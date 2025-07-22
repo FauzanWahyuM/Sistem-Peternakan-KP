@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
 
 export default function LoginPage() {
     const router = useRouter();
@@ -72,6 +74,14 @@ export default function LoginPage() {
                         </a>
                     </p>
                 </form>
+                <Link href="/">
+                    <button
+                        type="button"
+                        className="mt-4 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg transition duration-200"
+                    >
+                        Kembali ke Dashboard
+                    </button>
+                </Link>
             </div>
         </div>
     );
