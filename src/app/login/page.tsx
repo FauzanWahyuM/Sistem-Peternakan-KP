@@ -16,8 +16,15 @@ export default function LoginPage() {
 
         // Dummy logic login
         if (email === 'admin@example.com' && password === 'admin123') {
-            router.push('/dashboard');
-        } else {
+            router.push('/dashboard/admin');
+        }
+        else if (email == "penyuluh@gmail.com" && password === "penyuluh123") {
+            router.push('/dashboard/penyuluh');
+        }
+        else if (email == "peternak@gmail.com" && password === "peternak123") {
+            router.push('/dashboard/peternak'); 
+        }
+        else {
             setErrorMsg('Email atau password salah');
         }
     };
