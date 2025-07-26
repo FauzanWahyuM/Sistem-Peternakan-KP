@@ -1,61 +1,110 @@
-import DataTable from 'react-data-table-component';
+'use client';
+
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { Pencil, Trash2, FileDown } from 'lucide-react';
+
+const DataTable = dynamic(() => import('react-data-table-component'), { ssr: false });
+
+const customStyles = {
+    headCells: {
+        style: {
+            fontWeight: 'bold',
+            fontSize: '14px',
+            backgroundColor: '#f9fafb',
+            color: '#111827',
+        },
+    },
+    rows: {
+        style: {
+            fontSize: '14px',
+            color: '#374151',
+        },
+    },
+};
+
+type ActionButtonsProps = {
+    onEdit?: () => void;
+    onDelete?: () => void;
+    onDownload?: () => void;
+};
+
+const ActionButtons = ({ onEdit, onDelete, onDownload }: ActionButtonsProps) => (
+    <div className="flex gap-2">
+        {onEdit && (
+            <button type="button" onClick={onEdit} className="text-blue-600 hover:text-blue-800" title="Edit">
+                <Pencil size={16} />
+            </button>
+        )}
+        {onDelete && (
+            <button type="button" onClick={onDelete} className="text-red-600 hover:text-red-800" title="Hapus">
+                <Trash2 size={16} />
+            </button>
+        )}
+        {onDownload && (
+            <button type="button" onClick={onDownload} className="text-green-600 hover:text-green-800" title="Download">
+                <FileDown size={16} />
+            </button>
+        )}
+    </div>
+);
+
+type User = {
+    nama: string;
+    role: string;
+    status: string;
+};
+
+type Artikel = {
+    judul: string;
+    deskripsi: string;
+    tanggal: string;
+};
+
+type Laporan = {
+    nama: string;
+    nilai: string;
+};
 
 export default function CardSection() {
-    const ActionButtons = ({ onEdit, onDelete, onDownload }) => (
-        <div className="flex gap-2">
-            {onEdit && <button onClick={onEdit} className="text-blue-600 hover:underline">Edit</button>}
-            {onDelete && <button onClick={onDelete} className="text-red-600 hover:underline">Hapus</button>}
-            {onDownload && <button onClick={onDownload} className="text-green-600 hover:underline">Download</button>}
-        </div>
-    );
-
     const userColumns = [
-        { name: 'Nama', selector: row => row.nama, sortable: true },
-        { name: 'Role', selector: row => row.role },
-        { name: 'Status', selector: row => row.status },
+        { name: 'Nama', selector: (row: User) => row.nama, sortable: true },
+        { name: 'Role', selector: (row: User) => row.role },
+        { name: 'Status', selector: (row: User) => row.status },
         {
             name: 'Actions',
-            cell: (row) => (
+            cell: (row: User) => (
                 <ActionButtons
                     onEdit={() => console.log('Edit user', row)}
-                    onDelete={() => console.log('Hapus user', row)} onDownload={undefined}                />
+                    onDelete={() => console.log('Hapus user', row)}
+                />
             ),
         }
-    ];
-
-    const userData = [
-        { nama: 'Gibson', role: 'Penyuluh', status: 'Aktif' },
-        { nama: 'Zaki', role: 'Admin', status: 'Aktif' }
     ];
 
     const artikelColumns = [
-        { name: 'Judul', selector: row => row.judul },
-        { name: 'Deskripsi', selector: row => row.deskripsi },
+        { name: 'Judul', selector: (row: Artikel) => row.judul },
+        { name: 'Deskripsi', selector: (row: Artikel) => row.deskripsi },
         { name: 'Gambar', cell: () => <span>📷</span> },
-        { name: 'Tanggal', selector: row => row.tanggal },
+        { name: 'Tanggal', selector: (row: Artikel) => row.tanggal },
         {
             name: 'Actions',
-            cell: (row) => (
+            cell: (row: Artikel) => (
                 <ActionButtons
                     onEdit={() => console.log('Edit artikel', row)}
-                    onDelete={() => console.log('Hapus artikel', row)} onDownload={undefined}                />
+                    onDelete={() => console.log('Hapus artikel', row)}
+                />
             ),
         }
     ];
 
-    const artikelData = [
-        { judul: 'Pertanian', deskripsi: '...', tanggal: '16/07/2025' },
-        { judul: '...', deskripsi: '...', tanggal: '...' }
-    ];
-
     const laporanColumns = [
-        { name: 'Nama', selector: row => row.nama },
-        { name: 'Nilai Kepuasan', selector: row => row.nilai },
+        { name: 'Nama', selector: (row: Laporan) => row.nama },
+        { name: 'Nilai Kepuasan', selector: (row: Laporan) => row.nilai },
         {
             name: 'Actions',
-            cell: (row) => (
+            cell: (row: Laporan) => (
                 <ActionButtons
-                    onEdit={() => console.log('Lihat detail', row)}
                     onDelete={() => console.log('Hapus laporan', row)}
                     onDownload={() => console.log('Download laporan', row)}
                 />
@@ -63,7 +112,17 @@ export default function CardSection() {
         }
     ];
 
-    const laporanData = [
+    const userData: User[] = [
+        { nama: 'Gibson', role: 'Penyuluh', status: 'Aktif' },
+        { nama: 'Zaki', role: 'Admin', status: 'Aktif' }
+    ];
+
+    const artikelData: Artikel[] = [
+        { judul: 'Pertanian', deskripsi: 'Artikel tentang pertanian...', tanggal: '16/07/2025' },
+        { judul: 'Pangan Lokal', deskripsi: 'Deskripsi singkat...', tanggal: '18/07/2025' }
+    ];
+
+    const laporanData: Laporan[] = [
         { nama: 'Gibson', nilai: '100/100' },
         { nama: 'Zaki', nilai: '79/100' }
     ];
@@ -71,8 +130,8 @@ export default function CardSection() {
     return (
         <div className="space-y-6">
             {/* User Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">User</h2>
+            <section className="bg-white rounded-xl shadow-md p-4">
+                <h1 className="text-xl font-bold mb-4">User</h1>
                 <DataTable
                     columns={userColumns}
                     data={userData}
@@ -80,14 +139,13 @@ export default function CardSection() {
                     dense
                     responsive
                     highlightOnHover
-                    className="rounded"
+                    customStyles={customStyles}
                 />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">User Lainnya ⮞</button>
             </section>
 
             {/* Artikel Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">Artikel</h2>
+            <section className="bg-white rounded-xl shadow-md p-4">
+                <h1 className="text-xl font-bold mb-4">Artikel</h1>
                 <DataTable
                     columns={artikelColumns}
                     data={artikelData}
@@ -95,14 +153,13 @@ export default function CardSection() {
                     dense
                     responsive
                     highlightOnHover
-                    className="rounded"
+                    customStyles={customStyles}
                 />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">Artikel Lainnya ⮞</button>
             </section>
 
             {/* Laporan Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">Laporan</h2>
+            <section className="bg-white rounded-xl shadow-md p-4">
+                <h1 className="text-xl font-bold mb-4">Laporan</h1>
                 <DataTable
                     columns={laporanColumns}
                     data={laporanData}
@@ -110,9 +167,8 @@ export default function CardSection() {
                     dense
                     responsive
                     highlightOnHover
-                    className="rounded"
+                    customStyles={customStyles}
                 />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">Laporan Lainnya ⮞</button>
             </section>
         </div>
     );

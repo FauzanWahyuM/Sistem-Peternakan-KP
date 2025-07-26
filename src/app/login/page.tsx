@@ -15,7 +15,7 @@ export default function LoginPage() {
         e.preventDefault();
 
         // Dummy logic login
-        if (email === 'admin@example.com' && password === 'admin123') {
+        if (email === 'admin@gmail.com' && password === 'admin123') {
             router.push('/dashboard/admin');
         }
         else if (email == "penyuluh@gmail.com" && password === "penyuluh123") {
