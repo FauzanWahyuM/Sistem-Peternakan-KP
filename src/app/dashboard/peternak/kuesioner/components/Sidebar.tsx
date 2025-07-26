@@ -17,14 +17,13 @@ export default function Sidebar() {
     return (
         <aside className="bg-green-600 text-white w-64 flex flex-col justify-between min-h-screen py-6 px-4">
             <div>
-                <Image src="/img/Logo Sistem.png" alt="group" width={200} height={200} className='items-center ml-15 mb-5' />
+                <Image src="/img/Logo Sistem.png" alt="group" width={200} height={200} className='items-center ml-15' />
                 <nav className="space-y-4">
-                    <a href="/dashboard/peternak" className="flex items-center gap-3 font-[Judson] text-xl text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm">
-                        <Image src="/group.svg" alt="dashboard" width={20} height={20} />
+                    <a href="/dashboard/peternak" className="flex text-black font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
+                        <Image src="/group.svg" alt="group" width={20} height={20} />
                         <span>Dashboard</span>
                     </a>
-
-                    <a href="/dashboard/peternak/kuesioner" className="flex text-black font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
+                    <a href="/dashboard/peternak/kuesioner" className="flex items-center gap-3 font-[Judson] text-xl text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm">
                         <Image src="/task-square.svg" alt="group" width={20} height={20} />
                         <span>Kuesioner</span>
                     </a>
@@ -49,7 +48,7 @@ export default function Sidebar() {
                 </div>
                 <button
                     onClick={handleLogout}
-                    className="bg-red-500 hover:bg-red-800 w-full text-white py-2 rounded flex items-center justify-center space-x-2"
+                    className="bg-red-500 hover:bg-red-600 w-full text-white py-2 rounded flex items-center justify-center space-x-2"
                 >
                     <LogOut size={16} />
                     <span>Logout</span>
