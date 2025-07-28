@@ -12,9 +12,9 @@ export default function Sidebar() {
 
     const menuItems = [
         { href: '/dashboard/admin', icon: Home, label: 'Dashboard' },
-        { href: '/user', icon: Users, label: 'User' },
-        { href: '/artikel', icon: Newspaper, label: 'Artikel' },
-        { href: '/laporan', icon: FileText, label: 'Laporan' },
+        { href: '/admin/user', icon: Users, label: 'User' },
+        { href: '/admin/artikel', icon: Newspaper, label: 'Artikel' },
+        { href: '/admin/laporan', icon: FileText, label: 'Laporan' },
     ];
 
     return (

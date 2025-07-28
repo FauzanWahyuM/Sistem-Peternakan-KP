@@ -16,6 +16,21 @@ const customStyles = {
         style: {
             fontWeight: 'bold',
             fontSize: '14px',
+            backgroundColor: '#f9fafb',
+            color: '#111827',
+            paddingRight: '16px',
+        },
+    },
+    rows: {
+        style: {
+            minHeight: '60px',
+            paddingRight: '16px',
+        },
+    },
+    pagination: {
+        style: {
+            borderTop: '1px solid #E5E7EB',
+            padding: '16px',
         },
     },
 };
@@ -47,12 +62,12 @@ export default function TableSection() {
             name: 'Judul Laporan',
             selector: (row) => row.judul,
             sortable: true,
+            wrap: true,
         },
         {
             name: 'Nilai Kuesioner',
             selector: (row) => row.kategori,
             sortable: true,
-            center: true, // ✔️ tetap boleh karena ini dikenali oleh react-data-table
         },
         {
             name: 'Tanggal',
@@ -62,10 +77,10 @@ export default function TableSection() {
         {
             name: 'Aksi',
             cell: (row) => (
-                <div className="flex gap-3">
+                <div className="flex gap-2 justify-center">
                     <button
                         onClick={() => handleDownload(row)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition"
                         title="Download PDF"
                         type="button"
                     >
@@ -73,7 +88,7 @@ export default function TableSection() {
                     </button>
                     <button
                         onClick={() => handleDelete(row)}
-                        className="text-red-600 hover:text-red-800"
+                        className="p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition"
                         title="Hapus"
                         type="button"
                     >
@@ -82,18 +97,17 @@ export default function TableSection() {
                 </div>
             ),
             ignoreRowClick: true,
-            button: true, // ✔️ tetap boleh karena dikenali oleh DataTable, bukan DOM
-            allowOverflow: true, // ✔️ tetap boleh karena dikenali oleh DataTable, bukan DOM
+            button: true as const,
         },
     ];
 
     return (
-        <div className="rounded-xl bg-white p-4 shadow-md">
+        <div className="rounded-xl bg-white p-5 shadow-md border border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                 <input
                     type="text"
                     placeholder="Cari laporan..."
-                    className="w-full sm:max-w-sm px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800"
+                    className="w-full sm:max-w-sm px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -105,7 +119,9 @@ export default function TableSection() {
                 responsive
                 highlightOnHover
                 customStyles={customStyles}
-                noDataComponent="Belum ada data laporan."
+                noDataComponent={
+                    <div className="py-4 text-center text-gray-500">Belum ada data laporan.</div>
+                }
             />
         </div>
     );
