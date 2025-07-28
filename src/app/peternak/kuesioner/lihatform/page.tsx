@@ -1,30 +1,36 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import '../dashboard.css';
 
-function LihatFormContent() {
+export default function LihatForm() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const questionnaireId = searchParams.get('id') || '0';
+    const [questionnaireId, setQuestionnaireId] = useState('0');
     const [formData, setFormData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Ambil data form yang sudah disimpan berdasarkan ID
-        try {
-            const savedData = localStorage.getItem(`kuesionerFormData_${questionnaireId}`);
-            if (savedData) {
-                setFormData(JSON.parse(savedData));
+        // Get ID from URL on client side
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id') || '0';
+            setQuestionnaireId(id);
+            
+            // Ambil data form yang sudah disimpan berdasarkan ID
+            try {
+                const savedData = localStorage.getItem(`kuesionerFormData_${id}`);
+                if (savedData) {
+                    setFormData(JSON.parse(savedData));
+                }
+            } catch (error) {
+                console.error('Error loading form data:', error);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error('Error loading form data:', error);
-        } finally {
-            setLoading(false);
         }
-    }, [questionnaireId]);
+    }, []);
 
     if (loading) {
         return (

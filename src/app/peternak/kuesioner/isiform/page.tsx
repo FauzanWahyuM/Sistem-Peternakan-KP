@@ -1,20 +1,28 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import '../dashboard.css';
 
-function IsiFormContent() {
+export default function IsiForm() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const questionnaireId = searchParams.get('id') || '0';
+    const [questionnaireId, setQuestionnaireId] = useState('0');
     const [formData, setFormData] = useState({
         pertanyaan1: '',
         pertanyaan2: '',
         pertanyaan3: ''
     });
+
+    useEffect(() => {
+        // Get ID from URL on client side
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id') || '0';
+            setQuestionnaireId(id);
+        }
+    }, []);
 
     const handleRadioChange = (questionName: string, value: string) => {
         setFormData(prev => ({
@@ -103,7 +111,7 @@ function IsiFormContent() {
                                     onChange={(e) => handleRadioChange('pertanyaan1', e.target.value)}
                                     className="mr-3 w-4 h-4 text-green-600"
                                 />
-                                <span className="text-gray-700">Opsi 1</span>
+                                <span className="text-gray-700">Opsi 2</span>
                             </label>
                             <label className="flex items-center">
                                 <input
@@ -114,7 +122,7 @@ function IsiFormContent() {
                                     onChange={(e) => handleRadioChange('pertanyaan1', e.target.value)}
                                     className="mr-3 w-4 h-4 text-green-600"
                                 />
-                                <span className="text-gray-700">Opsi 1</span>
+                                <span className="text-gray-700">Opsi 3</span>
                             </label>
                         </div>
                     </div>
@@ -143,7 +151,7 @@ function IsiFormContent() {
                                     onChange={(e) => handleRadioChange('pertanyaan2', e.target.value)}
                                     className="mr-3 w-4 h-4 text-green-600"
                                 />
-                                <span className="text-gray-700">Opsi 1</span>
+                                <span className="text-gray-700">Opsi 2</span>
                             </label>
                             <label className="flex items-center">
                                 <input
@@ -154,7 +162,7 @@ function IsiFormContent() {
                                     onChange={(e) => handleRadioChange('pertanyaan2', e.target.value)}
                                     className="mr-3 w-4 h-4 text-green-600"
                                 />
-                                <span className="text-gray-700">Opsi 1</span>
+                                <span className="text-gray-700">Opsi 3</span>
                             </label>
                         </div>
                     </div>
