@@ -20,24 +20,23 @@ export default function Sidebar() {
                 <Image src="/img/Logo Sistem.png" alt="group" width={200} height={200} className='items-center ml-15 mb-5' />
                 <nav className="space-y-4">
                     <a href="/dashboard/peternak" className="flex items-center gap-3 font-[Judson] text-xl text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm">
-                        <Image src="/group.svg" alt="dashboard" width={20} height={20} />
+                        <Image src="/group.svg" alt="dashboard" width={25} height={25} />
                         <span>Dashboard</span>
                     </a>
-
-                    <a href="/dashboard/peternak/kuesioner" className="flex text-black font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
-                        <Image src="/task-square.svg" alt="group" width={20} height={20} />
+                    <a href="/peternak/kuesioner" className="flex text-white font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
+                        <Image src="/task-square-white.svg" alt="group" width={25} height={25} />
                         <span>Kuesioner</span>
                     </a>
-                    <a href="/dashboard/peternak/ternak" className="flex text-black font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
-                        <Image src="/folder-2.svg" alt="group" width={20} height={20} />
+                    <a href="/peternak/ternak" className="flex text-white font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
+                        <Image src="/folder-2-white.svg" alt="group" width={25} height={25} />
                         <span>Data Ternak</span>
                     </a>
-                    <a href="/dashboard/peternak/pelatihan" className="flex text-black font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
-                        <Image src="/book.svg" alt="group" width={20} height={20} />
+                    <a href="/peternak/pelatihan" className="flex text-white font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
+                        <Image src="/book-white.svg" alt="group" width={25} height={25} />
                         <span>Pelatihan</span>
                     </a>
-                    <a href="/dashboard/peternak/hasil" className="flex text-black font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
-                        <Image src="/clipboard-text.svg" alt="group" width={20} height={20} />
+                    <a href="/peternak/hasil" className="flex text-white font-[Judson] text-xl items-center space-x-3 hover:bg-green-700 px-3 py-2 rounded">
+                        <Image src="/clipboard-text-white.svg" alt="group" width={25} height={25} />
                         <span>Hasil Evaluasi</span>
                     </a>
                 </nav>

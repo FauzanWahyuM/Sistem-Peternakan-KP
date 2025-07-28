@@ -1,119 +1,86 @@
-import DataTable from 'react-data-table-component';
+'use client';
+import {
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 
-export default function CardSection() {
-    const ActionButtons = ({ onEdit, onDelete, onDownload }) => (
-        <div className="flex gap-2">
-            {onEdit && <button onClick={onEdit} className="text-blue-600 hover:underline">Edit</button>}
-            {onDelete && <button onClick={onDelete} className="text-red-600 hover:underline">Hapus</button>}
-            {onDownload && <button onClick={onDownload} className="text-green-600 hover:underline">Download</button>}
-        </div>
-    );
-
-    const userColumns = [
-        { name: 'Nama', selector: row => row.nama, sortable: true },
-        { name: 'Role', selector: row => row.role },
-        { name: 'Status', selector: row => row.status },
-        {
-            name: 'Actions',
-            cell: (row) => (
-                <ActionButtons
-                    onEdit={() => console.log('Edit user', row)}
-                    onDelete={() => console.log('Hapus user', row)} onDownload={undefined}                />
-            ),
-        }
+export default function CardSection({ jumlahTernak = 0, totalKuesioner = 0, evaluasi = 0 }) {
+    const cards = [
+        { title: 'Jumlah Ternak', value: `${jumlahTernak} Ekor` },
+        { title: 'Kuesioner', value: `${totalKuesioner} Diisi` },
+        { title: 'Evaluasi', value: `${evaluasi}% Baik` },
     ];
 
-    const userData = [
-        { nama: 'Gibson', role: 'Penyuluh', status: 'Aktif' },
-        { nama: 'Zaki', role: 'Admin', status: 'Aktif' }
+    const chartData = [
+        { bulan: 'Jan', nilai: 80 },
+        { bulan: 'Feb', nilai: 82 },
+        { bulan: 'Mar', nilai: 85 },
+        { bulan: 'Apr', nilai: 83 },
+        { bulan: 'Mei', nilai: 88 },
+        { bulan: 'Jun', nilai: 90 },
+        { bulan: 'Jul', nilai: 89 },
     ];
 
-    const artikelColumns = [
-        { name: 'Judul', selector: row => row.judul },
-        { name: 'Deskripsi', selector: row => row.deskripsi },
-        { name: 'Gambar', cell: () => <span>📷</span> },
-        { name: 'Tanggal', selector: row => row.tanggal },
-        {
-            name: 'Actions',
-            cell: (row) => (
-                <ActionButtons
-                    onEdit={() => console.log('Edit artikel', row)}
-                    onDelete={() => console.log('Hapus artikel', row)} onDownload={undefined}                />
-            ),
-        }
-    ];
+    const kuesionerData = {
+        Jan: true,
+        Feb: true,
+        Mar: true,
+        Apr: false,
+        Mei: true,
+        Jun: true,
+        Jul: true,
+    };
 
-    const artikelData = [
-        { judul: 'Pertanian', deskripsi: '...', tanggal: '16/07/2025' },
-        { judul: '...', deskripsi: '...', tanggal: '...' }
-    ];
-
-    const laporanColumns = [
-        { name: 'Nama', selector: row => row.nama },
-        { name: 'Nilai Kepuasan', selector: row => row.nilai },
-        {
-            name: 'Actions',
-            cell: (row) => (
-                <ActionButtons
-                    onEdit={() => console.log('Lihat detail', row)}
-                    onDelete={() => console.log('Hapus laporan', row)}
-                    onDownload={() => console.log('Download laporan', row)}
-                />
-            ),
-        }
-    ];
-
-    const laporanData = [
-        { nama: 'Gibson', nilai: '100/100' },
-        { nama: 'Zaki', nilai: '79/100' }
-    ];
+    // ✅ Cek bulan sekarang
+    const bulanSekarang = new Date().toLocaleString('id-ID', { month: 'short' });
+    const isFilled = kuesionerData[bulanSekarang] ?? false;
 
     return (
-        <div className="space-y-6">
-            {/* User Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">User</h2>
-                <DataTable
-                    columns={userColumns}
-                    data={userData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    className="rounded"
-                />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">User Lainnya ⮞</button>
-            </section>
+        <section className="p-6">
+            {/* Card Statistik */}
+            <div className="flex justify-center gap-60 flex-wrap mb-10">
+                {cards.map((card, index) => (
+                    <div
+                        key={index}
+                        className="bg-[#60c67a] text-white rounded-lg shadow-md px-10 py-8 text-center min-w-[250px]"
+                    >
+                        <div className="text-3xl font-[Judson] font-semibold">{card.title}</div>
+                        <div className="text-2xl font-[Judson] mt-1">{card.value}</div>
+                    </div>
+                ))}
+            </div>
 
-            {/* Artikel Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">Artikel</h2>
-                <DataTable
-                    columns={artikelColumns}
-                    data={artikelData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    className="rounded"
-                />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">Artikel Lainnya ⮞</button>
-            </section>
+            {/* Grafik Evaluasi Bulanan */}
+            <div className="bg-white rounded-xl shadow p-6 max-w-4xl mx-auto mb-10">
+                <h2 className="text-xl font-bold mb-4 text-gray-700 text-center">
+                    Performa Evaluasi Bulanan
+                </h2>
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="bulan" />
+                        <YAxis domain={[0, 100]} />
+                        <Tooltip />
+                        <Line
+                            type="monotone"
+                            dataKey="nilai"
+                            stroke="#60c67a"
+                            strokeWidth={3}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
 
-            {/* Laporan Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">Laporan</h2>
-                <DataTable
-                    columns={laporanColumns}
-                    data={laporanData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    className="rounded"
-                />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">Laporan Lainnya ⮞</button>
-            </section>
-        </div>
+            {/* Aktivitas Terakhir */}
+            <div className="flex justify-center">
+                <div className="bg-[#60c67a] text-white rounded-lg shadow-md px-6 py-4 text-center">
+                    <h2 className="text-3xl font-[Judson] font-bold mb-2">Aktivitas Terakhir</h2>
+                    <p className="text-2xl font-[Judson] font-semibold">
+                        {isFilled
+                            ? '✅ Sudah mengisi kuesioner bulan ini'
+                            : '⚠️ Belum mengisi kuesioner bulan ini'}
+                    </p>
+                </div>
+            </div>
+        </section>
     );
 }
