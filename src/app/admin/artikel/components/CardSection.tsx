@@ -15,21 +15,51 @@ type Artikel = {
 };
 
 const customStyles = {
+    table: {
+        style: {
+            width: '100%',
+        },
+    },
+    headRow: {
+        style: {
+            backgroundColor: '#f9fafb',
+            minHeight: '56px',
+            borderBottomWidth: '1px',
+            borderBottomColor: '#E5E7EB',
+        },
+    },
     headCells: {
         style: {
             fontWeight: 'bold',
             fontSize: '14px',
-            backgroundColor: '#f9fafb',
             color: '#111827',
+            paddingLeft: '16px',
+            paddingRight: '16px',
         },
     },
     rows: {
         style: {
+            minHeight: '60px',
+            paddingLeft: '16px',
+            paddingRight: '16px',
+        },
+    },
+    cells: {
+        style: {
+            paddingLeft: '16px',
+            paddingRight: '16px',
             fontSize: '14px',
             color: '#374151',
         },
     },
+    pagination: {
+        style: {
+            borderTop: '1px solid #E5E7EB',
+            padding: '16px',
+        },
+    },
 };
+
 
 export default function ArtikelManagement() {
     const [searchTerm, setSearchTerm] = useState<string>('');
@@ -94,15 +124,17 @@ export default function ArtikelManagement() {
                 <div className="flex gap-3">
                     <button
                         onClick={() => handleEdit(row)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="p-2 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 transition"
                         title="Edit"
+                        type='button'
                     >
                         <Pencil size={18} />
                     </button>
                     <button
                         onClick={() => handleDelete(row)}
-                        className="text-red-600 hover:text-red-800"
+                        className="p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition"
                         title="Hapus"
+                        type='button'
                     >
                         <Trash2 size={18} />
                     </button>
@@ -120,23 +152,21 @@ export default function ArtikelManagement() {
 
     return (
         <div className="rounded-xl bg-white p-4 shadow-md">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                    <input
-                        type="text"
-                        placeholder="Cari judul artikel..."
-                        className="w-full sm:max-w-sm px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-
-                    <button
-                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow font-semibold"
-                        onClick={() => alert("Fitur tambah user belum diimplementasikan")}
-                    >
-                        + Tambah Artikel
-                    </button>
-                </div>
-
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <input
+                    type="text"
+                    placeholder="Cari judul artikel..."
+                    className="w-full sm:max-w-sm px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <button
+                    className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow font-semibold"
+                    onClick={() => alert("Fitur tambah user belum diimplementasikan")}
+                >
+                    + Tambah Artikel
+                </button>
+            </div>
             <DataTable
                 columns={columns}
                 data={filteredData}
