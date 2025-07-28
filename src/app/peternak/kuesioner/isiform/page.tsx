@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import '../dashboard.css';
 
-export default function IsiForm() {
+function IsiFormContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const questionnaireId = searchParams.get('id') || '0';

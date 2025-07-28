@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import '../dashboard.css';
 
-export default function LihatForm() {
+function LihatFormContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const questionnaireId = searchParams.get('id') || '0';
