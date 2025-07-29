@@ -51,13 +51,14 @@ const ActionButtons = ({ onEdit, onDelete, onDownload }: ActionButtonsProps) => 
 );
 
 type User = {
-    id: number;
+    id: string;
     nama: string;
-    role: string;
-    status: string;
+    role: 'Peternak' | 'Penyuluh' | 'Admin';
+    status?: string;
 };
 
 type Artikel = {
+    id: number;
     judul: string;
     deskripsi: string;
     gambar: string;
@@ -72,38 +73,63 @@ type Laporan = {
 
 export default function CardSection() {
     const router = useRouter();
+    const [data, setData] = useState<User[]>([]);
     const [userData, setUserData] = useState<User[]>([]);
+    const [artikelData, setArtikelData] = useState<Artikel[]>([]);
+
+    const handleDeleteUser = (id: string) => {
+        const updatedUsers = data.filter((u) => u.id !== id);
+        localStorage.setItem('users', JSON.stringify(updatedUsers));
+        setData(updatedUsers);
+        setUserData(updatedUsers.slice(0, 5));
+    };
+
+    const handleDeleteArtikel = (id: number) => {
+        const artikelList = JSON.parse(localStorage.getItem("artikels") || "[]");
+        const updatedArtikels = artikelList.filter((a: Artikel) => a.id !== id);
+        localStorage.setItem("artikels", JSON.stringify(updatedArtikels));
+        setArtikelData(updatedArtikels.slice(0, 5));
+    };
+
 
     useEffect(() => {
         try {
-            const localData = JSON.parse(localStorage.getItem("users") || "[]");
-            const formatted = localData.map((u: any) => ({
+            // Ambil dan parse data users
+            const localUserData = JSON.parse(localStorage.getItem("users") || "[]");
+
+            // Format lengkap dengan default status "Aktif" jika belum ada
+            const formattedUserData: User[] = localUserData.map((u: any) => ({
                 id: u.id,
                 nama: u.nama,
                 role: u.role,
-                status: 'Aktif',
+                status: u.status ?? "Aktif",
             }));
-            setUserData(formatted.slice(0, 5)); // Hanya ambil 5 user teratas
+
+            setData(formattedUserData); // misalnya untuk DataTable
+            setUserData(formattedUserData.slice(0, 5)); // misalnya untuk dashboard ringkasan
+
+            // Simpan kembali data users jika ada data yang belum punya status
+            const needsUpdate = localUserData.some((u: any) => !u.status);
+            if (needsUpdate) {
+                localStorage.setItem("users", JSON.stringify(formattedUserData));
+            }
+
         } catch (error) {
-            console.error("Gagal membaca user dari localStorage:", error);
+            console.error("Gagal parsing data users:", error);
+            setData([]);
+            setUserData([]);
+        }
+
+        try {
+            // Ambil dan parse data artikels
+            const localArtikelData = JSON.parse(localStorage.getItem("artikels") || "[]");
+            setArtikelData(localArtikelData.slice(0, 5));
+        } catch (error) {
+            console.error("Gagal parsing data artikels:", error);
+            setArtikelData([]);
         }
     }, []);
 
-    const artikelColumns = [
-        { name: 'Judul', selector: (row: Artikel) => row.judul },
-        { name: 'Deskripsi', selector: (row: Artikel) => row.deskripsi },
-        { name: 'Gambar', selector: (row: Artikel) => row.gambar },
-        { name: 'Tanggal', selector: (row: Artikel) => row.tanggal },
-        {
-            name: 'Aksi',
-            cell: (row: Artikel) => (
-                <ActionButtons
-                    onEdit={() => console.log('Edit artikel', row)}
-                    onDelete={() => console.log('Hapus artikel', row)}
-                />
-            ),
-        }
-    ];
 
     const laporanColumns = [
         { name: 'Judul Laporan', selector: (row: Laporan) => row.judul },
@@ -120,19 +146,26 @@ export default function CardSection() {
         }
     ];
 
-    const artikelData: Artikel[] = [
+    const artikelColumns = [
+        { name: 'Judul', selector: (row: Artikel) => row.judul },
+        { name: 'Deskripsi', selector: (row: Artikel) => row.deskripsi },
         {
-            judul: 'Pertanian',
-            deskripsi: 'Artikel tentang pertanian...',
-            gambar: 'pertanian.jpg',
-            tanggal: '16/07/2025'
+            name: 'Gambar',
+            cell: (row: Artikel) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={row.gambar} alt="gambar artikel" className="w-12 h-12 object-cover rounded" />
+            ),
         },
+        { name: 'Tanggal', selector: (row: Artikel) => row.tanggal },
         {
-            judul: 'Pangan Lokal',
-            deskripsi: 'Deskripsi singkat...',
-            gambar: 'pangan-lokal.png',
-            tanggal: '18/07/2025'
-        }
+            name: 'Aksi',
+            cell: (row: Artikel) => (
+                <ActionButtons
+                    onEdit={() => router.push(`/admin/artikel/editartikel?id=${row.id}`)}
+                    onDelete={() => console.log('Delete', row)}
+                />
+            ),
+        },
     ];
 
     const laporanData: Laporan[] = [
@@ -148,8 +181,8 @@ export default function CardSection() {
             name: 'Aksi',
             cell: (row: User) => (
                 <ActionButtons
-                    onEdit={() => console.log('Edit user', row)}
-                    onDelete={() => console.log('Hapus user', row)}
+                    onEdit={() => router.push(`/admin/user/edituser?id=${row.id}`)}
+                    onDelete={() => handleDeleteUser(row.id)}
                 />
             ),
         }

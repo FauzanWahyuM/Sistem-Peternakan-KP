@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { Pencil, Trash2 } from 'lucide-react';
+import { TableColumn } from 'react-data-table-component';
+import { useRouter } from 'next/navigation';
 
 const DataTable = dynamic(() => import('react-data-table-component'), { ssr: false });
 
@@ -15,134 +17,108 @@ type Artikel = {
 };
 
 const customStyles = {
-    table: {
-        style: {
-            width: '100%',
-        },
-    },
-    headRow: {
-        style: {
-            backgroundColor: '#f9fafb',
-            minHeight: '56px',
-            borderBottomWidth: '1px',
-            borderBottomColor: '#E5E7EB',
-        },
-    },
     headCells: {
         style: {
             fontWeight: 'bold',
             fontSize: '14px',
+            backgroundColor: '#f9fafb',
             color: '#111827',
-            paddingLeft: '16px',
-            paddingRight: '16px',
         },
     },
     rows: {
         style: {
-            minHeight: '60px',
-            paddingLeft: '16px',
-            paddingRight: '16px',
-        },
-    },
-    cells: {
-        style: {
-            paddingLeft: '16px',
-            paddingRight: '16px',
             fontSize: '14px',
             color: '#374151',
         },
     },
-    pagination: {
-        style: {
-            borderTop: '1px solid #E5E7EB',
-            padding: '16px',
-        },
-    },
 };
-
 
 export default function ArtikelManagement() {
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [data, setData] = useState<Artikel[]>([]);
+    const [selectedArtikel, setSelectedArtikel] = useState<Artikel | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-    const [data, setData] = useState<Artikel[]>([
-        {
-            id: 1,
-            judul: 'Permanenkan...',
-            deskripsi: 'Jika...',
-            gambar: 'Foto.jpg',
-            tanggal: '11/02/2025',
-        },
-        {
-            id: 2,
-            judul: 'Artikel Tentang...',
-            deskripsi: 'API...',
-            gambar: 'Foto.png',
-            tanggal: '16/03/2025',
-        },
-        {
-            id: 3,
-            judul: 'Jika Alam...',
-            deskripsi: 'Apakah...',
-            gambar: 'Foto.jpg',
-            tanggal: '23/04/2025',
-        },
-    ]);
+    const router = useRouter();
 
-    const handleEdit = (row: Artikel) => {
-        console.log('Edit artikel:', row);
+    useEffect(() => {
+        try {
+            const localData = JSON.parse(localStorage.getItem('artikels') || '[]');
+            setData(localData);
+        } catch (error) {
+            console.error('Gagal membaca artikel dari localStorage:', error);
+            setData([]);
+        }
+    }, []);
+
+    const openModal = (artikel: Artikel) => {
+        setSelectedArtikel(artikel);
+        setIsModalOpen(true);
     };
 
-    const handleDelete = (row: Artikel) => {
-        if (window.confirm(`Yakin ingin menghapus artikel "${row.judul}"?`)) {
-            setData((prev) => prev.filter((artikel) => artikel.id !== row.id));
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setSelectedArtikel(null);
+    };
+
+    const confirmDelete = () => {
+        if (selectedArtikel) {
+            const updated = data.filter((a) => a.id !== selectedArtikel.id);
+            setData(updated);
+            localStorage.setItem('artikels', JSON.stringify(updated));
+            closeModal();
         }
     };
 
-    const columns = [
+    const handleEdit = (artikel: Artikel) => {
+        router.push(`/admin/artikel/editartikel?id=${artikel.id}`);
+    };
+
+    const columns: TableColumn<Artikel>[] = [
         {
             name: 'Judul',
-            selector: (row: Artikel) => row.judul,
+            selector: (row) => row.judul,
             sortable: true,
         },
         {
             name: 'Deskripsi',
-            selector: (row: Artikel) => row.deskripsi,
-            sortable: true,
+            selector: (row) => row.deskripsi,
+            sortable: false,
         },
         {
             name: 'Gambar',
-            selector: (row: Artikel) => row.gambar,
+            cell: (row) => (
+                <img src={row.gambar} alt="Gambar" className="w-16 h-16 object-cover rounded" />
+            ),
         },
         {
             name: 'Tanggal',
-            selector: (row: Artikel) => row.tanggal,
+            selector: (row) => row.tanggal,
             sortable: true,
         },
         {
             name: 'Aksi',
-            cell: (row: Artikel) => (
+            cell: (row) => (
                 <div className="flex gap-3">
                     <button
                         onClick={() => handleEdit(row)}
                         className="p-2 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 transition"
                         title="Edit"
-                        type='button'
                     >
                         <Pencil size={18} />
                     </button>
                     <button
-                        onClick={() => handleDelete(row)}
+                        onClick={() => openModal(row)}
                         className="p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition"
                         title="Hapus"
-                        type='button'
                     >
                         <Trash2 size={18} />
                     </button>
                 </div>
             ),
             ignoreRowClick: true,
-            allowOverflow: true as const,
-            button: true as const,
+            allowOverflow: true,
+            button: true,
         },
     ];
 
@@ -151,8 +127,8 @@ export default function ArtikelManagement() {
     );
 
     return (
-        <div className="rounded-xl bg-white p-4 shadow-md">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="rounded-xl bg-white p-4 shadow-md relative">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                 <input
                     type="text"
                     placeholder="Cari judul artikel..."
@@ -160,24 +136,66 @@ export default function ArtikelManagement() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
+
                 <button
                     className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow font-semibold"
-                    onClick={() => alert("Fitur tambah user belum diimplementasikan")}
+                    onClick={() => router.push('/admin/artikel/tambahartikel')}
                 >
                     + Tambah Artikel
                 </button>
             </div>
+
             <DataTable
                 columns={columns}
                 data={filteredData}
                 pagination
                 responsive
                 highlightOnHover
-                striped
                 dense
+                striped
                 customStyles={customStyles}
                 noDataComponent="Tidak ada data artikel."
             />
+
+            <div className="mt-3 text-sm text-gray-600">
+                Total artikel: <strong>{filteredData.length}</strong>
+            </div>
+
+            {/* Modal Konfirmasi Hapus */}
+            {isModalOpen && selectedArtikel && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative">
+                        <div className="flex items-center mb-4 gap-2 text-red-600">
+                            <AlertTriangle size={24} />
+                            <h2 className="text-lg font-bold">Konfirmasi Hapus</h2>
+                        </div>
+                        <p className="text-gray-700 mb-6">
+                            Apakah Anda yakin ingin menghapus artikel{' '}
+                            <strong>{selectedArtikel.judul}</strong>?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={closeModal}
+                                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                            >
+                                Ya, Hapus
+                            </button>
+                        </div>
+                        <button
+                            onClick={closeModal}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                        >
+                            <X />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
