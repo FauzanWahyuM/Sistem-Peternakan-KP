@@ -5,7 +5,7 @@ import Header from './components/Header';
 import CardSection from './components/CardSection';
 import './dashboard.css'; 
 
-export default function Dashboard() {
+export default function DashboardPage() {
     return (
         <div className="flex">
             {/* Sidebar tetap di kiri */}

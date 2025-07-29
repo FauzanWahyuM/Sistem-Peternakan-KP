@@ -15,7 +15,7 @@ export default function Sidebar() {
     };
 
     return (
-        <aside className="bg-green-600 text-white w-64 flex flex-col justify-between min-h-screen py-6 px-4">
+        <aside className="fixed top-0 left-0 h-screen w-64 bg-green-600 text-white w-64 flex flex-col justify-between min-h-screen py-6 px-4">
             <div>
                 <Image src="/img/Logo Sistem.png" alt="group" width={200} height={200} className='items-center ml-15 mb-5' />
                 <nav className="space-y-4">
