@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default function Home() {
   // Navigation items
-  const navItems = ["Beranda", "Tentang", "Program", "Artikel", "Kontak"];
+  const navItems = ["Beranda", "Program", "Artikel", "Kontak"];
 
   // Livestock groups data
   const livestockGroups = [
@@ -86,9 +86,10 @@ export default function Home() {
         <ul className="hidden md:flex gap-6 text-sm font-medium">
           {navItems.map((item, index) => (
             <li key={index} className="cursor-pointer hover:underline">
-              <a href="#" className="font-['Judson'] font-bold text-black text-[24px]">
+              <Link href={item === "Beranda" ? "/" : item === "Program" ? "/program" : item === "Artikel" ? "/artikel" : item === "Kontak" ? "/kontak" : "#"}
+                    className="font-['Judson'] font-bold text-black text-[24px]">
                 {item}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
@@ -117,25 +118,28 @@ export default function Home() {
           </div>
 
           {/* Images - Right Side - Stacked */}
-          <div className="md:w-1/2 relative">
-            {/* Bottom Image */}
-            <div className="relative w-full h-110 z-0">
-              <Image
-                src="/img/Peternakan2.png"
-                alt="Peternakan2"
-                fill
-                className="object-cover rounded-[24px] shadow-lg"
-              />
-            </div>
+          <div className="md:w-1/2 w-full relative overflow-hidden">
+            {/* Container tinggi untuk beri ruang tumpukan */}
+            <div className="relative h-[40rem] w-full">
+              {/* Bottom Image */}
+              <div className="absolute top-[5rem] left-0 w-[80%] h-[20rem] z-0">
+                <Image
+                  src="/img/Peternakan2.png"
+                  alt="Peternakan2"
+                  fill
+                  className="object-cover rounded-[24px] shadow-lg"
+                />
+              </div>
 
-            {/* Top Image - Overlapping */}
-            <div className="relative w-full h-110 -mt-50 ml-20 z-10">
-              <Image
-                src="/img/Peternakan1.png"
-                alt="Peternakan1"
-                fill
-                className="object-cover rounded-[24px] shadow-lg"
-              />
+              {/* Top Image - Overlapping */}
+              <div className="absolute top-[15rem] left-[5rem] w-[80%] h-[20rem] z-10">
+                <Image
+                  src="/img/Peternakan1.png"
+                  alt="Peternakan1"
+                  fill
+                  className="object-cover rounded-[24px] shadow-lg"
+                />
+              </div>
             </div>
           </div>
         </div>
