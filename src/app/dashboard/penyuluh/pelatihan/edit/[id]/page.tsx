@@ -1,21 +1,65 @@
 'use client';
 
-import Sidebar from '../../components/Sidebar';
-import { useRouter } from 'next/navigation';
+import Sidebar from '../../../components/Sidebar';
+import { useRouter, useParams } from 'next/navigation';
 import { ChevronLeft, Calendar, Image } from 'lucide-react';
-import { useState } from 'react';
-import { usePelatihanStorage } from '../../hooks/usePelatihanStorage';
+import { useState, useEffect } from 'react';
 
-export default function TambahPelatihanPage() {
+export default function EditPelatihanPage() {
     const router = useRouter();
-    const { addPelatihan } = usePelatihanStorage();
+    const params = useParams();
     const [loading, setLoading] = useState(false);
+    const [dataLoading, setDataLoading] = useState(true);
     const [formData, setFormData] = useState({
         judul: '',
         deskripsi: '',
         tanggal: '',
-        gambar: null as File | null
+        gambar: null as File | null,
+        currentGambar: ''
     });
+
+    const pelatihanId = parseInt(params.id as string);
+
+    useEffect(() => {
+        // Load data langsung dari localStorage
+        if (!pelatihanId || isNaN(pelatihanId)) {
+            alert('ID pelatihan tidak valid!');
+            router.push('/dashboard/penyuluh/pelatihan');
+            return;
+        }
+
+        try {
+            const data = localStorage.getItem('pelatihan_data');
+            if (!data) {
+                alert('Data pelatihan tidak ditemukan!');
+                router.push('/dashboard/penyuluh/pelatihan');
+                return;
+            }
+
+            const allPelatihan = JSON.parse(data);
+            const pelatihan = allPelatihan.find((p: any) => p.id === pelatihanId);
+
+            if (pelatihan) {
+                setFormData({
+                    judul: pelatihan.judul || '',
+                    deskripsi: pelatihan.deskripsi || '',
+                    tanggal: pelatihan.tanggal || '',
+                    gambar: null,
+                    currentGambar: pelatihan.gambar || ''
+                });
+            } else {
+                alert('Pelatihan tidak ditemukan!');
+                router.push('/dashboard/penyuluh/pelatihan');
+                return;
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+            alert('Terjadi kesalahan saat memuat data!');
+            router.push('/dashboard/penyuluh/pelatihan');
+        } finally {
+            setDataLoading(false);
+        }
+    }, [pelatihanId, router]);
 
     const handleBack = () => {
         router.back();
@@ -55,36 +99,63 @@ export default function TambahPelatihanPage() {
         try {
             setLoading(true);
 
-            // Untuk demo, kita simpan nama file. Dalam implementasi nyata,
-            // Anda bisa upload file ke server dan simpan URL-nya
-            const gambarName = formData.gambar ? formData.gambar.name : 'default.jpg';
+            // Update data di localStorage
+            const data = localStorage.getItem('pelatihan_data');
+            if (!data) {
+                alert('Data tidak ditemukan!');
+                return;
+            }
 
-            await addPelatihan({
+            const allPelatihan = JSON.parse(data);
+            const index = allPelatihan.findIndex((p: any) => p.id === pelatihanId);
+
+            if (index === -1) {
+                alert('Pelatihan tidak ditemukan!');
+                return;
+            }
+
+            // Update data
+            const gambarName = formData.gambar ? formData.gambar.name : formData.currentGambar;
+
+            allPelatihan[index] = {
+                ...allPelatihan[index],
                 judul: formData.judul.trim(),
                 deskripsi: formData.deskripsi.trim(),
                 tanggal: formData.tanggal,
-                gambar: gambarName
-            });
+                gambar: gambarName,
+                updatedAt: new Date().toISOString()
+            };
 
-            alert('Pelatihan berhasil ditambahkan!');
+            // Simpan kembali ke localStorage
+            localStorage.setItem('pelatihan_data', JSON.stringify(allPelatihan));
+
+            alert('Pelatihan berhasil diperbarui!');
             router.push('/dashboard/penyuluh/pelatihan');
+
         } catch (error) {
-            console.error('Error saving pelatihan:', error);
-            alert('Terjadi kesalahan saat menyimpan pelatihan!');
+            console.error('Error updating pelatihan:', error);
+            alert('Terjadi kesalahan saat memperbarui pelatihan!');
         } finally {
             setLoading(false);
         }
     };
 
     const handleBatal = () => {
-        if (formData.judul || formData.deskripsi || formData.tanggal || formData.gambar) {
-            if (window.confirm('Data yang sudah diisi akan hilang. Yakin ingin membatalkan?')) {
-                router.push('/dashboard/penyuluh/pelatihan');
-            }
-        } else {
-            router.push('/dashboard/penyuluh/pelatihan');
-        }
+        router.push('/dashboard/penyuluh/pelatihan');
     };
+
+    if (dataLoading) {
+        return (
+            <div className="flex min-h-screen bg-gray-100">
+                <Sidebar />
+                <main className="flex-1 p-6">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-lg text-gray-600">Loading...</div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen bg-gray-100">
@@ -99,7 +170,7 @@ export default function TambahPelatihanPage() {
                         >
                             <ChevronLeft size={20} />
                         </button>
-                        <h1 className="text-3xl font-bold text-gray-800">Tambah Pelatihan</h1>
+                        <h1 className="text-3xl font-bold text-gray-800">Edit Pelatihan</h1>
                     </div>
                 </div>
 
@@ -117,7 +188,7 @@ export default function TambahPelatihanPage() {
                                 value={formData.judul}
                                 onChange={handleInputChange}
                                 placeholder="Masukkan Judul"
-                                className="w-full px-3 text-black py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                className="w-full text-black px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                                 required
                             />
                         </div>
@@ -152,9 +223,12 @@ export default function TambahPelatihanPage() {
                                         <p className="text-sm text-gray-600 mb-2">
                                             Please upload square image, size less than 100KB
                                         </p>
+                                        <p className="text-xs text-gray-500 mb-3">
+                                            Gambar saat ini: {formData.currentGambar}
+                                        </p>
                                         <div className="flex items-center justify-center space-x-4">
                                             <label className="bg-green-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-green-600 transition-colors">
-                                                <span>Choose File</span>
+                                                <span>Choose New File</span>
                                                 <input
                                                     type="file"
                                                     onChange={handleFileChange}
@@ -163,7 +237,7 @@ export default function TambahPelatihanPage() {
                                                 />
                                             </label>
                                             <span className="text-gray-500">
-                                                {formData.gambar ? formData.gambar.name : 'No File Chosen'}
+                                                {formData.gambar ? formData.gambar.name : 'No New File Chosen'}
                                             </span>
                                         </div>
                                     </div>
@@ -182,7 +256,7 @@ export default function TambahPelatihanPage() {
                                     name="tanggal"
                                     value={formData.tanggal}
                                     onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-10"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-10 text-black"
                                     required
                                 />
                                 <Calendar size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />

@@ -3,48 +3,63 @@
 import Sidebar from '../components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { Edit2, Trash2 } from 'lucide-react';
+import { usePelatihanStorage } from '../hooks/usePelatihanStorage';
+import { useState } from 'react';
 
 export default function PelatihanPage() {
     const router = useRouter();
+    const { pelatihan, loading, deletePelatihan } = usePelatihanStorage();
+    const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
 
-    // Data pelatihan
-    const pelatihanData = [
-        {
-            id: 1,
-            judul: 'Pemahaman Dasar Peternakan Modern',
-            deskripsi: 'Pembelajaran tentang teknologi terbaru dalam bidang peternakan',
-            gambar: 'Foto.jpg',
-            tanggal: '11/02/2025'
-        },
-        {
-            id: 2,
-            judul: 'Artikel Manajemen Pakan Ternak',
-            deskripsi: 'Panduan lengkap mengenai nutrisi dan manajemen pakan',
-            gambar: 'Foto.png',
-            tanggal: '16/03/2025'
-        },
-        {
-            id: 3,
-            judul: 'Jika Ternak Sakit: Penanganan Pertama',
-            deskripsi: 'Langkah-langkah penanganan darurat untuk ternak yang sakit',
-            gambar: 'Foto.jpg',
-            tanggal: '23/04/2025'
-        }
-    ];
+    // Format tanggal untuk ditampilkan
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    };
 
     const handleTambahPelatihan = () => {
         router.push('/dashboard/penyuluh/pelatihan/tambah');
     };
 
     const handleEdit = (id: number) => {
-        console.log('Edit pelatihan', id);
-        // Implementasi edit functionality
+        router.push(`/dashboard/penyuluh/pelatihan/edit/${id}`);
     };
 
-    const handleDelete = (id: number) => {
-        console.log('Delete pelatihan', id);
-        // Implementasi delete functionality
+    const handleDelete = async (id: number) => {
+        if (window.confirm('Apakah Anda yakin ingin menghapus pelatihan ini?')) {
+            try {
+                setDeleteLoading(id);
+                const success = deletePelatihan(id);
+                if (success) {
+                    alert('Pelatihan berhasil dihapus!');
+                } else {
+                    alert('Gagal menghapus pelatihan!');
+                }
+            } catch (error) {
+                console.error('Error deleting pelatihan:', error);
+                alert('Terjadi kesalahan saat menghapus pelatihan!');
+            } finally {
+                setDeleteLoading(null);
+            }
+        }
     };
+
+    if (loading) {
+        return (
+            <div className="flex min-h-screen bg-gray-100">
+                <Sidebar />
+                <main className="flex-1 p-6">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-lg text-gray-600">Loading...</div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen bg-gray-100">
@@ -85,50 +100,59 @@ export default function PelatihanPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {pelatihanData.map((pelatihan, index) => (
-                                    <tr
-                                        key={pelatihan.id}
-                                        className={`border-b border-gray-200 hover:bg-gray-50 ${index === pelatihanData.length - 1 ? 'border-b-0' : ''
-                                            }`}
-                                    >
-                                        <td className="py-4 px-6 text-gray-800">
-                                            {pelatihan.judul.length > 30
-                                                ? `${pelatihan.judul.substring(0, 30)}...`
-                                                : pelatihan.judul
-                                            }
-                                        </td>
-                                        <td className="py-4 px-6 text-gray-600">
-                                            {pelatihan.deskripsi.length > 40
-                                                ? `${pelatihan.deskripsi.substring(0, 40)}...`
-                                                : pelatihan.deskripsi
-                                            }
-                                        </td>
-                                        <td className="py-4 px-6 text-gray-800">
-                                            {pelatihan.gambar}
-                                        </td>
-                                        <td className="py-4 px-6 text-gray-800">
-                                            {pelatihan.tanggal}
-                                        </td>
-                                        <td className="py-4 px-6">
-                                            <div className="flex items-center space-x-3">
-                                                <button
-                                                    onClick={() => handleEdit(pelatihan.id)}
-                                                    className="text-orange-500 hover:text-orange-700 transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Edit2 size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(pelatihan.id)}
-                                                    className="text-red-500 hover:text-red-700 transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
+                                {pelatihan.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="py-8 px-6 text-center text-gray-500">
+                                            Belum ada data pelatihan
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    pelatihan.map((item, index) => (
+                                        <tr
+                                            key={item.id}
+                                            className={`border-b border-gray-200 hover:bg-gray-50 ${index === pelatihan.length - 1 ? 'border-b-0' : ''
+                                                }`}
+                                        >
+                                            <td className="py-4 px-6 text-gray-800">
+                                                {item.judul.length > 30
+                                                    ? `${item.judul.substring(0, 30)}...`
+                                                    : item.judul
+                                                }
+                                            </td>
+                                            <td className="py-4 px-6 text-gray-600">
+                                                {item.deskripsi.length > 40
+                                                    ? `${item.deskripsi.substring(0, 40)}...`
+                                                    : item.deskripsi
+                                                }
+                                            </td>
+                                            <td className="py-4 px-6 text-gray-800">
+                                                {item.gambar}
+                                            </td>
+                                            <td className="py-4 px-6 text-gray-800">
+                                                {formatDate(item.tanggal)}
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex items-center space-x-3">
+                                                    <button
+                                                        onClick={() => handleEdit(item.id)}
+                                                        className="text-orange-500 hover:text-orange-700 transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <Edit2 size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(item.id)}
+                                                        disabled={deleteLoading === item.id}
+                                                        className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

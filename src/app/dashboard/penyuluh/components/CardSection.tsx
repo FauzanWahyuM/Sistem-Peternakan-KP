@@ -1,24 +1,15 @@
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { usePelatihanStorage } from '../hooks/usePelatihanStorage';
 
 export default function CardSection() {
-    // Data untuk grafik evaluasi
+    const { statistics } = usePelatihanStorage();
+
+    // Data untuk grafik evaluasi (dummy data - bisa diganti dengan data real)
     const evaluationData = [
         { name: 'Kelompok A', value: 78 },
         { name: 'Kelompok B', value: 86 },
         { name: 'Kelompok C', value: 79 },
         { name: 'Kelompok D', value: 90 }
-    ];
-
-    // Data pelatihan
-    const pelatihanData = [
-        {
-            judul: "Teknik Budidaya Modern",
-            deskripsi: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt..."
-        },
-        {
-            judul: "Manajemen Pakan Ternak",
-            deskripsi: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt..."
-        }
     ];
 
     return (
@@ -38,10 +29,11 @@ export default function CardSection() {
                     <p className="text-sm opacity-90">selesai mengisi</p>
                 </div>
 
-                {/* Evaluasi Card */}
+                {/* Pelatihan Card - Updated dengan data dari localStorage */}
                 <div className="bg-green-500 text-white p-6 rounded-lg shadow">
-                    <h3 className="text-lg font-semibold mb-2">Evaluasi</h3>
-                    <p className="text-3xl font-bold">91% Baik</p>
+                    <h3 className="text-lg font-semibold mb-2">Total Pelatihan</h3>
+                    <p className="text-3xl font-bold">{statistics.total}</p>
+                    <p className="text-sm opacity-90">Bulan ini: {statistics.thisMonth}</p>
                 </div>
             </div>
 
@@ -73,23 +65,51 @@ export default function CardSection() {
                     </div>
                 </div>
 
-                {/* Pelatihan Terakhir */}
-                <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-xl font-bold mb-4 text-gray-800">Pelatihan Terakhir</h3>
-                    <div className="space-y-4">
-                        {pelatihanData.map((pelatihan, index) => (
-                            <div key={index} className="bg-green-500 text-white p-4 rounded-lg">
-                                <h4 className="text-lg font-semibold mb-2">Judul</h4>
-                                <p className="text-sm mb-3 opacity-90">
-                                    {pelatihan.deskripsi}
-                                </p>
+                {/* Pelatihan Terbaru - Updated dengan data dari localStorage */}
+                <PelatihanTerbaru />
+            </div>
+        </div>
+    );
+}
+
+// Komponen terpisah untuk menampilkan pelatihan terbaru
+function PelatihanTerbaru() {
+    const { pelatihan } = usePelatihanStorage();
+
+    // Ambil 2 pelatihan terbaru berdasarkan tanggal
+    const pelatihanTerbaru = pelatihan
+        .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
+        .slice(0, 2);
+
+    return (
+        <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">Pelatihan Terbaru</h3>
+            <div className="space-y-4">
+                {pelatihanTerbaru.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">
+                        Belum ada pelatihan
+                    </div>
+                ) : (
+                    pelatihanTerbaru.map((pelatihan, index) => (
+                        <div key={pelatihan.id} className="bg-green-500 text-white p-4 rounded-lg">
+                            <h4 className="text-lg font-semibold mb-2">{pelatihan.judul}</h4>
+                            <p className="text-sm mb-3 opacity-90">
+                                {pelatihan.deskripsi.length > 100
+                                    ? `${pelatihan.deskripsi.substring(0, 100)}...`
+                                    : pelatihan.deskripsi
+                                }
+                            </p>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs opacity-75">
+                                    {new Date(pelatihan.tanggal).toLocaleDateString('id-ID')}
+                                </span>
                                 <button className="bg-white text-green-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors">
                                     Selengkapnya
                                 </button>
                             </div>
-                        ))}
-                    </div>
-                </div>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );
