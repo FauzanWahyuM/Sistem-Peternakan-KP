@@ -108,9 +108,7 @@ export default function Home() {
           {/* Text Content - Left Side */}
           <div className="md:w-1/2">
             <h1 className="text-7xl font-bold font-['Judson'] leading-tight text-black mb-6">
-              Sistem Informasi
-              <br />
-              Peternakan
+              Sistem Informasi Penjaminan Mutu Kelompok Peternak (SIMANTEK)
             </h1>
             <p className="text-2xl font-['Judson'] italic text-black">
               Pada website ini berisikan seluruh informasi mengenai pelatihan kelompok peternak kambing sapi.

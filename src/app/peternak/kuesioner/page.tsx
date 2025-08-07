@@ -1,16 +1,16 @@
 'use client';
 
-import Sidebar from './components/Sidebar';
+import Sidebar from './components/UnifiedSidebar';
 import Header from './components/Header';
 import CardSection from './components/CardSection';
-import './dashboard.css'; 
+import './dashboard.css';
 
 export default function DashboardPage() {
     return (
         <div className="flex">
             {/* Sidebar tetap di kiri */}
             <aside className="fixed w-56 h-screen bg-green-700 text-white z-50">
-                <Sidebar />
+                <Sidebar userType="peternak" />
             </aside>
 
             {/* Konten utama bergeser ke kanan */}

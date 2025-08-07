@@ -47,7 +47,7 @@ export default function UserManagement() {
                 id: u.id,
                 nama: u.nama,
                 role: u.role,
-                status: "Aktif",
+                status: u.status,
             }));
             setData(formattedLocalData);
         } catch (error) {

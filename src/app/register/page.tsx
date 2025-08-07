@@ -8,6 +8,7 @@ export default function RegisterPage() {
     const [form, setForm] = useState({
         name: '',
         username: '',
+        email: '',
         password: '',
         kelompok: '',
         role: '',
@@ -54,6 +55,18 @@ export default function RegisterPage() {
                             name="username"
                             placeholder='Masukkan Username'
                             value={form.username}
+                            onChange={handleChange}
+                            required
+                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-black"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-sm text-gray-700 block mb-1">Email</label>
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder='Masukkan Email'
+                            value={form.email}
                             onChange={handleChange}
                             required
                             className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-black"

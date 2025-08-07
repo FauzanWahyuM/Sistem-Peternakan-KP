@@ -7,9 +7,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 interface FormData {
     nama: string;
     username: string;
+    email: string;
     password: string;
     kelompok: string;
     role: 'Peternak' | 'Penyuluh' | 'Admin' | '';
+    status: 'Aktif' | 'Non-Aktif' | '';
 }
 
 const EditUser: React.FC = () => {
@@ -21,9 +23,11 @@ const EditUser: React.FC = () => {
     const [formData, setFormData] = useState<FormData>({
         nama: '',
         username: '',
+        email: '',
         password: '',
         kelompok: '',
         role: '',
+        status: '',
     });
 
     useEffect(() => {
@@ -47,6 +51,10 @@ const EditUser: React.FC = () => {
 
     const handleRoleChange = (role: FormData['role']) => {
         setFormData((prev) => ({ ...prev, role }));
+    };
+
+    const handleStatusChange = (status: FormData['status']) => {
+        setFormData((prev) => ({ ...prev, status }));
     };
 
     const handleSubmit = (e: FormEvent) => {
@@ -105,6 +113,18 @@ const EditUser: React.FC = () => {
                     </div>
 
                     <div>
+                        <label className="block font-semibold mb-1 text-black">Email</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="w-full border rounded px-4 py-2 text-black"
+                            required
+                        />
+                    </div>
+
+                    <div>
                         <label className="block font-semibold mb-1 text-black">Password</label>
                         <div className="relative">
                             <input
@@ -122,6 +142,24 @@ const EditUser: React.FC = () => {
                             >
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block font-semibold mb-2 text-black">Status</label>
+                        <div className="flex gap-8 text-black">
+                            {['Aktif', 'Non-Aktif'].map((status) => (
+                                <label key={status} className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        name="status"
+                                        value={status}
+                                        checked={formData.status === status}
+                                        onChange={() => handleStatusChange(status as FormData['status'])}
+                                    />
+                                    {status}
+                                </label>
+                            ))}
                         </div>
                     </div>
 
