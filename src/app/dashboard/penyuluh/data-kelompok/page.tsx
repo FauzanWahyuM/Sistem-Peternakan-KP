@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/UnifiedSidebar';
 import { useRouter } from 'next/navigation';
 
 export default function DataKelompokPage() {
@@ -35,7 +35,7 @@ export default function DataKelompokPage() {
 
     return (
         <div className="flex min-h-screen bg-gray-100">
-            <Sidebar />
+            <Sidebar userType="penyuluh" />
             <main className="flex-1 p-6">
                 {/* Header */}
                 <div className="mb-8">

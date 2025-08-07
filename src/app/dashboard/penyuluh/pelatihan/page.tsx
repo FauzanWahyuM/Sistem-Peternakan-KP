@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/UnifiedSidebar';
 import { useRouter } from 'next/navigation';
 import { Edit2, Trash2 } from 'lucide-react';
 import { usePelatihanStorage } from '../hooks/usePelatihanStorage';
@@ -51,7 +51,7 @@ export default function PelatihanPage() {
     if (loading) {
         return (
             <div className="flex min-h-screen bg-gray-100">
-                <Sidebar />
+                <Sidebar userType="penyuluh" />
                 <main className="flex-1 p-6">
                     <div className="flex items-center justify-center h-64">
                         <div className="text-lg text-gray-600">Loading...</div>
@@ -63,7 +63,7 @@ export default function PelatihanPage() {
 
     return (
         <div className="flex min-h-screen bg-gray-100">
-            <Sidebar />
+            <Sidebar userType="penyuluh" />
             <main className="flex-1 p-6">
                 {/* Header */}
                 <div className="mb-8 flex justify-between items-center">

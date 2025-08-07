@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/UnifiedSidebar';
 import Header from '../components/Header';
 import { ChevronLeft } from 'lucide-react';
 
@@ -136,7 +136,7 @@ function EditTernakContent() {
     if (loading) {
         return (
             <div className="flex min-h-screen">
-                <Sidebar />
+                <Sidebar userType="peternak" />
                 <main className="flex-1 bg-gray-100 p-6 ml-64">
                     <div className="flex items-center justify-center h-full">
                         <p className="text-lg font-[Judson]">Memuat data...</p>
@@ -148,12 +148,12 @@ function EditTernakContent() {
 
     return (
         <div className="flex min-h-screen">
-            <Sidebar />
+            <Sidebar userType="peternak" />
             <main className="flex-1 bg-gray-100 p-6 ml-64">
                 <div className="max-w-4xl mx-auto">
                     {/* Back Button dan Header */}
                     <div className="flex items-center mb-8">
-                        <button 
+                        <button
                             onClick={handleBack}
                             className="mr-4 p-2 rounded-full bg-green-500 text-white hover:bg-green-600"
                         >
@@ -298,7 +298,7 @@ function EditTernakContent() {
 function LoadingFallback() {
     return (
         <div className="flex min-h-screen">
-            <Sidebar />
+            <Sidebar userType="peternak" />
             <main className="flex-1 bg-gray-100 p-6 ml-64">
                 <div className="flex items-center justify-center h-full">
                     <p className="text-lg font-[Judson]">Memuat halaman...</p>

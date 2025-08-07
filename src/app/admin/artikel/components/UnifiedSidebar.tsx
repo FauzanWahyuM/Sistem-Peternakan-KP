@@ -8,7 +8,7 @@ interface SidebarProps {
   userType: 'admin' | 'penyuluh' | 'peternak';
 }
 
-export default function Sidebar({ userType }: SidebarProps) {
+export default function UnifiedSidebar({ userType }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft, Edit, Trash2 } from 'lucide-react';
 
 function LihatTernakContent() {
@@ -168,7 +168,7 @@ function LihatTernakContent() {
 
     return (
         <div className="flex min-h-screen">
-            <Sidebar />
+            <Sidebar userType="peternak" />
             <main className="flex-1 bg-gray-100 p-6 ml-64">
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}
@@ -410,7 +410,7 @@ function LihatTernakContent() {
 function LoadingFallback() {
     return (
         <div className="flex min-h-screen">
-            <Sidebar />
+            <Sidebar userType="peternak" />
             <main className="flex-1 bg-gray-100 p-6 ml-64">
                 <div className="flex items-center justify-center h-full">
                     <p className="text-lg font-[Judson]">Memuat halaman...</p>

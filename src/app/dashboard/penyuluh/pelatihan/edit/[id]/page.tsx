@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../../../components/Sidebar';
+import Sidebar from '../../../components/UnifiedSidebar';
 import { useRouter, useParams } from 'next/navigation';
 import { ChevronLeft, Calendar, Image } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -147,7 +147,7 @@ export default function EditPelatihanPage() {
     if (dataLoading) {
         return (
             <div className="flex min-h-screen bg-gray-100">
-                <Sidebar />
+                <Sidebar userType="penyuluh" />
                 <main className="flex-1 p-6">
                     <div className="flex items-center justify-center h-64">
                         <div className="text-lg text-gray-600">Loading...</div>
@@ -159,7 +159,7 @@ export default function EditPelatihanPage() {
 
     return (
         <div className="flex min-h-screen bg-gray-100">
-            <Sidebar />
+            <Sidebar userType="penyuluh" />
             <main className="flex-1 p-6">
                 {/* Header with Back Button */}
                 <div className="mb-8">

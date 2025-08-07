@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../../components/Sidebar';
+import Sidebar from './components/UnifiedSidebar';
 import Header from './components/Header';
 import CardSection from './components/CardSection';
 import './dashboard.css';

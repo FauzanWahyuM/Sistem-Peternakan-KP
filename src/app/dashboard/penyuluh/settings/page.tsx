@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/UnifiedSidebar';
 import StorageManager from '../components/StorageManager';
 import { useState } from 'react';
 
@@ -14,7 +14,7 @@ export default function SettingsPage() {
 
     return (
         <div className="flex min-h-screen bg-gray-100">
-            <Sidebar />
+            <Sidebar userType="penyuluh" />
             <main className="flex-1 p-6">
                 {/* Header */}
                 <div className="mb-8">

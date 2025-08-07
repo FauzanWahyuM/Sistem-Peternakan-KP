@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/UnifiedSidebar';
 import Header from '../components/Header';
 import { ChevronLeft } from 'lucide-react';
 
@@ -100,7 +100,7 @@ export default function TambahTernakPage() {
 
     return (
         <div className="flex min-h-screen">
-            <Sidebar />
+            <Sidebar userType="peternak" />
             <main className="flex-1 bg-gray-100 p-6 ml-64">
                 <div className="max-w-4xl mx-auto">
                     {/* Back Button dan Header */}
