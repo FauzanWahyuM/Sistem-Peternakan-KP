@@ -34,9 +34,9 @@ export default function UnifiedSidebar({ userType }: SidebarProps) {
         ];
       case 'peternak':
         return [
-          { href: '/dashboard/peternak', icon: '/group.svg', label: 'Dashboard' },
+          { href: '/dashboard/peternak', icon: '/group-white.svg', label: 'Dashboard' },
           { href: '/peternak/kuesioner', icon: '/task-square-white.svg', label: 'Kuesioner' },
-          { href: '/peternak/ternak', icon: '/folder-2-white.svg', label: 'Data Ternak' },
+          { href: '/peternak/ternak', icon: '/folder-2.svg', label: 'Data Ternak' },
           { href: '/peternak/pelatihan', icon: '/book-white.svg', label: 'Pelatihan' },
           { href: '/peternak/hasil', icon: '/clipboard-text-white.svg', label: 'Hasil Evaluasi' },
         ];

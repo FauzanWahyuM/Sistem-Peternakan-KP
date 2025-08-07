@@ -2,8 +2,35 @@
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import { useState, useEffect } from 'react';
 
-export default function CardSection({ jumlahTernak = 0, totalKuesioner = 0, evaluasi = 0 }) {
+export default function CardSection({ totalKuesioner = 0, evaluasi = 0 }) {
+    const [jumlahTernak, setJumlahTernak] = useState(0);
+
+    useEffect(() => {
+        // Load ternak count from localStorage
+        const loadTernakCount = () => {
+            const savedData = localStorage.getItem('ternakList');
+            if (savedData) {
+                const ternakList = JSON.parse(savedData);
+                setJumlahTernak(ternakList.length);
+            }
+        };
+
+        loadTernakCount();
+
+        // Listen for updates to ternak data
+        const handleTernakUpdate = () => {
+            loadTernakCount();
+        };
+
+        window.addEventListener('ternakDataUpdated', handleTernakUpdate);
+
+        return () => {
+            window.removeEventListener('ternakDataUpdated', handleTernakUpdate);
+        };
+    }, []);
+
     const cards = [
         { title: 'Jumlah Ternak', value: `${jumlahTernak} Ekor` },
         { title: 'Kuesioner', value: `${totalKuesioner} Diisi` },

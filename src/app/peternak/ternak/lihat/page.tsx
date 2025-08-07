@@ -169,8 +169,8 @@ function LihatTernakContent() {
     return (
         <div className="flex min-h-screen">
             <Sidebar userType="peternak" />
-            <main className="flex-1 bg-gray-100 p-6 ml-64">
-                <div className="max-w-7xl mx-auto">
+            <main className="flex-1 bg-gray-100 p-6">
+                <div className="max-w-6xl mx-auto">
                     {/* Header */}
                     <div className="flex items-center mb-8">
                         <button 
@@ -183,8 +183,9 @@ function LihatTernakContent() {
                     </div>
 
                     {/* Filters */}
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
+                    <div className="flex justify-center">
+                        <div className="bg-white rounded-lg shadow p-6 mb-6 mx-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4 justify-center">
                             {/* Jenis Hewan Filter */}
                             <div>
                                 <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
@@ -304,7 +305,7 @@ function LihatTernakContent() {
                         </div>
 
                         {/* Clear Filters Button */}
-                        <div className="flex justify-end">
+                        <div className="flex justify-center">
                             <button
                                 onClick={clearAllFilters}
                                 className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-[Judson]"
@@ -313,6 +314,7 @@ function LihatTernakContent() {
                             </button>
                         </div>
                     </div>
+                </div>
 
                     {/* Data Table */}
                     <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -411,7 +413,7 @@ function LoadingFallback() {
     return (
         <div className="flex min-h-screen">
             <Sidebar userType="peternak" />
-            <main className="flex-1 bg-gray-100 p-6 ml-64">
+            <main className="flex-1 bg-gray-100 p-6">
                 <div className="flex items-center justify-center h-full">
                     <p className="text-lg font-[Judson]">Memuat halaman...</p>
                 </div>

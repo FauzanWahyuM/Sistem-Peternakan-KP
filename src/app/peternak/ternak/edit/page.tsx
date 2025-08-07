@@ -149,8 +149,8 @@ function EditTernakContent() {
     return (
         <div className="flex min-h-screen">
             <Sidebar userType="peternak" />
-            <main className="flex-1 bg-gray-100 p-6 ml-64">
-                <div className="max-w-4xl mx-auto">
+            <main className="flex-1 bg-gray-100 p-6">
+                <div className="max-w-2xl mx-auto">
                     {/* Back Button dan Header */}
                     <div className="flex items-center mb-8">
                         <button
