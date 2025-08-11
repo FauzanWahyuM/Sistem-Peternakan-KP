@@ -4,24 +4,22 @@ import Sidebar from '../../components/UnifiedSidebar';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Calendar, Image } from 'lucide-react';
 import { useState } from 'react';
-import { usePelatihanStorage } from '../../hooks/usePelatihanStorage';
 
 export default function TambahPelatihanPage() {
     const router = useRouter();
-    const { addPelatihan } = usePelatihanStorage();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         judul: '',
         deskripsi: '',
         tanggal: '',
-        gambar: null as File | null
+        gambar: null
     });
 
     const handleBack = () => {
         router.back();
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
@@ -29,7 +27,7 @@ export default function TambahPelatihanPage() {
         }));
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e) => {
         const file = e.target.files?.[0] || null;
         setFormData(prev => ({
             ...prev,
@@ -59,13 +57,31 @@ export default function TambahPelatihanPage() {
             // Anda bisa upload file ke server dan simpan URL-nya
             const gambarName = formData.gambar ? formData.gambar.name : 'default.jpg';
 
-            await addPelatihan({
+            // In a real implementation, you would get the actual user ID from session/context
+            const userId = 'user-id-placeholder'; // This should be replaced with actual user ID
+
+            const newPelatihan = {
+                userId: userId,
                 judul: formData.judul.trim(),
                 deskripsi: formData.deskripsi.trim(),
                 tanggal: formData.tanggal,
                 gambar: gambarName
+            };
+
+            const response = await fetch('/api/training-programs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newPelatihan),
             });
 
+            if (!response.ok) {
+                throw new Error('Failed to save data');
+            }
+
+            const result = await response.json();
+            console.log('Pelatihan saved to MongoDB:', result.trainingProgram);
             alert('Pelatihan berhasil ditambahkan!');
             router.push('/dashboard/penyuluh/pelatihan');
         } catch (error) {

@@ -8,30 +8,63 @@ import '../dashboard.css';
 
 export default function IsiForm() {
     const router = useRouter();
-    const [questionnaireId, setQuestionnaireId] = useState('0');
-    const [formData, setFormData] = useState({
-        pertanyaan1: '',
-        pertanyaan2: '',
-        pertanyaan3: ''
-    });
+    const [questionnaireId, setQuestionnaireId] = useState('');
+    const [questionnaire, setQuestionnaire] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [formData, setFormData] = useState({});
 
     useEffect(() => {
         // Get ID from URL on client side
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
-            const id = urlParams.get('id') || '0';
-            setQuestionnaireId(id);
+            const id = urlParams.get('id');
+            if (id) {
+                setQuestionnaireId(id);
+                loadQuestionnaire(id);
+            } else {
+                setError('ID kuesioner tidak ditemukan');
+                setLoading(false);
+            }
         }
     }, []);
 
-    const handleRadioChange = (questionName: string, value: string) => {
+    const loadQuestionnaire = async (id) => {
+        try {
+            setLoading(true);
+            const response = await fetch(`/api/questionnaires/${id}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch questionnaire');
+            }
+            const result = await response.json();
+            setQuestionnaire(result.questionnaire);
+            
+            // Initialize form data with empty values
+            const initialFormData = {};
+            if (result.questionnaire.pertanyaan) {
+                result.questionnaire.pertanyaan.forEach((q, index) => {
+                    initialFormData[`pertanyaan_${q.id || index}`] = '';
+                });
+            }
+            setFormData(initialFormData);
+            
+            setError(null);
+        } catch (err) {
+            console.error('Error loading questionnaire:', err);
+            setError('Gagal memuat kuesioner');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRadioChange = (questionId, value) => {
         setFormData(prev => ({
             ...prev,
-            [questionName]: value
+            [questionId]: value
         }));
     };
 
-    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const handleTextChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
@@ -39,20 +72,104 @@ export default function IsiForm() {
         }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         // Validasi sederhana
-        if (!formData.pertanyaan1 || !formData.pertanyaan2 || !formData.pertanyaan3) {
+        const hasEmptyAnswer = Object.values(formData).some(value => !value);
+        if (hasEmptyAnswer) {
             alert('Mohon lengkapi semua pertanyaan!');
             return;
         }
 
-        // Simpan data form dengan ID yang sesuai
-        localStorage.setItem(`kuesionerFormData_${questionnaireId}`, JSON.stringify(formData));
-        localStorage.setItem(`kuesioner_filled_${questionnaireId}`, 'true');
-        
-        alert('Kuesioner berhasil disimpan!');
-        router.push('/peternak/kuesioner');
+        try {
+            // In a real implementation, you would get the actual user ID from session/context
+            const userId = 'user-id-placeholder'; // This should be replaced with actual user ID
+            
+            // Prepare response data
+            const responses = Object.entries(formData).map(([questionId, jawaban]) => ({
+                pertanyaanId: questionId,
+                jawaban
+            }));
+            
+            const responsePayload = {
+                questionnaireId,
+                userId,
+                responses
+            };
+            
+            // Save response to database
+            const response = await fetch('/api/questionnaire-responses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(responsePayload),
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to save response');
+            }
+            
+            alert('Kuesioner berhasil disimpan!');
+            router.push('/peternak/kuesioner');
+        } catch (error) {
+            console.error('Error saving response:', error);
+            alert('Gagal menyimpan kuesioner: ' + error.message);
+        }
     };
+
+    if (loading) {
+        return (
+            <div className="flex">
+                {/* Sidebar tetap di kiri */}
+                <aside className="fixed w-56 h-screen bg-green-700 text-white z-50">
+                    <Sidebar userType="peternak" />
+                </aside>
+
+                {/* Konten utama bergeser ke kanan */}
+                <main className="ml-65 w-full p-6 bg-gray-100 min-h-screen">
+                    <div className="flex items-center justify-center h-full">
+                        <p className="text-lg font-[Judson]">Memuat kuesioner...</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex">
+                {/* Sidebar tetap di kiri */}
+                <aside className="fixed w-56 h-screen bg-green-700 text-white z-50">
+                    <Sidebar userType="peternak" />
+                </aside>
+
+                {/* Konten utama bergeser ke kanan */}
+                <main className="ml-65 w-full p-6 bg-gray-100 min-h-screen">
+                    <div className="flex items-center justify-center h-full">
+                        <p className="text-lg font-[Judson] text-red-500">{error}</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (!questionnaire) {
+        return (
+            <div className="flex">
+                {/* Sidebar tetap di kiri */}
+                <aside className="fixed w-56 h-screen bg-green-700 text-white z-50">
+                    <Sidebar userType="peternak" />
+                </aside>
+
+                {/* Konten utama bergeser ke kanan */}
+                <main className="ml-65 w-full p-6 bg-gray-100 min-h-screen">
+                    <div className="flex items-center justify-center h-full">
+                        <p className="text-lg font-[Judson]">Kuesioner tidak ditemukan</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex">
@@ -87,104 +204,65 @@ export default function IsiForm() {
                 </div>
                 
                 <div className="max-w-4xl mx-auto">
-                    {/* Pertanyaan 1 */}
-                    <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-                        <h3 className="text-lg font-semibold mb-4">Pertanyaan 1</h3>
-                        <div className="space-y-3">
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="pertanyaan1"
-                                    value="opsi1"
-                                    checked={formData.pertanyaan1 === 'opsi1'}
-                                    onChange={(e) => handleRadioChange('pertanyaan1', e.target.value)}
-                                    className="mr-3 w-4 h-4 text-green-600"
-                                />
-                                <span className="text-gray-700">Opsi 1</span>
-                            </label>
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="pertanyaan1"
-                                    value="opsi2"
-                                    checked={formData.pertanyaan1 === 'opsi2'}
-                                    onChange={(e) => handleRadioChange('pertanyaan1', e.target.value)}
-                                    className="mr-3 w-4 h-4 text-green-600"
-                                />
-                                <span className="text-gray-700">Opsi 2</span>
-                            </label>
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="pertanyaan1"
-                                    value="opsi3"
-                                    checked={formData.pertanyaan1 === 'opsi3'}
-                                    onChange={(e) => handleRadioChange('pertanyaan1', e.target.value)}
-                                    className="mr-3 w-4 h-4 text-green-600"
-                                />
-                                <span className="text-gray-700">Opsi 3</span>
-                            </label>
+                    <h2 className="text-2xl font-[Judson] font-bold mb-6 text-gray-700">
+                        {questionnaire.judul}
+                    </h2>
+                    
+                    {questionnaire.pertanyaan && questionnaire.pertanyaan.map((q, index) => {
+                        const questionId = `pertanyaan_${q.id || index}`;
+                        
+                        if (q.tipe === 'pilihan_ganda') {
+                            return (
+                                <div key={q.id || index} className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
+                                    <h3 className="text-lg font-semibold mb-4">{q.teks}</h3>
+                                    <div className="space-y-3">
+                                        {q.opsi && q.opsi.map((opsi, opsiIndex) => (
+                                            <label key={opsiIndex} className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    name={questionId}
+                                                    value={opsi}
+                                                    checked={formData[questionId] === opsi}
+                                                    onChange={(e) => handleRadioChange(questionId, e.target.value)}
+                                                    className="mr-3 w-4 h-4 text-green-600"
+                                                />
+                                                <span className="text-gray-700">{opsi}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        } else if (q.tipe === 'text') {
+                            return (
+                                <div key={q.id || index} className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
+                                    <h3 className="text-lg font-semibold mb-4">{q.teks}</h3>
+                                    <textarea
+                                        name={questionId}
+                                        value={formData[questionId] || ''}
+                                        onChange={handleTextChange}
+                                        placeholder="Masukkan jawaban disini"
+                                        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                                        rows={4}
+                                    />
+                                </div>
+                            );
+                        }
+                        
+                        return null;
+                    })}
+                    
+                    {(!questionnaire.pertanyaan || questionnaire.pertanyaan.length === 0) && (
+                        <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
+                            <p className="text-gray-700">Tidak ada pertanyaan dalam kuesioner ini.</p>
                         </div>
-                    </div>
-
-                    {/* Pertanyaan 2 */}
-                    <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-                        <h3 className="text-lg font-semibold mb-4">Pertanyaan 2</h3>
-                        <div className="space-y-3">
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="pertanyaan2"
-                                    value="opsi1"
-                                    checked={formData.pertanyaan2 === 'opsi1'}
-                                    onChange={(e) => handleRadioChange('pertanyaan2', e.target.value)}
-                                    className="mr-3 w-4 h-4 text-green-600"
-                                />
-                                <span className="text-gray-700">Opsi 1</span>
-                            </label>
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="pertanyaan2"
-                                    value="opsi2"
-                                    checked={formData.pertanyaan2 === 'opsi2'}
-                                    onChange={(e) => handleRadioChange('pertanyaan2', e.target.value)}
-                                    className="mr-3 w-4 h-4 text-green-600"
-                                />
-                                <span className="text-gray-700">Opsi 2</span>
-                            </label>
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="pertanyaan2"
-                                    value="opsi3"
-                                    checked={formData.pertanyaan2 === 'opsi3'}
-                                    onChange={(e) => handleRadioChange('pertanyaan2', e.target.value)}
-                                    className="mr-3 w-4 h-4 text-green-600"
-                                />
-                                <span className="text-gray-700">Opsi 3</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Pertanyaan 3 */}
-                    <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-                        <h3 className="text-lg font-semibold mb-4">Pertanyaan 3</h3>
-                        <textarea
-                            name="pertanyaan3"
-                            value={formData.pertanyaan3}
-                            onChange={handleTextChange}
-                            placeholder="Masukkan jawaban disini"
-                            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                            rows={4}
-                        />
-                    </div>
+                    )}
 
                     {/* Tombol Kirim */}
                     <div className="flex justify-start">
                         <button
                             onClick={handleSubmit}
-                            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-md font-medium transition-colors duration-200"
+                            disabled={!questionnaire.pertanyaan || questionnaire.pertanyaan.length === 0}
+                            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-md font-medium transition-colors duration-200 disabled:opacity-50"
                         >
                             Kirim
                         </button>

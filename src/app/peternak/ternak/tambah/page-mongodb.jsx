@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
+import Header from '../components/Header';
 import { ChevronLeft } from 'lucide-react';
 
-function EditTernakContent() {
+export default function TambahTernakPageMongoDB() {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const ternakId = searchParams?.get('id');
-    
     const [formData, setFormData] = useState({
         jenisHewan: '',
         jenisKelamin: '',
@@ -18,13 +16,12 @@ function EditTernakContent() {
         kondisiKesehatan: ''
     });
 
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
     // Data untuk dropdown
+    const jenisHewanOptions = ['Sapi', 'Kambing', 'Domba', 'Ayam', 'Bebek'];
+    const jenisKelaminOptions = ['Jantan', 'Betina'];
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
 
-    // Status ternak berdasarkan jenis hewan dan kelamin (sama seperti form tambah)
+    // Status ternak berdasarkan jenis hewan dan kelamin
     const getStatusTernakOptions = () => {
         const { jenisHewan, jenisKelamin } = formData;
         
@@ -56,46 +53,12 @@ function EditTernakContent() {
         return statusOptions[jenisHewan]?.[jenisKelamin] || [];
     };
 
-    // Load data ternak yang akan diedit
-    useEffect(() => {
-        if (!ternakId) {
-            alert('ID ternak tidak ditemukan!');
-            router.push('/peternak/ternak');
-            return;
-        }
-
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(`/api/livestock/${ternakId}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch data');
-                }
-                
-                const result = await response.json();
-                setFormData({
-                    jenisHewan: result.livestock.jenisHewan,
-                    jenisKelamin: result.livestock.jenisKelamin,
-                    umurTernak: result.livestock.umurTernak,
-                    statusTernak: result.livestock.statusTernak,
-                    kondisiKesehatan: result.livestock.kondisiKesehatan
-                });
-                setError(null);
-            } catch (err) {
-                console.error('Error loading data:', err);
-                setError('Gagal memuat data ternak');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, [ternakId, router]);
-
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
             ...prev,
-            [field]: value
+            [field]: value,
+            // Reset status ternak jika jenis hewan atau kelamin berubah
+            ...(field === 'jenisHewan' || field === 'jenisKelamin' ? { statusTernak: '' } : {})
         }));
     };
 
@@ -103,61 +66,47 @@ function EditTernakContent() {
         e.preventDefault();
         
         try {
-            const response = await fetch(`/api/livestock/${ternakId}`, {
-                method: 'PUT',
+            // In a real implementation, you would get the actual user ID from session/context
+            const userId = 'user-id-placeholder'; // This should be replaced with actual user ID
+            
+            const newTernak = {
+                userId: userId,
+                jenisHewan: formData.jenisHewan,
+                jenisKelamin: formData.jenisKelamin,
+                umurTernak: formData.umurTernak,
+                statusTernak: formData.statusTernak,
+                kondisiKesehatan: formData.kondisiKesehatan
+            };
+
+            const response = await fetch('/api/livestock', {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(newTernak),
             });
-            
+
             if (!response.ok) {
-                throw new Error('Failed to update data');
+                throw new Error('Failed to save data');
             }
-            
+
             const result = await response.json();
-            console.log('Data ternak updated:', result.livestock);
-            alert('Data ternak berhasil diperbarui!');
-            router.push('/peternak/ternak/lihat');
+            console.log('Data ternak saved to MongoDB:', result.livestock);
+            alert('Data ternak berhasil disimpan!');
+            router.push('/peternak/ternak');
         } catch (error) {
-            console.error('Error updating ternak data:', error);
-            alert('Gagal memperbarui data ternak: ' + error.message);
+            console.error('Error saving ternak data:', error);
+            alert('Gagal menyimpan data ternak: ' + error.message);
         }
     };
 
     const handleCancel = () => {
-        router.push('/peternak/ternak/lihat');
+        router.push('/peternak/ternak');
     };
 
     const handleBack = () => {
-        router.push('/peternak/ternak/lihat');
+        router.push('/peternak/ternak');
     };
-
-    if (loading) {
-        return (
-            <div className="flex min-h-screen">
-                <Sidebar userType="peternak" />
-                <main className="flex-1 bg-gray-100 p-6">
-                    <div className="flex items-center justify-center h-full">
-                        <p className="text-lg font-[Judson]">Memuat data...</p>
-                    </div>
-                </main>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex min-h-screen">
-                <Sidebar userType="peternak" />
-                <main className="flex-1 bg-gray-100 p-6">
-                    <div className="flex items-center justify-center h-full">
-                        <p className="text-lg font-[Judson] text-red-500">{error}</p>
-                    </div>
-                </main>
-            </div>
-        );
-    }
 
     return (
         <div className="flex min-h-screen">
@@ -166,18 +115,18 @@ function EditTernakContent() {
                 <div className="max-w-2xl mx-auto">
                     {/* Back Button dan Header */}
                     <div className="flex items-center mb-8">
-                        <button
+                        <button 
                             onClick={handleBack}
                             className="mr-4 p-2 rounded-full bg-green-500 text-white hover:bg-green-600"
                         >
                             <ChevronLeft size={24} />
                         </button>
-                        <h1 className="text-3xl font-bold font-[Judson] text-center flex-1">Edit Data Ternak</h1>
+                        <h1 className="text-3xl font-bold font-[Judson] text-center flex-1">Tambah Ternak</h1>
                     </div>
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Jenis Hewan - Disabled */}
+                        {/* Jenis Hewan */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Jenis Hewan
@@ -185,10 +134,14 @@ function EditTernakContent() {
                             <div className="relative">
                                 <select
                                     value={formData.jenisHewan}
-                                    disabled
-                                    className="w-full p-4 border border-gray-300 rounded-lg bg-gray-100 font-[Judson] text-gray-500 appearance-none cursor-not-allowed"
+                                    onChange={(e) => handleInputChange('jenisHewan', e.target.value)}
+                                    className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    required
                                 >
-                                    <option value={formData.jenisHewan}>{formData.jenisHewan}</option>
+                                    <option value="">Masukkan Jenis Hewan</option>
+                                    {jenisHewanOptions.map((option) => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
                                 </select>
                                 <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,7 +151,7 @@ function EditTernakContent() {
                             </div>
                         </div>
 
-                        {/* Jenis Kelamin - Disabled */}
+                        {/* Jenis Kelamin */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Jenis Kelamin
@@ -206,10 +159,14 @@ function EditTernakContent() {
                             <div className="relative">
                                 <select
                                     value={formData.jenisKelamin}
-                                    disabled
-                                    className="w-full p-4 border border-gray-300 rounded-lg bg-gray-100 font-[Judson] text-gray-500 appearance-none cursor-not-allowed"
+                                    onChange={(e) => handleInputChange('jenisKelamin', e.target.value)}
+                                    className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    required
                                 >
-                                    <option value={formData.jenisKelamin}>{formData.jenisKelamin}</option>
+                                    <option value="">Masukkan Jenis Kelamin</option>
+                                    {jenisKelaminOptions.map((option) => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
                                 </select>
                                 <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,7 +176,7 @@ function EditTernakContent() {
                             </div>
                         </div>
 
-                        {/* Umur Ternak - Editable */}
+                        {/* Umur Ternak */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Umur Ternak
@@ -234,7 +191,7 @@ function EditTernakContent() {
                             />
                         </div>
 
-                        {/* Status Ternak - Editable */}
+                        {/* Status Ternak */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Status Ternak
@@ -245,6 +202,7 @@ function EditTernakContent() {
                                     onChange={(e) => handleInputChange('statusTernak', e.target.value)}
                                     className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
                                     required
+                                    disabled={!formData.jenisHewan || !formData.jenisKelamin}
                                 >
                                     <option value="">Masukkan Status Ternak</option>
                                     {getStatusTernakOptions().map((option) => (
@@ -259,7 +217,7 @@ function EditTernakContent() {
                             </div>
                         </div>
 
-                        {/* Kondisi Kesehatan - Editable */}
+                        {/* Kondisi Kesehatan */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Kondisi Kesehatan
@@ -288,14 +246,14 @@ function EditTernakContent() {
                         <div className="flex gap-4 pt-6">
                             <button
                                 type="submit"
-                                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-medium font-[Judson] text-lg"
+                                className="flex-1 bg-green-500 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium font-[Judson] text-lg"
                             >
-                                Simpan Perubahan
+                                Simpan
                             </button>
                             <button
                                 type="button"
                                 onClick={handleCancel}
-                                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-lg font-medium font-[Judson] text-lg"
+                                className="flex-1 bg-red-500 hover:bg-red-900 text-white py-3 px-6 rounded-lg font-medium font-[Judson] text-lg"
                             >
                                 Batal
                             </button>
@@ -304,12 +262,5 @@ function EditTernakContent() {
                 </div>
             </main>
         </div>
-    );
-}
-
-// Main page component
-export default function EditTernakPage() {
-    return (
-        <EditTernakContent />
     );
 }

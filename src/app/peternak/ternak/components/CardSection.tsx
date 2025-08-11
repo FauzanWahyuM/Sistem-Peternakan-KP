@@ -12,15 +12,25 @@ export default function CardSection() {
         { jenis: 'Ayam', jumlah: 0 },
         { jenis: 'Bebek', jumlah: 0 }
     ]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Load data from localStorage when component mounts
+    // Load data from MongoDB when component mounts
     useEffect(() => {
-        const loadTernakData = () => {
-            const savedData = localStorage.getItem('ternakList');
-            if (savedData) {
-                const ternakList = JSON.parse(savedData);
+        const loadTernakData = async () => {
+            try {
+                setLoading(true);
+                // In a real implementation, you would get the actual user ID from session/context
+                const userId = 'user-id-placeholder'; // This should be replaced with actual user ID
                 
-                // Count animals by type
+                const response = await fetch(`/api/livestock?stats=true&userId=${userId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch livestock statistics');
+                }
+                
+                const result = await response.json();
+                
+                // Convert statistics data to the format expected by the UI
                 const counts = {
                     'Sapi': 0,
                     'Kambing': 0,
@@ -28,13 +38,14 @@ export default function CardSection() {
                     'Ayam': 0,
                     'Bebek': 0
                 };
-
-                ternakList.forEach(ternak => {
-                    if (counts.hasOwnProperty(ternak.jenisHewan)) {
-                        counts[ternak.jenisHewan]++;
+                
+                // Update counts based on statistics data
+                result.statistics.forEach(stat => {
+                    if (counts.hasOwnProperty(stat._id)) {
+                        counts[stat._id] = stat.total;
                     }
                 });
-
+                
                 // Update ternak data with actual counts
                 const updatedData = [
                     { jenis: 'Sapi', jumlah: counts['Sapi'] },
@@ -43,33 +54,18 @@ export default function CardSection() {
                     { jenis: 'Ayam', jumlah: counts['Ayam'] },
                     { jenis: 'Bebek', jumlah: counts['Bebek'] }
                 ];
-
+                
                 setTernakData(updatedData);
+                setError(null);
+            } catch (err) {
+                console.error('Error loading livestock data:', err);
+                setError('Gagal memuat data ternak');
+            } finally {
+                setLoading(false);
             }
         };
 
         loadTernakData();
-
-        // Listen for storage changes (when data is added from other tabs/windows)
-        const handleStorageChange = (e) => {
-            if (e.key === 'ternakList') {
-                loadTernakData();
-            }
-        };
-
-        window.addEventListener('storage', handleStorageChange);
-        
-        // Also listen for custom events (when data is added in the same tab)
-        const handleTernakUpdate = () => {
-            loadTernakData();
-        };
-
-        window.addEventListener('ternakDataUpdated', handleTernakUpdate);
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('ternakDataUpdated', handleTernakUpdate);
-        };
     }, []);
 
     const handleLihatData = (jenis) => {
@@ -81,6 +77,53 @@ export default function CardSection() {
     const handleTambahData = () => {
         router.push('/peternak/ternak/tambah');
     };
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                {/* Header dengan tombol Tambah Data */}
+                <div className="flex justify-end items-center">
+                    <button
+                        onClick={handleTambahData}
+                        className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium font-[Judson]"
+                    >
+                        Tambah Data
+                    </button>
+                </div>
+
+                {/* Loading state */}
+                <div className="space-y-4">
+                    <div className="flex justify-center items-center h-32">
+                        <p className="text-lg font-[Judson]">Memuat data...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="space-y-6">
+                {/* Header dengan tombol Tambah Data */}
+                <div className="flex justify-end items-center">
+                    <button
+                        onClick={handleTambahData}
+                        className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium font-[Judson]"
+                    >
+                        Tambah Data
+                    </button>
+                </div>
+
+                {/* Error state */}
+                <div className="space-y-4">
+                    <div className="flex justify-center items-center h-32">
+                        <p className="text-lg font-[Judson] text-red-500">{error}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* Header dengan tombol Tambah Data */}

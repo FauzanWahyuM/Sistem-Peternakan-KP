@@ -3,16 +3,17 @@
 import Sidebar from '../components/UnifiedSidebar';
 import { useRouter } from 'next/navigation';
 import { Edit2, Trash2 } from 'lucide-react';
-import { usePelatihanStorage } from '../hooks/usePelatihanStorage';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function PelatihanPage() {
     const router = useRouter();
-    const { pelatihan, loading, deletePelatihan } = usePelatihanStorage();
-    const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
+    const [pelatihan, setPelatihan] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(null);
 
     // Format tanggal untuk ditampilkan
-    const formatDate = (dateString: string) => {
+    const formatDate = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('id-ID', {
             day: '2-digit',
@@ -21,24 +22,59 @@ export default function PelatihanPage() {
         });
     };
 
+    // Load data from MongoDB
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                // In a real implementation, you would get the actual user ID from session/context
+                const userId = 'user-id-placeholder'; // This should be replaced with actual user ID
+                
+                const response = await fetch(`/api/training-programs?userId=${userId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+                
+                const result = await response.json();
+                setPelatihan(result.trainingPrograms);
+                setError(null);
+            } catch (err) {
+                console.error('Error loading data:', err);
+                setError('Gagal memuat data pelatihan');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, []);
+
     const handleTambahPelatihan = () => {
         router.push('/dashboard/penyuluh/pelatihan/tambah');
     };
 
-    const handleEdit = (id: number) => {
+    const handleEdit = (id) => {
         router.push(`/dashboard/penyuluh/pelatihan/edit/${id}`);
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id) => {
         if (window.confirm('Apakah Anda yakin ingin menghapus pelatihan ini?')) {
             try {
                 setDeleteLoading(id);
-                const success = deletePelatihan(id);
-                if (success) {
-                    alert('Pelatihan berhasil dihapus!');
-                } else {
-                    alert('Gagal menghapus pelatihan!');
+                
+                const response = await fetch(`/api/training-programs/${id}`, {
+                    method: 'DELETE',
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to delete data');
                 }
+                
+                // Update local state
+                const updatedPelatihan = pelatihan.filter(item => item._id !== id);
+                setPelatihan(updatedPelatihan);
+                
+                alert('Pelatihan berhasil dihapus!');
             } catch (error) {
                 console.error('Error deleting pelatihan:', error);
                 alert('Terjadi kesalahan saat menghapus pelatihan!');
@@ -55,6 +91,19 @@ export default function PelatihanPage() {
                 <main className="flex-1 p-6">
                     <div className="flex items-center justify-center h-64">
                         <div className="text-lg text-gray-600">Loading...</div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex min-h-screen bg-gray-100">
+                <Sidebar userType="penyuluh" />
+                <main className="flex-1 p-6">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-lg text-red-600">{error}</div>
                     </div>
                 </main>
             </div>
@@ -109,7 +158,7 @@ export default function PelatihanPage() {
                                 ) : (
                                     pelatihan.map((item, index) => (
                                         <tr
-                                            key={item.id}
+                                            key={item._id}
                                             className={`border-b border-gray-200 hover:bg-gray-50 ${index === pelatihan.length - 1 ? 'border-b-0' : ''
                                                 }`}
                                         >
@@ -134,15 +183,15 @@ export default function PelatihanPage() {
                                             <td className="py-4 px-6">
                                                 <div className="flex items-center space-x-3">
                                                     <button
-                                                        onClick={() => handleEdit(item.id)}
+                                                        onClick={() => handleEdit(item._id)}
                                                         className="text-orange-500 hover:text-orange-700 transition-colors"
                                                         title="Edit"
                                                     >
                                                         <Edit2 size={18} />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(item.id)}
-                                                        disabled={deleteLoading === item.id}
+                                                        onClick={() => handleDelete(item._id)}
+                                                        disabled={deleteLoading === item._id}
                                                         className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
                                                         title="Delete"
                                                     >

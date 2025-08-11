@@ -10,62 +10,60 @@ export default function EditPelatihanPage() {
     const params = useParams();
     const [loading, setLoading] = useState(false);
     const [dataLoading, setDataLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [formData, setFormData] = useState({
         judul: '',
         deskripsi: '',
         tanggal: '',
-        gambar: null as File | null,
+        gambar: null,
         currentGambar: ''
     });
 
-    const pelatihanId = parseInt(params.id as string);
+    const pelatihanId = params.id;
 
     useEffect(() => {
-        // Load data langsung dari localStorage
-        if (!pelatihanId || isNaN(pelatihanId)) {
+        // Load data from MongoDB
+        if (!pelatihanId) {
             alert('ID pelatihan tidak valid!');
             router.push('/dashboard/penyuluh/pelatihan');
             return;
         }
 
-        try {
-            const data = localStorage.getItem('pelatihan_data');
-            if (!data) {
-                alert('Data pelatihan tidak ditemukan!');
-                router.push('/dashboard/penyuluh/pelatihan');
-                return;
-            }
-
-            const allPelatihan = JSON.parse(data);
-            const pelatihan = allPelatihan.find((p: any) => p.id === pelatihanId);
-
-            if (pelatihan) {
+        const loadData = async () => {
+            try {
+                setDataLoading(true);
+                const response = await fetch(`/api/training-programs/${pelatihanId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+                
+                const result = await response.json();
                 setFormData({
-                    judul: pelatihan.judul || '',
-                    deskripsi: pelatihan.deskripsi || '',
-                    tanggal: pelatihan.tanggal || '',
+                    judul: result.trainingProgram.judul || '',
+                    deskripsi: result.trainingProgram.deskripsi || '',
+                    tanggal: result.trainingProgram.tanggal || '',
                     gambar: null,
-                    currentGambar: pelatihan.gambar || ''
+                    currentGambar: result.trainingProgram.gambar || ''
                 });
-            } else {
-                alert('Pelatihan tidak ditemukan!');
+                setError(null);
+            } catch (err) {
+                console.error('Error loading data:', err);
+                setError('Terjadi kesalahan saat memuat data!');
+                alert('Terjadi kesalahan saat memuat data!');
                 router.push('/dashboard/penyuluh/pelatihan');
-                return;
+            } finally {
+                setDataLoading(false);
             }
-        } catch (error) {
-            console.error('Error loading data:', error);
-            alert('Terjadi kesalahan saat memuat data!');
-            router.push('/dashboard/penyuluh/pelatihan');
-        } finally {
-            setDataLoading(false);
-        }
+        };
+
+        loadData();
     }, [pelatihanId, router]);
 
     const handleBack = () => {
         router.back();
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
@@ -73,7 +71,7 @@ export default function EditPelatihanPage() {
         }));
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e) => {
         const file = e.target.files?.[0] || null;
         setFormData(prev => ({
             ...prev,
@@ -99,36 +97,30 @@ export default function EditPelatihanPage() {
         try {
             setLoading(true);
 
-            // Update data di localStorage
-            const data = localStorage.getItem('pelatihan_data');
-            if (!data) {
-                alert('Data tidak ditemukan!');
-                return;
-            }
-
-            const allPelatihan = JSON.parse(data);
-            const index = allPelatihan.findIndex((p: any) => p.id === pelatihanId);
-
-            if (index === -1) {
-                alert('Pelatihan tidak ditemukan!');
-                return;
-            }
-
-            // Update data
+            // Update data in MongoDB
             const gambarName = formData.gambar ? formData.gambar.name : formData.currentGambar;
 
-            allPelatihan[index] = {
-                ...allPelatihan[index],
+            const updatedPelatihan = {
                 judul: formData.judul.trim(),
                 deskripsi: formData.deskripsi.trim(),
                 tanggal: formData.tanggal,
-                gambar: gambarName,
-                updatedAt: new Date().toISOString()
+                gambar: gambarName
             };
 
-            // Simpan kembali ke localStorage
-            localStorage.setItem('pelatihan_data', JSON.stringify(allPelatihan));
+            const response = await fetch(`/api/training-programs/${pelatihanId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedPelatihan),
+            });
 
+            if (!response.ok) {
+                throw new Error('Failed to update data');
+            }
+
+            const result = await response.json();
+            console.log('Pelatihan updated in MongoDB:', result.trainingProgram);
             alert('Pelatihan berhasil diperbarui!');
             router.push('/dashboard/penyuluh/pelatihan');
 
@@ -151,6 +143,19 @@ export default function EditPelatihanPage() {
                 <main className="flex-1 p-6">
                     <div className="flex items-center justify-center h-64">
                         <div className="text-lg text-gray-600">Loading...</div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex min-h-screen bg-gray-100">
+                <Sidebar userType="penyuluh" />
+                <main className="flex-1 p-6">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-lg text-red-600">{error}</div>
                     </div>
                 </main>
             </div>

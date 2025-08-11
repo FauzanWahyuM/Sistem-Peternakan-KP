@@ -4,31 +4,69 @@ import {
 } from 'recharts';
 import { useState, useEffect } from 'react';
 
-export default function CardSection({ totalKuesioner = 0, evaluasi = 0 }) {
+export default function CardSection() {
     const [jumlahTernak, setJumlahTernak] = useState(0);
+    const [totalKuesioner, setTotalKuesioner] = useState(0);
+    const [evaluasi, setEvaluasi] = useState(0);
+    const [isFilled, setIsFilled] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Load ternak count from localStorage
-        const loadTernakCount = () => {
-            const savedData = localStorage.getItem('ternakList');
-            if (savedData) {
-                const ternakList = JSON.parse(savedData);
-                setJumlahTernak(ternakList.length);
+        // In a real implementation, you would get the actual user ID from session/context
+        const userId = 'user-id-placeholder'; // This should be replaced with actual user ID
+        
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                
+                // Fetch livestock count
+                const livestockResponse = await fetch(`/api/livestock?userId=${userId}`);
+                if (!livestockResponse.ok) {
+                    throw new Error('Failed to fetch livestock data');
+                }
+                const livestockData = await livestockResponse.json();
+                setJumlahTernak(livestockData.livestock.length);
+                
+                // Fetch questionnaire responses
+                const questionnaireResponse = await fetch(`/api/questionnaire-responses?userId=${userId}`);
+                let questionnaireData = { responses: [] };
+                
+                if (questionnaireResponse.ok) {
+                    questionnaireData = await questionnaireResponse.json();
+                }
+                
+                // Set total kuesioner count (0 if no data or error)
+                setTotalKuesioner(questionnaireData.responses ? questionnaireData.responses.length : 0);
+                
+                // Check if current month's questionnaire is filled
+                const currentMonth = new Date().toLocaleString('id-ID', { month: 'short' });
+                const currentYear = new Date().getFullYear();
+                
+                // Find if any response was submitted this month
+                const isCurrentMonthFilled = questionnaireData.responses && questionnaireData.responses.some(response => {
+                    const responseDate = new Date(response.submittedAt);
+                    const responseMonth = responseDate.toLocaleString('id-ID', { month: 'short' });
+                    const responseYear = responseDate.getFullYear();
+                    return responseMonth === currentMonth && responseYear === currentYear;
+                });
+                
+                setIsFilled(isCurrentMonthFilled);
+                
+                // Fetch evaluation data (this is a placeholder - you would need to implement this)
+                // For now, we'll simulate this data
+                setEvaluasi(85); // Placeholder value
+                
+                setError(null);
+            } catch (err) {
+                console.error('Error loading data:', err);
+                setError('Gagal memuat data');
+            } finally {
+                setLoading(false);
             }
         };
 
-        loadTernakCount();
-
-        // Listen for updates to ternak data
-        const handleTernakUpdate = () => {
-            loadTernakCount();
-        };
-
-        window.addEventListener('ternakDataUpdated', handleTernakUpdate);
-
-        return () => {
-            window.removeEventListener('ternakDataUpdated', handleTernakUpdate);
-        };
+        loadData();
     }, []);
 
     const cards = [
@@ -47,19 +85,28 @@ export default function CardSection({ totalKuesioner = 0, evaluasi = 0 }) {
         { bulan: 'Jul', nilai: 89 },
     ];
 
-    const kuesionerData = {
-        Jan: true,
-        Feb: true,
-        Mar: true,
-        Apr: false,
-        Mei: true,
-        Jun: true,
-        Jul: true,
-    };
-
     // ✅ Cek bulan sekarang
     const bulanSekarang = new Date().toLocaleString('id-ID', { month: 'short' });
-    const isFilled = kuesionerData[bulanSekarang] ?? false;
+
+    if (loading) {
+        return (
+            <section className="p-6">
+                <div className="flex justify-center items-center h-64">
+                    <p className="text-lg font-[Judson]">Memuat data...</p>
+                </div>
+            </section>
+        );
+    }
+
+    if (error) {
+        return (
+            <section className="p-6">
+                <div className="flex justify-center items-center h-64">
+                    <p className="text-lg font-[Judson] text-red-500">{error}</p>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="p-6">
@@ -76,7 +123,7 @@ export default function CardSection({ totalKuesioner = 0, evaluasi = 0 }) {
                 ))}
             </div>
 
-            {/* Grafik Evaluasi Bulanan */}
+            {/* Grafik Evaluasi Bulanan */}{
             <div className="bg-white rounded-xl shadow p-6 max-w-4xl mx-auto mb-10">
                 <h2 className="text-xl font-bold mb-4 text-gray-700 text-center">
                     Performa Evaluasi Bulanan
@@ -96,8 +143,9 @@ export default function CardSection({ totalKuesioner = 0, evaluasi = 0 }) {
                     </LineChart>
                 </ResponsiveContainer>
             </div>
+            }
 
-            {/* Aktivitas Terakhir */}
+            {/* Aktivitas Terakhir */}{
             <div className="flex justify-center">
                 <div className="bg-[#60c67a] text-white rounded-lg shadow-md px-6 py-4 text-center">
                     <h2 className="text-3xl font-[Judson] font-bold mb-2">Aktivitas Terakhir</h2>
@@ -108,6 +156,7 @@ export default function CardSection({ totalKuesioner = 0, evaluasi = 0 }) {
                     </p>
                 </div>
             </div>
+            }
         </section>
     );
 }

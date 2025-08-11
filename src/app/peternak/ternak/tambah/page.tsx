@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
-import Header from '../components/Header';
 import { ChevronLeft } from 'lucide-react';
 
 export default function TambahTernakPage() {
@@ -16,12 +15,10 @@ export default function TambahTernakPage() {
         kondisiKesehatan: ''
     });
 
-    // Data untuk dropdown
     const jenisHewanOptions = ['Sapi', 'Kambing', 'Domba', 'Ayam', 'Bebek'];
     const jenisKelaminOptions = ['Jantan', 'Betina'];
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
 
-    // Status ternak berdasarkan jenis hewan dan kelamin
     const getStatusTernakOptions = () => {
         const { jenisHewan, jenisKelamin } = formData;
         
@@ -57,37 +54,41 @@ export default function TambahTernakPage() {
         setFormData(prev => ({
             ...prev,
             [field]: value,
-            // Reset status ternak jika jenis hewan atau kelamin berubah
             ...(field === 'jenisHewan' || field === 'jenisKelamin' ? { statusTernak: '' } : {})
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // Get existing data from localStorage
-        const existingData = localStorage.getItem('ternakList');
-        const ternakList = existingData ? JSON.parse(existingData) : [];
-        
-        // Create new ternak entry with unique ID and timestamp
-        const newTernak = {
-            id: Date.now().toString(),
-            ...formData,
-            createdAt: new Date().toISOString()
-        };
-        
-        // Add new data to the list
-        ternakList.push(newTernak);
-        
-        // Save back to localStorage
-        localStorage.setItem('ternakList', JSON.stringify(ternakList));
-        
-        // Trigger custom event to update the main page
-        window.dispatchEvent(new CustomEvent('ternakDataUpdated'));
-        
-        console.log('Data ternak saved:', newTernak);
-        alert('Data ternak berhasil disimpan!');
-        router.push('/peternak/ternak');
+        try {
+            const userId = 'user-id-placeholder';
+            
+            const newTernak = {
+                userId: userId,
+                ...formData
+            };
+            
+            const response = await fetch('/api/livestock', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newTernak),
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to save data');
+            }
+            
+            const result = await response.json();
+            console.log('Data ternak saved to MongoDB:', result.livestock);
+            alert('Data ternak berhasil disimpan ke database!');
+            router.push('/peternak/ternak');
+        } catch (error) {
+            console.error('Error saving ternak data:', error);
+            alert('Gagal menyimpan data ternak: ' + error.message);
+        }
     };
 
     const handleCancel = () => {
@@ -103,7 +104,6 @@ export default function TambahTernakPage() {
             <Sidebar userType="peternak" />
             <main className="flex-1 bg-gray-100 p-6">
                 <div className="max-w-2xl mx-auto">
-                    {/* Back Button dan Header */}
                     <div className="flex items-center mb-8">
                         <button 
                             onClick={handleBack}
@@ -114,9 +114,7 @@ export default function TambahTernakPage() {
                         <h1 className="text-3xl font-bold font-[Judson] text-center flex-1">Tambah Ternak</h1>
                     </div>
 
-                    {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Jenis Hewan */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Jenis Hewan
@@ -141,7 +139,6 @@ export default function TambahTernakPage() {
                             </div>
                         </div>
 
-                        {/* Jenis Kelamin */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Jenis Kelamin
@@ -166,7 +163,6 @@ export default function TambahTernakPage() {
                             </div>
                         </div>
 
-                        {/* Umur Ternak */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Umur Ternak
@@ -181,7 +177,6 @@ export default function TambahTernakPage() {
                             />
                         </div>
 
-                        {/* Status Ternak */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Status Ternak
@@ -207,7 +202,6 @@ export default function TambahTernakPage() {
                             </div>
                         </div>
 
-                        {/* Kondisi Kesehatan */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Kondisi Kesehatan
@@ -232,7 +226,6 @@ export default function TambahTernakPage() {
                             </div>
                         </div>
 
-                        {/* Buttons */}
                         <div className="flex gap-4 pt-6">
                             <button
                                 type="submit"
