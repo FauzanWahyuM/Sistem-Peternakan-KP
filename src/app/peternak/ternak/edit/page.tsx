@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft } from 'lucide-react';
@@ -310,6 +310,8 @@ function EditTernakContent() {
 // Main page component
 export default function EditTernakPage() {
     return (
-        <EditTernakContent />
+        <Suspense fallback={<div>Loading...</div>}>
+            <EditTernakContent />
+        </Suspense>
     );
 }
