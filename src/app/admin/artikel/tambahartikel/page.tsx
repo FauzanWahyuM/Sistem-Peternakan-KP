@@ -3,6 +3,7 @@
 import React, { useState, ChangeEvent, FormEvent, useRef } from 'react';
 import { ArrowLeft, UploadCloud } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const TambahArtikel: React.FC = () => {
     const router = useRouter();
@@ -123,9 +124,11 @@ const TambahArtikel: React.FC = () => {
                             />
                             {gambar && (
                                 <div className="mt-3">
-                                    <img
+                                    <Image
                                         src={gambar}
                                         alt="Preview"
+                                        width={128}
+                                        height={128}
                                         className="w-32 h-32 object-cover rounded border shadow-sm"
                                     />
                                 </div>

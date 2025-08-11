@@ -5,6 +5,11 @@ class PelatihanStorageService {
 
     // Inisialisasi data default jika belum ada
     private initializeDefaultData(): Pelatihan[] {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return [];
+        }
+        
         const defaultData: Pelatihan[] = [
             {
                 id: 1,
@@ -41,6 +46,11 @@ class PelatihanStorageService {
 
     // Mengambil semua data pelatihan
     getAllPelatihan(): Pelatihan[] {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return [];
+        }
+        
         try {
             const data = localStorage.getItem(this.STORAGE_KEY);
             if (!data) {
@@ -55,12 +65,27 @@ class PelatihanStorageService {
 
     // Mengambil pelatihan berdasarkan ID
     getPelatihanById(id: number): Pelatihan | null {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return null;
+        }
+        
         const allPelatihan = this.getAllPelatihan();
         return allPelatihan.find(p => p.id === id) || null;
     }
 
     // Menambah pelatihan baru
     addPelatihan(pelatihanData: Omit<Pelatihan, 'id' | 'createdAt' | 'updatedAt'>): Pelatihan {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return {
+                ...pelatihanData,
+                id: 0,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+        }
+        
         const allPelatihan = this.getAllPelatihan();
         const newId = Math.max(...allPelatihan.map(p => p.id), 0) + 1;
 
@@ -79,6 +104,11 @@ class PelatihanStorageService {
 
     // Mengupdate pelatihan
     updatePelatihan(id: number, updates: Partial<Omit<Pelatihan, 'id' | 'createdAt' | 'updatedAt'>>): Pelatihan | null {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return null;
+        }
+        
         const allPelatihan = this.getAllPelatihan();
         const index = allPelatihan.findIndex(p => p.id === id);
 
@@ -98,6 +128,11 @@ class PelatihanStorageService {
 
     // Menghapus pelatihan
     deletePelatihan(id: number): boolean {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        
         const allPelatihan = this.getAllPelatihan();
         const filteredPelatihan = allPelatihan.filter(p => p.id !== id);
 
@@ -111,6 +146,11 @@ class PelatihanStorageService {
 
     // Menyimpan data ke localStorage
     private setData(data: Pelatihan[]): void {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return;
+        }
+        
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
         } catch (error) {
@@ -120,17 +160,32 @@ class PelatihanStorageService {
 
     // Menghapus semua data (untuk reset)
     clearAllData(): void {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return;
+        }
+        
         localStorage.removeItem(this.STORAGE_KEY);
     }
 
     // Export data untuk backup
     exportData(): string {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return '{}';
+        }
+        
         const data = this.getAllPelatihan();
         return JSON.stringify(data, null, 2);
     }
 
     // Import data dari backup
     importData(jsonData: string): boolean {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        
         try {
             const data = JSON.parse(jsonData) as Pelatihan[];
             // Validasi struktur data
@@ -153,6 +208,16 @@ class PelatihanStorageService {
 
     // Statistik data
     getStatistics() {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return {
+                total: 0,
+                thisMonth: 0,
+                upcoming: 0,
+                past: 0
+            };
+        }
+        
         const allPelatihan = this.getAllPelatihan();
         const now = new Date();
         const thisMonth = allPelatihan.filter(p => {

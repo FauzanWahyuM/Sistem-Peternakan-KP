@@ -5,6 +5,7 @@ import { Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { TableColumn } from 'react-data-table-component';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const DataTable = dynamic(() => import('react-data-table-component'), { ssr: false });
 
@@ -88,7 +89,7 @@ export default function ArtikelManagement() {
         {
             name: 'Gambar',
             cell: (row) => (
-                <img src={row.gambar} alt="Gambar" className="w-16 h-16 object-cover rounded" />
+                <Image src={row.gambar} alt="Gambar" width={64} height={64} className="w-16 h-16 object-cover rounded" />
             ),
         },
         {

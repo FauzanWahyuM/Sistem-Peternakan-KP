@@ -2,7 +2,7 @@
 
 import Sidebar from '../../components/UnifiedSidebar';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Calendar, Image } from 'lucide-react';
+import { ChevronLeft, Calendar, Image as ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 
 export default function TambahPelatihanPage() {
@@ -162,7 +162,7 @@ export default function TambahPelatihanPage() {
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                                 <div className="flex flex-col items-center justify-center space-y-4">
                                     <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                                        <Image size={32} className="text-gray-400" />
+                                        <ImageIcon size={32} className="text-gray-400" />
                                     </div>
                                     <div className="text-center">
                                         <p className="text-sm text-gray-600 mb-2">

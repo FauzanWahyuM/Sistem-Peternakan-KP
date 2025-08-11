@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft, Edit, Trash2 } from 'lucide-react';
@@ -512,6 +512,8 @@ function LihatTernakContent() {
 // Main page component
 export default function LihatTernakPage() {
     return (
-        <LihatTernakContent />
+        <Suspense fallback={<div>Loading...</div>}>
+            <LihatTernakContent />
+        </Suspense>
     );
 }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react';
 import { ArrowLeft, UploadCloud } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 
 interface ArtikelData {
     id: number;
@@ -139,9 +140,11 @@ const EditArtikel: React.FC = () => {
                             />
                             {formData.gambar && (
                                 <div className="mt-3">
-                                    <img
+                                    <Image
                                         src={formData.gambar}
                                         alt="Preview"
+                                        width={128}
+                                        height={128}
                                         className="w-32 h-32 object-cover rounded border shadow-sm"
                                     />
                                 </div>

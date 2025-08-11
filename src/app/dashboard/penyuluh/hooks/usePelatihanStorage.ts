@@ -8,7 +8,10 @@ export function usePelatihanStorage() {
 
     // Load data saat hook pertama kali digunakan
     useEffect(() => {
-        loadPelatihan();
+        // Only run on client side
+        if (typeof window !== 'undefined') {
+            loadPelatihan();
+        }
     }, []);
 
     const loadPelatihan = () => {
@@ -71,6 +74,11 @@ export function usePelatihanStorage() {
     };
 
     const getPelatihanById = (id: number): Pelatihan | null => {
+        // Check if we're running on the client side
+        if (typeof window === 'undefined') {
+            return null;
+        }
+        
         try {
             console.log('Getting pelatihan by ID:', id);
 
