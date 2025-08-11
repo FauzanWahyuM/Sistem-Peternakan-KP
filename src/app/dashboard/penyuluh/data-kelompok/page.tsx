@@ -10,27 +10,70 @@ export default function DataKelompokPage() {
         {
             id: 'A',
             nama: 'Kelompok A',
-            anggota: ['Gideon', 'Fauzan', 'Syahrul']
+            anggota: ['Gideon', 'Fauzan', 'Syahrul'],
+            status: 'aktif'
         },
         {
             id: 'B',
             nama: 'Kelompok B',
-            anggota: ['Ahmad', 'Budi', 'Citra']
+            anggota: ['Ahmad', 'Budi', 'Citra'],
+            status: 'tidak aktif'
         },
         {
             id: 'C',
             nama: 'Kelompok C',
-            anggota: ['Dani', 'Eka', 'Farid']
+            anggota: ['Dani', 'Eka', 'Farid'],
+            status: 'aktif'
         },
         {
             id: 'D',
             nama: 'Kelompok D',
-            anggota: ['Gita', 'Hadi', 'Ira']
+            anggota: ['Gita', 'Hadi', 'Ira'],
+            status: 'pending'
         }
     ];
 
     const handleKelompokClick = (kelompokId: string) => {
         router.push(`/dashboard/penyuluh/data-kelompok/${kelompokId}`);
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'aktif':
+                return 'bg-green-500';
+            case 'tidak aktif':
+                return 'bg-red-500';
+            case 'pending':
+                return 'bg-yellow-500';
+            default:
+                return 'bg-gray-500';
+        }
+    };
+
+    const getButtonColor = (status: string) => {
+        switch (status) {
+            case 'aktif':
+                return 'bg-white text-green-600 hover:bg-gray-100';
+            case 'tidak aktif':
+                return 'bg-white text-red-600 hover:bg-gray-100';
+            case 'pending':
+                return 'bg-white text-yellow-600 hover:bg-gray-100';
+            default:
+                return 'bg-white text-gray-600 hover:bg-gray-100';
+        }
+    };
+
+    const getStatusText = (status: string) => {
+        switch (status) {
+            case 'aktif':
+                return 'Aktif';
+            case 'tidak aktif':
+                return 'Tidak Aktif';
+            case 'pending':
+                return 'Pending';
+            default:
+                return status;
+        }
     };
 
     return (
@@ -45,8 +88,13 @@ export default function DataKelompokPage() {
                 {/* Kelompok Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                     {kelompokData.map((kelompok) => (
-                        <div key={kelompok.id} className="bg-green-500 text-white p-6 rounded-lg shadow-lg">
-                            <h3 className="text-xl font-bold mb-4">{kelompok.nama}</h3>
+                        <div key={kelompok.id} className={`${getStatusColor(kelompok.status)} text-white p-6 rounded-lg shadow-lg`}>
+                            <div className="flex justify-between items-start mb-4">
+                                <h3 className="text-xl font-bold">{kelompok.nama}</h3>
+                                <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium text-black">
+                                    {getStatusText(kelompok.status)}
+                                </span>
+                            </div>
 
                             {/* Anggota List */}
                             <div className="mb-6 space-y-1">
@@ -60,7 +108,7 @@ export default function DataKelompokPage() {
                             {/* Selengkapnya Button */}
                             <button
                                 onClick={() => handleKelompokClick(kelompok.id)}
-                                className="bg-white text-green-600 px-6 py-2 rounded-full font-medium hover:bg-gray-100 transition-colors w-full"
+                                className={`${getButtonColor(kelompok.status)} px-6 py-2 rounded-full font-medium transition-colors w-full`}
                             >
                                 Selengkapnya
                             </button>
