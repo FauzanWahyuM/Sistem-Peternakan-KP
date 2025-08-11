@@ -124,7 +124,7 @@ export default function ArtikelManagement() {
     ];
 
     const filteredData = data.filter((artikel) =>
-        artikel.judul.toLowerCase().includes(searchTerm.toLowerCase())
+        artikel.judul && artikel.judul.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (

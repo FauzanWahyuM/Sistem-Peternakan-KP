@@ -54,7 +54,7 @@ export default function TableSection() {
     };
 
     const filteredData = data.filter((item) =>
-        item.judul.toLowerCase().includes(searchTerm.toLowerCase())
+        item.judul && item.judul.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const columns: TableColumn<Laporan>[] = [

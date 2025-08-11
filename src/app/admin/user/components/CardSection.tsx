@@ -126,7 +126,7 @@ export default function UserManagement() {
     ];
 
     const filteredData = data.filter((user) =>
-        user.nama.toLowerCase().includes(searchTerm.toLowerCase())
+        user.nama && user.nama.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (

@@ -86,8 +86,8 @@ function LihatTernakContent() {
 
         // Filter by umur ternak
         if (filters.umurTernak) {
-            filtered = filtered.filter(item => 
-                item.umurTernak.toLowerCase().includes(filters.umurTernak.toLowerCase())
+            filtered = filtered.filter(item =>
+                item.umurTernak && item.umurTernak.toLowerCase().includes(filters.umurTernak.toLowerCase())
             );
         }
 
