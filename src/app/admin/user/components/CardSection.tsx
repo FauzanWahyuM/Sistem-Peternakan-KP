@@ -173,7 +173,7 @@ export default function UserManagement() {
                             <h2 className="text-lg font-bold">Konfirmasi Hapus</h2>
                         </div>
                         <p className="text-gray-700 mb-6">
-                            Apakah Anda yakin ingin menghapus <strong>{selectedUser.nama}</strong>?
+                            Apakah anda ingin menghapus?
                         </p>
                         <div className="flex justify-end gap-3">
                             <button

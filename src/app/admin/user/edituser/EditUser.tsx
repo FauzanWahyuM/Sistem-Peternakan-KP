@@ -36,7 +36,16 @@ const EditUser: React.FC = () => {
             const userToEdit = users.find((user: any) => user.id.toString() === userId);
 
             if (userToEdit) {
-                setFormData(userToEdit);
+                // Merge user data with default form data to ensure all fields are present
+                setFormData({
+                    nama: userToEdit.nama || '',
+                    username: userToEdit.username || '',
+                    email: userToEdit.email || '',
+                    password: userToEdit.password || '',
+                    kelompok: userToEdit.kelompok || '',
+                    role: userToEdit.role || '',
+                    status: userToEdit.status || '',
+                });
             } else {
                 alert('User tidak ditemukan');
                 router.push('/admin/user');

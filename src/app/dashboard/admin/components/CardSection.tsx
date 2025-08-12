@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { Pencil, Trash2, FileDown, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { X, AlertTriangle } from 'lucide-react';
 
 const DataTable = dynamic(() => import('react-data-table-component'), { ssr: false });
 
@@ -76,6 +77,8 @@ export default function CardSection() {
     const [data, setData] = useState<User[]>([]);
     const [userData, setUserData] = useState<User[]>([]);
     const [artikelData, setArtikelData] = useState<Artikel[]>([]);
+    const [selectedItem, setSelectedItem] = useState<{type: 'user' | 'artikel', data: User | Artikel} | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
     const handleDeleteUser = (id: string) => {
         const updatedUsers = data.filter((u) => u.id !== id);
@@ -89,6 +92,29 @@ export default function CardSection() {
         const updatedArtikels = artikelList.filter((a: Artikel) => a.id !== id);
         localStorage.setItem("artikels", JSON.stringify(updatedArtikels));
         setArtikelData(updatedArtikels.slice(0, 5));
+    };
+
+    const openModal = (type: 'user' | 'artikel', item: User | Artikel) => {
+        setSelectedItem({type, data: item});
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setSelectedItem(null);
+    };
+
+    const confirmDelete = () => {
+        if (selectedItem) {
+            if (selectedItem.type === 'user') {
+                const user = selectedItem.data as User;
+                handleDeleteUser(user.id);
+            } else if (selectedItem.type === 'artikel') {
+                const artikel = selectedItem.data as Artikel;
+                handleDeleteArtikel(artikel.id);
+            }
+            closeModal();
+        }
     };
 
 
@@ -162,7 +188,7 @@ export default function CardSection() {
             cell: (row: Artikel) => (
                 <ActionButtons
                     onEdit={() => router.push(`/admin/artikel/editartikel?id=${row.id}`)}
-                    onDelete={() => console.log('Delete', row)}
+                    onDelete={() => openModal('artikel', row)}
                 />
             ),
         },
@@ -182,7 +208,7 @@ export default function CardSection() {
             cell: (row: User) => (
                 <ActionButtons
                     onEdit={() => router.push(`/admin/user/edituser?id=${row.id}`)}
-                    onDelete={() => handleDeleteUser(row.id)}
+                    onDelete={() => openModal('user', row)}
                 />
             ),
         }
@@ -258,6 +284,41 @@ export default function CardSection() {
                     <ArrowRight size={16} />
                 </button>
             </section>
+            
+            {/* Modal Konfirmasi Hapus */}
+            {isModalOpen && selectedItem && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative">
+                        <div className="flex items-center mb-4 gap-2 text-red-600">
+                            <AlertTriangle size={24} />
+                            <h2 className="text-lg font-bold">Konfirmasi Hapus</h2>
+                        </div>
+                        <p className="text-gray-700 mb-6">
+                            Apakah anda ingin menghapus?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={closeModal}
+                                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                            >
+                                Ya, Hapus
+                            </button>
+                        </div>
+                        <button
+                            onClick={closeModal}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                        >
+                            <X />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

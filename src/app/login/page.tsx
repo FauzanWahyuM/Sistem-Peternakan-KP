@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AuthClient } from '../../lib/api-client';
 
 
 export default function LoginPage() {
@@ -11,20 +12,31 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Dummy logic login
-        if (username === 'admin' && password === 'admin123') {
-            router.push('/dashboard/admin');
-        }
-        else if (username == "penyuluh" && password === "penyuluh123") {
-            router.push('/dashboard/penyuluh');
-        }
-        else if (username == "peternak" && password === "peternak123") {
-            router.push('/dashboard/peternak');
-        }
-        else {
+        try {
+            const response = await AuthClient.login(username, password);
+            
+            // Save token to localStorage for future requests
+            localStorage.setItem('token', response.token);
+            
+            // Redirect based on user role
+            switch (response.user.role) {
+                case 'Admin':
+                    router.push('/dashboard/admin');
+                    break;
+                case 'Penyuluh':
+                    router.push('/dashboard/penyuluh');
+                    break;
+                case 'Peternak':
+                    router.push('/dashboard/peternak');
+                    break;
+                default:
+                    router.push('/');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
             setErrorMsg('Username atau password salah');
         }
     };

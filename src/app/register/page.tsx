@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ApiClient } from '../../lib/api-client';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -22,13 +23,32 @@ export default function RegisterPage() {
         });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        setSuccessMsg('Registrasi berhasil! Mengarahkan ke login...');
-        setTimeout(() => {
-            router.push('/login');
-        }, 2000);
+        try {
+            // Create user object matching the database schema
+            const userData = {
+                nama: form.name,
+                username: form.username,
+                email: form.email,
+                password: form.password,
+                kelompok: form.kelompok,
+                role: form.role,
+                status: 'Aktif' // Default status
+            };
+
+            // Save user to database
+            await ApiClient.createUser(userData);
+            
+            setSuccessMsg('Registrasi berhasil! Mengarahkan ke login...');
+            setTimeout(() => {
+                router.push('/login');
+            }, 2000);
+        } catch (error) {
+            console.error('Registration error:', error);
+            setSuccessMsg('Registrasi gagal. Silakan coba lagi.');
+        }
     };
 
     return (

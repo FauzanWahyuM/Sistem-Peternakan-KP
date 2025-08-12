@@ -241,10 +241,7 @@ export class ApiClient {
 // Authentication utilities
 export class AuthClient {
   static async login(username, password) {
-    // In a real implementation, this would call an auth API endpoint
-    // For now, we'll simulate the login process
     try {
-      // This is a placeholder - in reality, you would call your auth API
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
