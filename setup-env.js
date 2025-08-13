@@ -16,8 +16,8 @@ MONGODB_DB=simantek
 # For production deployment (Vercel), use MongoDB Atlas:
 # MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
 
-# API URL for frontend
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
+# API URL for frontend - For development, this points to localhost (do not include /api)
+NEXT_PUBLIC_API_URL=http://localhost:3000
 `;
 
 fs.writeFileSync(envLocalPath, envContent);
