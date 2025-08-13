@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { UserModel } from '../../../models/User';
-import { connectToDatabase } from '../../../lib/mongodb';
+import { UserModel } from '../../models/User';
+import { connectToDatabase } from '../../lib/mongodb';
 
 // GET /api/test-api - Test endpoint to check users in database
 export async function GET() {
@@ -13,7 +13,7 @@ export async function GET() {
     const users = await UserModel.findAll();
     console.log('Users in database:', users);
     
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Database connection successful',
       users: users.map(user => ({
         id: user._id,
