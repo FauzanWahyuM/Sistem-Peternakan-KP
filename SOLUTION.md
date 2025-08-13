@@ -11,16 +11,18 @@ Additionally, there's a "failed to fetch" error when trying to register, which i
 1. **Database Connection**: The application uses a local MongoDB connection which is not accessible from Vercel
 2. **Environment Variables**: Production environment variables are not properly configured in Vercel
 3. **API URL Configuration**: The `NEXT_PUBLIC_API_URL` environment variable is not properly set
-4. **Error Handling**: Limited error feedback makes it difficult to diagnose issues
+4. **CORS Issues**: Cross-origin resource sharing issues between frontend and backend
+5. **Error Handling**: Limited error feedback makes it difficult to diagnose issues
 
 ## Solution Overview
 
-The solution involves four main steps:
+The solution involves five main steps:
 
 1. Set up MongoDB Atlas (cloud MongoDB service) for production
 2. Configure environment variables in Vercel
 3. Fix API URL configuration issues
-4. Improve error handling for better debugging
+4. Add CORS handling for API routes
+5. Improve error handling for better debugging
 
 ## Detailed Solution
 
@@ -49,7 +51,15 @@ Replace:
 
 **Important**: The `NEXT_PUBLIC_API_URL` should be your Vercel deployment URL WITHOUT the `/api` suffix. The API client will automatically append `/api` to this URL.
 
-### 3. Code Improvements Made
+### 3. Add CORS Handling for API Routes
+
+We've added CORS (Cross-Origin Resource Sharing) handling to resolve connection issues between the frontend and backend API routes:
+
+- Created middleware to handle CORS preflight requests
+- Added CORS headers to all API route responses
+- Configured middleware to apply to all API routes automatically
+
+### 4. Code Improvements Made
 
 We've made several improvements to help with debugging and error handling:
 
@@ -58,6 +68,7 @@ We've made several improvements to help with debugging and error handling:
 - Enhanced MongoDB connection with better error handling and configuration options
 - Improved error messages in authentication API routes
 - Better logging for debugging authentication issues
+- Added CORS handling for all API routes
 
 #### Frontend Improvements
 

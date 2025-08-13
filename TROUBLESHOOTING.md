@@ -22,6 +22,17 @@ When trying to register a new user on the deployed Vercel application, you recei
    - Click the "Redeploy" button for the latest deployment
    - Or make a small change and push to your repository to trigger a new deployment
 
+### 2. CORS (Cross-Origin Resource Sharing) Issues
+
+**Issue**: The browser blocks requests due to CORS policy violations.
+
+**Solution**:
+We've added CORS handling to all API routes through middleware. This should resolve most CORS issues. However, if you're still experiencing problems:
+
+1. Ensure your frontend and API routes are on the same domain
+2. Check that you're not using different ports or subdomains
+3. Verify that the middleware is working correctly by checking the response headers in your browser's developer tools
+
 ### 2. MongoDB Connection Issues
 
 **Issue**: The application cannot connect to the MongoDB database.

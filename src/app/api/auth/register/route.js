@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { UserModel } from '../../../../models/User';
 import { hashPassword } from '../../../../lib/auth';
 
+// Handle CORS preflight requests
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 // POST /api/auth/register - Register a new user
 export async function POST(request) {
   try {
