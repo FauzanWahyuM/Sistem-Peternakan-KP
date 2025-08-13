@@ -1,33 +1,42 @@
 import { NextResponse } from 'next/server';
 import { UserModel } from '../../../models/User';
-import { verifyPassword, generateToken } from '../../../lib/auth';
+import bcrypt from 'bcryptjs';
+import { generateToken } from '../../../lib/auth';
 
 // POST /api/auth/login - Login user
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { username, password } = body;
+    let { username, password } = body;
 
-    // Find user by username
+    // Pastikan username dan password ada
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+    }
+
+    // Normalisasi username agar case-insensitive
+    username = username.trim();
+
+    // Cari user berdasarkan username (case-insensitive)
     const user = await UserModel.findByUsername(username);
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Verify password
-    const isPasswordValid = await verifyPassword(password, user.password);
+    // Verifikasi password menggunakan bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Remove password from user object
+    // Hapus password dari objek user
     const { password: _, ...userWithoutPassword } = user;
 
     // Generate token
-    const token = generateToken(user);
+    const token = generateToken(userWithoutPassword);
 
-    return NextResponse.json({ 
-      user: userWithoutPassword, 
+    return NextResponse.json({
+      user: userWithoutPassword,
       token,
       message: 'Login successful'
     });

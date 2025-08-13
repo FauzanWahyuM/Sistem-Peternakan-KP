@@ -180,10 +180,6 @@ const response = await fetch(`/api/livestock/${ternakId}`, {
 2. Check the terminal for server-side errors
 3. Verify MongoDB is accessible with a MongoDB client
 4. Check that all required dependencies are installed
-5. Test MongoDB connection with the test script:
-   ```bash
-   node src/lib/test-mongodb.js
-   ```
 
 ### MongoDB Connection Issues
 1. **Verify MongoDB is running**:
@@ -198,11 +194,6 @@ const response = await fetch(`/api/livestock/${ternakId}`, {
 2. **Check connection string format**:
    - Local MongoDB: `mongodb://localhost:27017/simantek`
    - MongoDB Atlas: `mongodb+srv://username:password@cluster.mongodb.net/simantek`
-
-3. **Test connection with the provided test script**:
-   ```bash
-   node src/lib/test-mongodb.js
-   ```
 
 ### Environment Variable Issues
 1. Ensure `.env.local` file exists in the root directory

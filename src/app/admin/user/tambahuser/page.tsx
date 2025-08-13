@@ -3,6 +3,7 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ApiClient } from '../../../../lib/api-client';
 
 interface FormData {
     nama: string;
@@ -27,6 +28,7 @@ const TambahUser: React.FC = () => {
         status: '',
     });
     const [passwordError, setPasswordError] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -77,27 +79,56 @@ const TambahUser: React.FC = () => {
         return true;
     };
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
 
         if (!validatePassword(formData.password)) {
             return;
         }
 
+        setIsSubmitting(true);
         try {
-            const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-            const newUser = {
-                id: Date.now(),
-                ...formData,
+            // Create user object matching the database schema
+            const userData = {
+                nama: formData.nama,
+                username: formData.username,
+                email: formData.email,
+                password: formData.password,
+                kelompok: formData.kelompok,
+                role: formData.role,
+                status: formData.status
             };
-            const updatedUsers = [...existingUsers, newUser];
-            localStorage.setItem('users', JSON.stringify(updatedUsers));
+
+            // Save user to database using API client
+            await ApiClient.createUser(userData);
+            
             alert('User berhasil ditambahkan!');
             router.push('/admin/user');
         } catch (error) {
-            console.error('Gagal menyimpan ke localStorage:', error);
-            alert('Terjadi kesalahan saat menyimpan data.');
-        }
+                    console.error('Gagal menyimpan ke database:', error);
+                    // Check if the error is a response object with a specific message
+                    if (error instanceof Response) {
+                        // Handle HTTP errors
+                        if (error.status === 400) {
+                            alert('Username atau email sudah digunakan. Silakan gunakan yang lain.');
+                        } else {
+                            alert('Terjadi kesalahan saat menyimpan data. Silakan coba lagi.');
+                        }
+                    } else if (error.message) {
+                        // Handle custom error messages
+                        if (error.message.includes('Username already exists')) {
+                            alert('Username sudah digunakan. Silakan gunakan yang lain.');
+                        } else if (error.message.includes('Email already exists')) {
+                            alert('Email sudah digunakan. Silakan gunakan yang lain.');
+                        } else {
+                            alert('Terjadi kesalahan saat menyimpan data: ' + error.message);
+                        }
+                    } else {
+                        alert('Terjadi kesalahan saat menyimpan data. Silakan coba lagi.');
+                    }
+                } finally {
+                    setIsSubmitting(false);
+                }
     };
 
     return (
@@ -230,8 +261,9 @@ const TambahUser: React.FC = () => {
                         <button
                             type="submit"
                             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded"
+                            disabled={isSubmitting}
                         >
-                            Simpan
+                            {isSubmitting ? 'Menyimpan...' : 'Simpan'}
                         </button>
                         <button
                             type="button"

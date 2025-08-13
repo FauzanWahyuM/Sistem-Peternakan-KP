@@ -88,20 +88,6 @@ sudo systemctl start mongod
    MONGODB_DB=simantek
    ```
 
-### 3. Test the Connection
-
-1. **Run the test script:**
-   ```bash
-   node src/lib/test-mongodb.js
-   ```
-   
-   You should see output similar to:
-   ```
-   Testing MongoDB connection...
-   Connected successfully to MongoDB
-   Available collections: []
-   Connection closed
-   ```
 
 ### 4. Run the Application
 
@@ -179,10 +165,3 @@ If you have existing data in localStorage that you want to migrate to MongoDB:
 2. **Review the database schema** in `docs/database-design.md`
 3. **Check the API documentation** in `README-MONGODB.md`
 4. **Review the migration guide** in `MIGRATION-GUIDE.md` for detailed information about the changes
-
-## Support
-
-If you encounter issues not covered in this guide:
-1. Check the console logs for error messages
-2. Review the documentation files mentioned above
-3. Contact the development team for assistance

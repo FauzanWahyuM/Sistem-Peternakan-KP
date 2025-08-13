@@ -15,6 +15,7 @@ export async function GET(request) {
     
     return NextResponse.json({ users: usersWithoutPassword });
   } catch (error) {
+    console.error('Fetch users error:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }

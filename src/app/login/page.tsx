@@ -17,22 +17,26 @@ export default function LoginPage() {
 
         try {
             const response = await AuthClient.login(username, password);
+            console.log('Login response:', response);
             
             // Save token to localStorage for future requests
             localStorage.setItem('token', response.token);
             
             // Redirect based on user role
-            switch (response.user.role) {
-                case 'Admin':
+            console.log('User role:', response.user.role);
+            const role = response.user.role?.toLowerCase();
+            switch (role) {
+                case 'admin':
                     router.push('/dashboard/admin');
                     break;
-                case 'Penyuluh':
+                case 'penyuluh':
                     router.push('/dashboard/penyuluh');
                     break;
-                case 'Peternak':
+                case 'peternak':
                     router.push('/dashboard/peternak');
                     break;
                 default:
+                    console.log('Unknown role:', response.user.role);
                     router.push('/');
             }
         } catch (error) {

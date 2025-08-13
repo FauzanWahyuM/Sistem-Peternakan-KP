@@ -20,6 +20,10 @@ You can start editing the page by modifying `app/page.js`. The page auto-updates
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## MongoDB Setup
+
+This application requires MongoDB to function properly. Please follow the instructions in [README-MONGODB.md](README-MONGODB.md) to set up MongoDB.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

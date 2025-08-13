@@ -3,6 +3,7 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ApiClient } from '../../../../lib/api-client';
 
 interface FormData {
     nama: string;
@@ -29,29 +30,43 @@ const EditUser: React.FC = () => {
         role: '',
         status: '',
     });
+    const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
         if (userId) {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const userToEdit = users.find((user: any) => user.id.toString() === userId);
+            fetchUser();
+        }
+    }, [userId]);
 
-            if (userToEdit) {
+    const fetchUser = async () => {
+        try {
+            setLoading(true);
+            const response = await ApiClient.getUserById(userId);
+            const user = response.user;
+
+            if (user) {
                 // Merge user data with default form data to ensure all fields are present
                 setFormData({
-                    nama: userToEdit.nama || '',
-                    username: userToEdit.username || '',
-                    email: userToEdit.email || '',
-                    password: userToEdit.password || '',
-                    kelompok: userToEdit.kelompok || '',
-                    role: userToEdit.role || '',
-                    status: userToEdit.status || '',
+                    nama: user.nama || '',
+                    username: user.username || '',
+                    email: user.email || '',
+                    password: '',
+                    kelompok: user.kelompok || '',
+                    role: user.role || '',
+                    status: user.status || '',
                 });
             } else {
                 alert('User tidak ditemukan');
                 router.push('/admin/user');
             }
+        } catch (error) {
+            console.error('Gagal mengambil data pengguna:', error);
+            alert('Terjadi kesalahan saat mengambil data pengguna.');
+            router.push('/admin/user');
+        } finally {
+            setLoading(false);
         }
-    }, [userId, router]);
+    };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -66,23 +81,32 @@ const EditUser: React.FC = () => {
         setFormData((prev) => ({ ...prev, status }));
     };
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
 
         try {
-            const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-            const updatedUsers = existingUsers.map((user: any) =>
-                user.id.toString() === userId ? { ...user, ...formData } : user
-            );
-
-            localStorage.setItem('users', JSON.stringify(updatedUsers));
+            // Only send password if it's not empty (meaning it's being updated)
+            const userData = { ...formData };
+            if (!userData.password) {
+                delete userData.password;
+            }
+            
+            await ApiClient.updateUser(userId, userData);
             alert('User berhasil diperbarui!');
             router.push('/admin/user');
         } catch (error) {
-            console.error('Gagal menyimpan ke localStorage:', error);
+            console.error('Gagal menyimpan ke database:', error);
             alert('Terjadi kesalahan saat menyimpan data.');
         }
     };
+
+    if (loading) {
+        return (
+            <div className="p-8 bg-gray-100 min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 bg-gray-100 min-h-screen">
@@ -142,7 +166,7 @@ const EditUser: React.FC = () => {
                                 value={formData.password}
                                 onChange={handleChange}
                                 className="w-full border rounded px-4 py-2 pr-10 text-black"
-                                required
+                                placeholder="Biarkan kosong jika tidak ingin mengganti password"
                             />
                             <button
                                 type="button"

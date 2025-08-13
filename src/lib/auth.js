@@ -25,7 +25,7 @@ export function generateToken(user) {
   // In a real application, you would use a proper JWT library
   // This is a simplified version for demonstration
   return Buffer.from(JSON.stringify({
-    id: user._id,
+    id: user._id ? user._id.toString() : user.id,
     username: user.username,
     role: user.role
   })).toString('base64');

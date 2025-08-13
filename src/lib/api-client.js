@@ -18,23 +18,105 @@ export class ApiClient {
     }
   }
 
-  static async createUser(userData) {
+  static async getUserById(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      if (!response.ok) throw new Error('Failed to create user');
+      const response = await fetch(`${API_BASE_URL}/users/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch user');
       return await response.json();
     } catch (error) {
-      console.error('Error creating user:', error);
+      console.error('Error fetching user:', error);
       throw error;
     }
   }
+
+  static async createUser(userData) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData),
+        });
+        
+        if (!response.ok) {
+          // Try to parse the error response from the server
+          let errorMessage = 'Failed to create user';
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (parseError) {
+            // If we can't parse the error response, use the status text
+            errorMessage = response.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Error creating user:', error);
+        throw error;
+      }
+    }
+
+  static async updateUser(id, userData) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData),
+        });
+        
+        if (!response.ok) {
+          // Try to parse the error response from the server
+          let errorMessage = 'Failed to update user';
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (parseError) {
+            // If we can't parse the error response, use the status text
+            errorMessage = response.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Error updating user:', error);
+        throw error;
+      }
+    }
+
+  static async deleteUser(id) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          // Try to parse the error response from the server
+          let errorMessage = 'Failed to delete user';
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (parseError) {
+            // If we can't parse the error response, use the status text
+            errorMessage = response.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        throw error;
+      }
+    }
 
   // Livestock API
   static async getLivestock(filters = {}) {

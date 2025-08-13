@@ -5,6 +5,7 @@ import { Pencil, Trash2, FileDown, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
+import { ApiClient } from '../../../../lib/api-client';
 
 const DataTable = dynamic(() => import('react-data-table-component'), { ssr: false });
 
@@ -52,10 +53,11 @@ const ActionButtons = ({ onEdit, onDelete, onDownload }: ActionButtonsProps) => 
 );
 
 type User = {
-    id: string;
+    _id: string;
     nama: string;
     role: 'Peternak' | 'Penyuluh' | 'Admin';
     status?: string;
+    createdAt?: string;
 };
 
 type Artikel = {
@@ -79,12 +81,41 @@ export default function CardSection() {
     const [artikelData, setArtikelData] = useState<Artikel[]>([]);
     const [selectedItem, setSelectedItem] = useState<{type: 'user' | 'artikel', data: User | Artikel} | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
 
-    const handleDeleteUser = (id: string) => {
-        const updatedUsers = data.filter((u) => u.id !== id);
-        localStorage.setItem('users', JSON.stringify(updatedUsers));
-        setData(updatedUsers);
-        setUserData(updatedUsers.slice(0, 5));
+    const fetchUsers = async () => {
+        try {
+            setLoading(true);
+            const response = await ApiClient.getUsers();
+            const users = response.users || [];
+            
+            // Sort users by createdAt in descending order (newest first)
+            const sortedUsers = users.sort((a: User, b: User) => {
+                if (a.createdAt && b.createdAt) {
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                }
+                return 0;
+            });
+            
+            setData(sortedUsers);
+            setUserData(sortedUsers.slice(0, 5)); // Show only 5 most recent users
+        } catch (error) {
+            console.error("Gagal mengambil data users:", error);
+            setData([]);
+            setUserData([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteUser = async (id: string) => {
+        try {
+            await ApiClient.deleteUser(id);
+            await fetchUsers(); // Refresh the user list
+        } catch (error) {
+            console.error("Gagal menghapus user:", error);
+            alert("Gagal menghapus user");
+        }
     };
 
     const handleDeleteArtikel = (id: number) => {
@@ -104,11 +135,11 @@ export default function CardSection() {
         setSelectedItem(null);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (selectedItem) {
             if (selectedItem.type === 'user') {
                 const user = selectedItem.data as User;
-                handleDeleteUser(user.id);
+                await handleDeleteUser(user._id);
             } else if (selectedItem.type === 'artikel') {
                 const artikel = selectedItem.data as Artikel;
                 handleDeleteArtikel(artikel.id);
@@ -119,33 +150,8 @@ export default function CardSection() {
 
 
     useEffect(() => {
-        try {
-            // Ambil dan parse data users
-            const localUserData = JSON.parse(localStorage.getItem("users") || "[]");
-
-            // Format lengkap dengan default status "Aktif" jika belum ada
-            const formattedUserData: User[] = localUserData.map((u: any) => ({
-                id: u.id,
-                nama: u.nama,
-                role: u.role,
-                status: u.status ?? "Aktif",
-            }));
-
-            setData(formattedUserData); // misalnya untuk DataTable
-            setUserData(formattedUserData.slice(0, 5)); // misalnya untuk dashboard ringkasan
-
-            // Simpan kembali data users jika ada data yang belum punya status
-            const needsUpdate = localUserData.some((u: any) => !u.status);
-            if (needsUpdate) {
-                localStorage.setItem("users", JSON.stringify(formattedUserData));
-            }
-
-        } catch (error) {
-            console.error("Gagal parsing data users:", error);
-            setData([]);
-            setUserData([]);
-        }
-
+        fetchUsers();
+        
         try {
             // Ambil dan parse data artikels
             const localArtikelData = JSON.parse(localStorage.getItem("artikels") || "[]");
@@ -207,12 +213,27 @@ export default function CardSection() {
             name: 'Aksi',
             cell: (row: User) => (
                 <ActionButtons
-                    onEdit={() => router.push(`/admin/user/edituser?id=${row.id}`)}
+                    onEdit={() => router.push(`/admin/user/edituser?id=${row._id}`)}
                     onDelete={() => openModal('user', row)}
                 />
             ),
         }
     ];
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-md p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h1 className="text-xl font-bold">User</h1>
+                    </div>
+                    <div className="flex justify-center items-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

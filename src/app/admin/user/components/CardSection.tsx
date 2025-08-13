@@ -5,11 +5,12 @@ import { Pencil, Trash2, X, AlertTriangle } from "lucide-react";
 import dynamic from "next/dynamic";
 import { TableColumn } from "react-data-table-component";
 import { useRouter } from "next/navigation";
+import { ApiClient } from "../../../../lib/api-client";
 
 const DataTable = dynamic(() => import("react-data-table-component"), { ssr: false });
 
 type User = {
-    id: number;
+    _id: string;
     nama: string;
     role: string;
     status: string;
@@ -37,24 +38,27 @@ export default function UserManagement() {
     const [data, setData] = useState<User[]>([]);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
 
     const router = useRouter();
 
     useEffect(() => {
-        try {
-            const localData = JSON.parse(localStorage.getItem("users") || "[]");
-            const formattedLocalData: User[] = localData.map((u: any) => ({
-                id: u.id,
-                nama: u.nama,
-                role: u.role,
-                status: u.status,
-            }));
-            setData(formattedLocalData);
-        } catch (error) {
-            console.error("Gagal membaca localStorage:", error);
-            setData([]);
-        }
+        fetchUsers();
     }, []);
+
+    const fetchUsers = async () => {
+        try {
+            setLoading(true);
+            const response = await ApiClient.getUsers();
+            const users = response.users || [];
+            setData(users);
+        } catch (error) {
+            console.error("Gagal mengambil data pengguna:", error);
+            setData([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const openModal = (user: User) => {
         setSelectedUser(user);
@@ -66,21 +70,21 @@ export default function UserManagement() {
         setSelectedUser(null);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (selectedUser) {
-            const updatedData = data.filter((user) => user.id !== selectedUser.id);
-            setData(updatedData);
-
-            const existingLocal = JSON.parse(localStorage.getItem("users") || "[]");
-            const filteredLocal = existingLocal.filter((u: any) => u.id !== selectedUser.id);
-            localStorage.setItem("users", JSON.stringify(filteredLocal));
-
-            closeModal();
+            try {
+                await ApiClient.deleteUser(selectedUser._id);
+                await fetchUsers(); // Refresh the user list
+                closeModal();
+            } catch (error) {
+                console.error("Gagal menghapus pengguna:", error);
+                alert("Gagal menghapus pengguna");
+            }
         }
     };
 
     const handleEdit = (row: User) => {
-        router.push(`/admin/user/edituser?id=${row.id}`);
+        router.push(`/admin/user/edituser?id=${row._id}`);
     };
 
     const columns: TableColumn<User>[] = [
@@ -128,6 +132,16 @@ export default function UserManagement() {
     const filteredData = data.filter((user) =>
         user.nama && user.nama.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    if (loading) {
+        return (
+            <div className="rounded-xl bg-white p-4 shadow-md">
+                <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="rounded-xl bg-white p-4 shadow-md relative">
