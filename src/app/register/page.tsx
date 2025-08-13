@@ -47,7 +47,12 @@ export default function RegisterPage() {
             }, 2000);
         } catch (error) {
             console.error('Registration error:', error);
-            setSuccessMsg('Registrasi gagal. Silakan coba lagi.');
+            // Show more specific error messages
+            if (error.message) {
+                setSuccessMsg(`Registrasi gagal: ${error.message}`);
+            } else {
+                setSuccessMsg('Registrasi gagal. Silakan coba lagi.');
+            }
         }
     };
 

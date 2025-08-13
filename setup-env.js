@@ -9,14 +9,23 @@ if (fs.existsSync(envLocalPath)) {
 }
 
 // Create .env.local file with default values
-const envContent = `# MongoDB Configuration
+const envContent = `# MongoDB Configuration for Development
 MONGODB_URI=mongodb://localhost:27017/simantek
 MONGODB_DB=simantek
 
-# Uncomment and modify the following lines if using MongoDB Atlas
+# For production deployment (Vercel), use MongoDB Atlas:
 # MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
+
+# API URL for frontend
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
 `;
 
 fs.writeFileSync(envLocalPath, envContent);
 console.log('.env.local file created successfully!');
 console.log('Please update the MongoDB connection details in .env.local as needed.');
+console.log('');
+console.log('For production deployment:');
+console.log('1. Set up MongoDB Atlas (see DEPLOYMENT.md)');
+console.log('2. Update environment variables in Vercel dashboard');
+console.log('3. Set MONGODB_URI to your MongoDB Atlas connection string');
+console.log('4. Set NEXT_PUBLIC_API_URL to your Vercel deployment URL');

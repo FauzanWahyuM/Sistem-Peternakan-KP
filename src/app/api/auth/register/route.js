@@ -31,6 +31,11 @@ export async function POST(request) {
     }, { status: 201 });
   } catch (error) {
     console.error('Registration error:', error);
-    return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
+    // Return more specific error message
+    if (error.code === 11000) {
+      // Duplicate key error
+      return NextResponse.json({ error: 'Username or email already exists' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Registration failed: ' + error.message }, { status: 500 });
   }
 }

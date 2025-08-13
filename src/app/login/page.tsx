@@ -41,7 +41,12 @@ export default function LoginPage() {
             }
         } catch (error) {
             console.error('Login error:', error);
-            setErrorMsg('Username atau password salah');
+            // Show more specific error messages
+            if (error.message) {
+                setErrorMsg(error.message);
+            } else {
+                setErrorMsg('Username atau password salah');
+            }
         }
     };
 

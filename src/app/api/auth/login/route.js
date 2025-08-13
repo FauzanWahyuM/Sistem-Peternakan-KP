@@ -28,7 +28,7 @@ export async function POST(request) {
     console.log('User found:', user);
     
     if (!user) {
-        console.log('User not found');
+        console.log('User not found for username:', username);
         return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
     

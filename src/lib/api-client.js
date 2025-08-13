@@ -332,7 +332,17 @@ export class AuthClient {
         body: JSON.stringify({ username, password }),
       });
       
-      if (!response.ok) throw new Error('Login failed');
+      if (!response.ok) {
+        // Try to parse error response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Login failed with status ${response.status}`);
+        } catch (parseError) {
+          // If we can't parse JSON, use status text
+          throw new Error(`Login failed: ${response.statusText} (${response.status})`);
+        }
+      }
+      
       return await response.json();
     } catch (error) {
       console.error('Login error:', error);
@@ -350,7 +360,17 @@ export class AuthClient {
         body: JSON.stringify(userData),
       });
       
-      if (!response.ok) throw new Error('Registration failed');
+      if (!response.ok) {
+        // Try to parse error response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Registration failed with status ${response.status}`);
+        } catch (parseError) {
+          // If we can't parse JSON, use status text
+          throw new Error(`Registration failed: ${response.statusText} (${response.status})`);
+        }
+      }
+      
       return await response.json();
     } catch (error) {
       console.error('Registration error:', error);
