@@ -55,6 +55,8 @@ If you encounter connection issues:
 2. Check that the `MONGODB_URI` in `.env.local` is correct
 3. Verify that your firewall isn't blocking MongoDB connections
 4. If using MongoDB Atlas, ensure your IP address is whitelisted
+5. For development purposes, you can set the IP whitelist to `0.0.0.0/0`
+   to allow connections from any IP address (not recommended for production)
 
 ## Collections
 

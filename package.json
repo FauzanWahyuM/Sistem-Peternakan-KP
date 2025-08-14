@@ -10,7 +10,8 @@
     "setup-env": "node setup-env.js",
     "setup": "npm run setup-env && echo 'Environment setup complete! Please install MongoDB dependencies with: npm install mongodb bcryptjs'",
     "test-auth": "node test-auth.js",
-    "test-atlas": "node src/lib/test-atlas-connection.js"
+    "test-atlas": "node src/lib/test-atlas-connection.js",
+    "atlas-ip-config": "node src/lib/update-atlas-ip-whitelist.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
