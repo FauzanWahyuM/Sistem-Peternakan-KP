@@ -26,16 +26,26 @@ MONGODB_DB=simantek
 If you're using MongoDB Atlas, uncomment and modify the following line in `.env.local`:
 
 ```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
+MONGODB_ATLAS_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
 ```
 
 For Vercel deployment, you'll need to set these environment variables in your Vercel project settings:
 
 ```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
+MONGODB_ATLAS_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
 MONGODB_DB=simantek
 NEXT_PUBLIC_API_URL=https://your-vercel-url.vercel.app
 ```
+
+## Testing MongoDB Atlas Connection
+
+To test your MongoDB Atlas connection, you can use the provided connection script:
+
+```
+node src/lib/mongodb-atlas.js
+```
+
+This will attempt to connect to your MongoDB Atlas cluster and ping the database to confirm the connection.
 
 ## Troubleshooting
 
