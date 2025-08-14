@@ -1,0 +1,18 @@
+{
+  "env": {
+    "MONGODB_URI": "mongodb+srv://syahrulzaki0706:0kaBFLryZ2PmsE8d@cluster0.gxaeql8.mongodb.net/simantek",
+    "MONGODB_DB": "simantek"
+  },
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}

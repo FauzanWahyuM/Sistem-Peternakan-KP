@@ -50,12 +50,17 @@ This guide explains how to deploy the Sistem Peternakan application to Vercel wi
    - Add the following environment variables:
    
    ```
-   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
+   MONGODB_URI=mongodb+srv://syahrulzaki0706:0kaBFLryZ2PmsE8d@cluster0.gxaeql8.mongodb.net/simantek
    MONGODB_DB=simantek
    NEXT_PUBLIC_API_URL=https://your-vercel-url.vercel.app
    ```
    
    Note: The NEXT_PUBLIC_API_URL should NOT include `/api` at the end. It should be just the base URL of your Vercel deployment.
+   
+   For the specific MongoDB connection string provided by the user, use:
+   ```
+   MONGODB_URI=mongodb+srv://syahrulzaki0706:0kaBFLryZ2PmsE8d@cluster0.gxaeql8.mongodb.net/simantek
+   ```
 
 4. **Deploy**
    - Vercel will automatically deploy your application
