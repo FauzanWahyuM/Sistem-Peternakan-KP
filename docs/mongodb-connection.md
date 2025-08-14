@@ -102,10 +102,10 @@ npm run test-api-client
 The frontend connects to the backend API through the `ApiClient` class in `src/lib/api-client.js`. The API client automatically detects whether it's running in a Vercel deployment or local development:
 
 1. In Vercel deployments, it uses the Vercel URL (`https://<vercel-url>`)
-2. In local development, it uses `http://localhost:3000` by default
+2. In local development, it uses a relative path by default (no absolute URL)
 3. It can be overridden with the `NEXT_PUBLIC_API_URL` environment variable
 
-This ensures that frontend requests always go to the correct backend endpoint, whether running locally or deployed to Vercel.
+This ensures that frontend requests always go to the correct backend endpoint, whether running locally or deployed to Vercel. When using relative paths, the requests will be made to the same domain as the frontend, which is the correct approach for Next.js applications.
 
 ## Vercel Deployment
 
