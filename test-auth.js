@@ -7,7 +7,7 @@ const { MongoClient } = require('mongodb');
 const bcrypt = require('bcryptjs');
 
 // Load environment variables
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/simantek';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://username:password@cluster.mongodb.net/simantek';
 const MONGODB_DB = process.env.MONGODB_DB || 'simantek';
 
 const SALT_ROUNDS = 10;

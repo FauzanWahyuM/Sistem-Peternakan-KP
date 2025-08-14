@@ -2,6 +2,14 @@ import clientPromise from "../../../lib/mongodb-new";
 
 export async function GET(request) {
   try {
+    // Check if clientPromise is available
+    if (!clientPromise) {
+      return Response.json({
+        success: false,
+        error: "MongoDB connection not available - check environment variables"
+      }, { status: 500 });
+    }
+    
     // Test the MongoDB connection
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB || "simantek");

@@ -107,6 +107,21 @@ The frontend connects to the backend API through the `ApiClient` class in `src/l
 
 This ensures that frontend requests always go to the correct backend endpoint, whether running locally or deployed to Vercel.
 
+## Vercel Deployment
+
+When deploying to Vercel, you need to set the environment variables in the Vercel project settings:
+
+1. Go to your Vercel project dashboard
+2. Navigate to Settings > Environment Variables
+3. Add the following environment variables:
+   - `MONGODB_URI` - Your MongoDB Atlas connection string
+   - `MONGODB_DB` - Your MongoDB database name
+
+The updated MongoDB connection implementation handles build time issues by:
+- Checking if environment variables are available during build time
+- Not throwing errors during build time when environment variables are not available
+- Properly initializing connections only when running in a server environment
+
 ## Benefits of This Approach
 
 1. **Connection Reuse**: In development, connections are reused to avoid multiple connections
@@ -115,3 +130,4 @@ This ensures that frontend requests always go to the correct backend endpoint, w
 4. **Type Safety**: Uses modern ES modules with proper imports
 5. **Vercel Compatible**: Automatically works with Vercel deployments
 6. **MongoDB Atlas**: Uses MongoDB Atlas for both local development and production
+7. **Build Time Safe**: Handles Vercel build process without requiring environment variables during build time
