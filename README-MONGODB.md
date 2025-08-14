@@ -29,6 +29,14 @@ If you're using MongoDB Atlas, uncomment and modify the following line in `.env.
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
 ```
 
+For Vercel deployment, you'll need to set these environment variables in your Vercel project settings:
+
+```
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
+MONGODB_DB=simantek
+NEXT_PUBLIC_API_URL=https://your-vercel-url.vercel.app
+```
+
 ## Troubleshooting
 
 If you encounter connection issues:

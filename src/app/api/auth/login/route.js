@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
 import { UserModel } from '../../../../models/User';
-import bcrypt from 'bcryptjs';
-import { generateToken } from '../../../../lib/auth';
+import { generateToken, verifyPassword } from '../../../../lib/auth';
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
+  const allowedOrigin = process.env.NODE_ENV === 'development'
+    ? '*'
+    : process.env.NEXT_PUBLIC_API_URL || '*';
+    
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': allowedOrigin,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
@@ -48,7 +51,7 @@ export async function POST(request) {
     console.log('User role:', user.role);
 
     // Verifikasi password menggunakan bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await verifyPassword(password, user.password);
     console.log('Password valid:', isPasswordValid);
     
     if (!isPasswordValid) {

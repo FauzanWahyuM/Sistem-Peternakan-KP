@@ -24,6 +24,10 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 This application requires MongoDB to function properly. Please follow the instructions in [README-MONGODB.md](README-MONGODB.md) to set up MongoDB.
 
+## Testing
+
+To test the authentication system, follow the instructions in [TESTING.md](TESTING.md).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

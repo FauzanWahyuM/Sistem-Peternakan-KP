@@ -52,8 +52,10 @@ This guide explains how to deploy the Sistem Peternakan application to Vercel wi
    ```
    MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/simantek
    MONGODB_DB=simantek
-   NEXT_PUBLIC_API_URL=https://your-vercel-url.vercel.app/api
+   NEXT_PUBLIC_API_URL=https://your-vercel-url.vercel.app
    ```
+   
+   Note: The NEXT_PUBLIC_API_URL should NOT include `/api` at the end. It should be just the base URL of your Vercel deployment.
 
 4. **Deploy**
    - Vercel will automatically deploy your application

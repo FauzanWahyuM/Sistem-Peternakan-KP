@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "setup-env": "node setup-env.js",
-    "setup": "npm run setup-env && echo 'Environment setup complete! Please install MongoDB dependencies with: npm install mongodb bcryptjs'"
+    "setup": "npm run setup-env && echo 'Environment setup complete! Please install MongoDB dependencies with: npm install mongodb bcryptjs'",
+    "test-auth": "node test-auth.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
