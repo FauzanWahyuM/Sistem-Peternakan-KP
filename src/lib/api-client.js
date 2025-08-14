@@ -324,13 +324,18 @@ export class ApiClient {
 export class AuthClient {
   static async login(username, password) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const url = `${API_BASE_URL}/auth/login`;
+      console.log('Making login request to:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
       });
+      
+      console.log('Login response status:', response.status);
       
       if (!response.ok) {
         // Try to parse error response
@@ -346,19 +351,28 @@ export class AuthClient {
       return await response.json();
     } catch (error) {
       console.error('Login error:', error);
+      // Provide more context about the error
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network error: Unable to connect to the server. Please check your internet connection and ensure the server is running.');
+      }
       throw error;
     }
   }
 
   static async register(userData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const url = `${API_BASE_URL}/auth/register`;
+      console.log('Making registration request to:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(userData),
       });
+      
+      console.log('Registration response status:', response.status);
       
       if (!response.ok) {
         // Try to parse error response
@@ -374,6 +388,10 @@ export class AuthClient {
       return await response.json();
     } catch (error) {
       console.error('Registration error:', error);
+      // Provide more context about the error
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network error: Unable to connect to the server. Please check your internet connection and ensure the server is running.');
+      }
       throw error;
     }
   }

@@ -4,9 +4,9 @@ import { generateToken, verifyPassword } from '../../../../lib/auth';
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
-  const allowedOrigin = process.env.NODE_ENV === 'development'
-    ? '*'
-    : process.env.NEXT_PUBLIC_API_URL || '*';
+  const allowedOrigin = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') // Remove /api if present
+    : '*';
     
   return new Response(null, {
     status: 204,
@@ -14,6 +14,7 @@ export async function OPTIONS() {
       'Access-Control-Allow-Origin': allowedOrigin,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
     },
   });
 }
