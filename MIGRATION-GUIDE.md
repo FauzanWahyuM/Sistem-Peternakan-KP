@@ -1,214 +1,162 @@
-# Migration Guide: From localStorage to MongoDB
+# Migration Guide: From MongoDB to Static Implementation
 
 ## Overview
-This guide explains how to migrate the existing SIMANTEK application from localStorage-based storage to MongoDB database storage.
+This guide explains how to migrate the existing SIMANTEK application from MongoDB database storage to static data implementation.
 
 ## Prerequisites
-1. MongoDB server running (local or remote)
-2. Node.js and npm installed
-3. Existing SIMANTEK application codebase
+1. Node.js and npm installed
+2. Existing SIMANTEK application codebase
 
 ## Migration Steps
 
-### 1. Install Required Dependencies
-```bash
-npm install mongodb bcryptjs
-```
+### 1. Remove MongoDB Dependencies
+The following MongoDB-related dependencies have been removed:
+- `mongodb`
+- `bcryptjs` (kept for password hashing in static implementation)
 
-### 2. Configure Environment Variables
-Create a `.env.local` file in the root directory:
+### 2. Update Environment Variables
+The `.env.local` file has been updated to remove MongoDB settings:
 ```env
-MONGODB_URI=mongodb://localhost:27017/simantek
-MONGODB_DB=simantek
+# Environment configuration for static implementation
+# MongoDB settings have been removed
+
+# API URL for frontend - For development, this points to localhost (do not include /api)
+NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
 
-### 3. Add MongoDB Connection Code
-The following files have been added to handle MongoDB connections:
-- `src/lib/mongodb.js` - Database connection utility
-- `src/lib/db-init.js` - Database initialization and indexing
-- `src/lib/auth.js` - Authentication utilities
+### 3. Add Static Data Implementation
+The following files have been added to handle static data:
+- `src/lib/static-users.js` - Static user data storage
+- Updated model files to use static data instead of MongoDB
 
-### 4. Create Data Models
-The following model files have been created:
-- `src/models/User.js` - User management
-- `src/models/Livestock.js` - Livestock data management
-- `src/models/TrainingProgram.js` - Training program management
-- `src/models/Article.js` - Article management
-- `src/models/Questionnaire.js` - Questionnaire management
-- `src/models/FarmerGroup.js` - Farmer group management
-- `src/models/TrainingParticipation.js` - Training participation tracking
+### 4. Update Data Models
+The following model files have been updated to use static data:
+- `src/models/User.js` - User management with static data
+- `src/models/Livestock.js` - Livestock data management with static data
+- `src/models/TrainingProgram.js` - Training program management with static data
+- `src/models/Article.js` - Article management with static data
+- `src/models/Questionnaire.js` - Questionnaire management with static data
+- `src/models/FarmerGroup.js` - Farmer group management with static data
+- `src/models/TrainingParticipation.js` - Training participation tracking with static data
 
-### 5. Create API Routes
-The following API routes have been created:
-- `src/app/api/users/route.js` - User management endpoints
-- `src/app/api/livestock/route.js` - Livestock management endpoints
-- `src/app/api/training-programs/route.js` - Training program endpoints
-- `src/app/api/articles/route.js` - Article management endpoints
-- `src/app/api/migrate/route.js` - Data migration endpoint
-
-### 6. Update Frontend Components
-The existing frontend components have been updated to use MongoDB instead of localStorage:
-- `src/app/peternak/ternak/tambah/page.tsx` - Livestock creation form
-- `src/app/peternak/ternak/lihat/page.tsx` - Livestock listing and filtering
-- `src/app/peternak/ternak/edit/page.tsx` - Livestock editing
-- `src/app/dashboard/penyuluh/pelatihan/page.tsx` - Training program listing
-- `src/app/dashboard/penyuluh/pelatihan/tambah/page.tsx` - Training program creation
-- `src/app/dashboard/penyuluh/pelatihan/edit/[id]/page.tsx` - Training program editing
-
-### 7. Data Migration
-To migrate existing data from localStorage to MongoDB:
-
-#### Option 1: Automated Migration (Recommended)
-Use the built-in migration API:
-1. Start your application
-2. Navigate to `/api/migrate` in your browser
-3. The system will automatically migrate all existing data
-
-#### Option 2: Manual Migration Script
-Run the migration script directly:
-```bash
-node src/lib/migrate-localstorage.js
-```
-
-### 8. Testing the Migration
-After migration, verify that:
-1. All existing data is accessible through the MongoDB-based UI
-2. New data is being stored in MongoDB
-3. Filtering and search functionality works correctly
-4. Edit and delete operations work as expected
+### 5. Update Authentication
+The authentication system has been updated to work with static data:
+- `src/lib/auth.js` - Updated authentication utilities
+- `src/app/api/auth/login/route.js` - Updated login API route
+- `src/app/api/auth/register/route.js` - Updated register API route
 
 ## Code Changes Summary
 
-### Before (localStorage)
+### Before (MongoDB)
 ```javascript
 // Saving data
-localStorage.setItem('ternakList', JSON.stringify(ternakList));
+const { db } = await connectToDatabase();
+const collection = db.collection('users');
+const result = await collection.insertOne(userWithTimestamps);
 
 // Loading data
-const savedData = localStorage.getItem('ternakList');
-const ternakList = savedData ? JSON.parse(savedData) : [];
+const { db } = await connectToDatabase();
+const collection = db.collection('users');
+return await collection.findOne({ username });
 
 // Updating data
-const updatedList = ternakList.map(ternak => {
-    if (ternak.id === ternakId) {
-        return { ...ternak, ...updates };
-    }
-    return ternak;
-});
-localStorage.setItem('ternakList', JSON.stringify(updatedList));
+const { db } = await connectToDatabase();
+const collection = db.collection('users');
+const result = await collection.updateOne(
+  { _id: objectId },
+  { $set: { ...updateData, updatedAt: new Date() } }
+);
 ```
 
-### After (MongoDB)
+### After (Static Data)
 ```javascript
 // Saving data
-const response = await fetch('/api/livestock', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(newTernak),
-});
+staticUsers.push(newUser);
+return newUser;
 
 // Loading data
-const response = await fetch(`/api/livestock?userId=${userId}`);
-const result = await response.json();
-setTernakList(result.livestock);
+return staticUsers.find(user => user.username === username);
 
 // Updating data
-const response = await fetch(`/api/livestock/${ternakId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-});
+staticUsers[index] = {
+  ...staticUsers[index],
+  ...updateData,
+  updatedAt: new Date()
+};
 ```
 
-## Database Schema Changes
+## Static Data Structure
 
-### Users Collection
+### Users Data
 ```javascript
-{
-  _id: ObjectId,
-  name: String,
-  username: String,
-  email: String,
-  password: String, // Hashed
-  role: String, // "admin", "penyuluh", "peternak"
-  kelompok: String,
-  createdAt: Date,
-  updatedAt: Date,
-  lastLogin: Date
-}
+const staticUsers = [
+  {
+    id: '1',
+    nama: 'Admin User',
+    username: 'admin',
+    email: 'admin@simantek.com',
+    password: '$2b$10$example_hashed_password',
+    kelompok: 'Administrator',
+    role: 'admin',
+    status: 'Aktif',
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01')
+  },
+  // Additional predefined users...
+];
 ```
 
-### Livestock Collection
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId, // Reference to User
-  jenisHewan: String,
-  jenisKelamin: String,
-  umurTernak: String,
-  statusTernak: String,
-  kondisiKesehatan: String,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
+## Predefined Users
 
-### Training Programs Collection
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId, // Reference to User (penyuluh)
-  judul: String,
-  deskripsi: String,
-  gambar: String,
-  tanggal: Date,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
+The application comes with predefined users for testing:
+
+1. **Admin User**
+   - Username: admin
+   - Password: password
+   - Role: admin
+
+2. **Penyuluh User**
+   - Username: penyuluh
+   - Password: password
+   - Role: penyuluh
+
+3. **Peternak User**
+   - Username: peternak
+   - Password: password
+   - Role: peternak
+
+## Testing the Migration
+
+After migration, verify that:
+1. All predefined users can log in successfully
+2. New user registration works (data not persisted between restarts)
+3. All API routes return valid responses
+4. Frontend components work correctly with static data
 
 ## Troubleshooting
 
 ### Common Issues
-1. **Connection refused**: Ensure MongoDB is running and the connection string is correct
-2. **Data not migrating**: Check that localStorage data exists before running migration
-3. **API errors**: Verify that all required environment variables are set
-4. **"MongoClient is not a constructor"**: Remove deprecated options from MongoDB connection
+1. **Login fails**: Ensure you're using the correct predefined usernames and passwords
+2. **Registration data lost**: This is expected behavior for static implementation
+3. **API errors**: Check that all model files have been properly updated
 
 ### Debugging Steps
 1. Check the browser console for JavaScript errors
 2. Check the terminal for server-side errors
-3. Verify MongoDB is accessible with a MongoDB client
-4. Check that all required dependencies are installed
-
-### MongoDB Connection Issues
-1. **Verify MongoDB is running**:
-   ```bash
-   # On Windows
-   net start MongoDB
-   
-   # On macOS/Linux
-   sudo systemctl status mongod
-   ```
-
-2. **Check connection string format**:
-   - Local MongoDB: `mongodb://localhost:27017/simantek`
-   - MongoDB Atlas: `mongodb+srv://username:password@cluster.mongodb.net/simantek`
-
-### Environment Variable Issues
-1. Ensure `.env.local` file exists in the root directory
-2. Verify the file contains the correct MongoDB connection details
-3. Restart the development server after adding environment variables
+3. Verify that static data files exist and are correctly formatted
+4. Ensure all API routes are working correctly
 
 ## Rollback Plan
+
 If issues occur after migration:
-1. Revert frontend components to use localStorage
-2. Restore MongoDB data from backup if needed
-3. Contact the development team for assistance
+1. Restore the MongoDB implementation files
+2. Reinstall MongoDB dependencies
+3. Restore environment variables for MongoDB
+4. Contact the development team for assistance
 
 ## Future Enhancements
-1. Implement proper user authentication with JWT
-2. Add data validation and sanitization
-3. Implement pagination for large datasets
-4. Add real-time data synchronization
-5. Implement backup and restore functionality
+
+1. Implement data persistence for static implementation
+2. Add more predefined data for testing
+3. Implement backup and restore functionality for static data
+4. Add data validation and sanitization for static implementation

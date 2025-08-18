@@ -1,147 +1,110 @@
-import { connectToDatabase } from '../lib/mongodb';
-import { ObjectId } from 'mongodb';
+// Static implementation of FarmerGroup model
+const staticFarmerGroups = [
+  {
+    id: '1',
+    nama: 'Kelompok Ternak Maju',
+    deskripsi: 'Kelompok peternak yang fokus pada pengembangan ternak sapi',
+    anggota: [
+      { userId: '3', nama: 'Peternak User', role: 'member', joinedAt: new Date('2025-01-01') }
+    ],
+    createdAt: new Date('2025-01-01'),
+    updatedAt: new Date('2025-01-01')
+  }
+];
 
 export class FarmerGroupModel {
   static async create(groupData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
-    
-    // Add timestamps
-    const groupWithTimestamps = {
+    // In static implementation, we'll just add to the array
+    const newGroup = {
+      id: String(staticFarmerGroups.length + 1),
       ...groupData,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    const result = await collection.insertOne(groupWithTimestamps);
-    return { ...groupWithTimestamps, _id: result.insertedId };
+    staticFarmerGroups.push(newGroup);
+    return newGroup;
   }
 
   static async findById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    return await collection.findOne({ _id: objectId });
+    return staticFarmerGroups.find(group => group.id === id);
   }
 
   static async findByName(name) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
-    return await collection.findOne({ nama: name });
+    return staticFarmerGroups.find(group => group.nama === name);
   }
 
   static async findAll() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
-    return await collection.find({}).toArray();
+    return staticFarmerGroups;
   }
 
   static async findByMember(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    return await collection.find({ "anggota.userId": objectId }).toArray();
+    return staticFarmerGroups.filter(group => 
+      group.anggota && group.anggota.some(member => member.userId === userId)
+    );
   }
 
   static async updateById(id, updateData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
+    const index = staticFarmerGroups.findIndex(group => group.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
+    staticFarmerGroups[index] = {
+      ...staticFarmerGroups[index],
+      ...updateData,
+      updatedAt: new Date()
+    };
     
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { 
-        $set: { 
-          ...updateData, 
-          updatedAt: new Date() 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    return true;
   }
 
   static async addMember(groupId, memberData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
+    const group = staticFarmerGroups.find(g => g.id === groupId);
+    if (!group) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof groupId === 'string' ? new ObjectId(groupId) : groupId;
+    if (!group.anggota) {
+      group.anggota = [];
+    }
     
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { 
-        $push: { 
-          anggota: memberData 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    group.anggota.push(memberData);
+    group.updatedAt = new Date();
+    return true;
   }
 
   static async removeMember(groupId, userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
+    const group = staticFarmerGroups.find(g => g.id === groupId);
+    if (!group || !group.anggota) return false;
     
-    // Convert string ids to ObjectId if needed
-    const groupObjectId = typeof groupId === 'string' ? new ObjectId(groupId) : groupId;
-    const userObjectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
+    const initialLength = group.anggota.length;
+    group.anggota = group.anggota.filter(member => member.userId !== userId);
+    group.updatedAt = new Date();
     
-    const result = await collection.updateOne(
-      { _id: groupObjectId },
-      { 
-        $pull: { 
-          anggota: { userId: userObjectId } 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    return initialLength > group.anggota.length;
   }
 
   static async deleteById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
+    const index = staticFarmerGroups.findIndex(group => group.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.deleteOne({ _id: objectId });
-    return result.deletedCount > 0;
+    staticFarmerGroups.splice(index, 1);
+    return true;
   }
 
   static async searchByName(searchTerm) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
-    
-    const query = {
-      nama: { $regex: searchTerm, $options: 'i' }
-    };
-    
-    return await collection.find(query).toArray();
+    return staticFarmerGroups.filter(group => 
+      group.nama.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   }
 
   static async getStatistics() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('farmer_groups');
+    const totalGroups = staticFarmerGroups.length;
+    let totalMembers = 0;
     
-    const stats = await collection.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalGroups: { $sum: 1 },
-          totalMembers: { $sum: { $size: "$anggota" } }
-        }
+    staticFarmerGroups.forEach(group => {
+      if (group.anggota) {
+        totalMembers += group.anggota.length;
       }
-    ]).toArray();
+    });
     
-    return stats.length > 0 ? stats[0] : { totalGroups: 0, totalMembers: 0 };
+    return { totalGroups, totalMembers };
   }
 }

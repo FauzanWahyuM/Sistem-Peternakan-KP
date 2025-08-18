@@ -1,202 +1,195 @@
-# MongoDB Database Design for SIMANTEK System
+# Static Data Design for SIMANTEK System
 
 ## Overview
-This document outlines the MongoDB database structure for the Sistem Informasi Penjaminan Mutu Kelompok Peternak (SIMANTEK) application. The system has three main user roles:
+This document outlines the static data structure for the Sistem Informasi Penjaminan Mutu Kelompok Peternak (SIMANTEK) application. The system has three main user roles:
 1. Admin - System administrator
 2. Penyuluh - Extension officer/trainer
 3. Peternak - Farmer
 
-## Database Collections
+## Static Data Structure
 
-### 1. Users Collection
+### 1. Users Data
 Stores all user information including authentication details and role-based access.
 
 ```javascript
-{
-  _id: ObjectId,
-  name: String,
-  username: String,
-  email: String,
-  password: String, // Hashed password
-  role: String, // "admin", "penyuluh", "peternak"
-  kelompok: String, // For peternak role
-  createdAt: Date,
-  updatedAt: Date,
-  lastLogin: Date
-}
+const staticUsers = [
+  {
+    id: String,
+    nama: String,
+    username: String,
+    email: String,
+    password: String, // Hashed password
+    role: String, // "admin", "penyuluh", "peternak"
+    kelompok: String, // For peternak role
+    status: String, // "Aktif"
+    createdAt: Date,
+    updatedAt: Date
+  }
+];
 ```
 
-### 2. Livestock Collection
+### 2. Livestock Data
 Stores livestock data managed by peternak users.
 
 ```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId, // Reference to Users collection (peternak)
-  jenisHewan: String, // "Sapi", "Kambing", "Domba", "Ayam", "Bebek"
-  jenisKelamin: String, // "Jantan", "Betina"
-  umurTernak: String,
-  statusTernak: String, // Based on animal type and gender
-  kondisiKesehatan: String, // "Sehat", "Sakit"
-  createdAt: Date,
-  updatedAt: Date
-}
+const staticLivestock = [
+  {
+    id: String,
+    userId: String, // Reference to Users data (peternak)
+    jenisHewan: String, // "Sapi", "Kambing", "Domba", "Ayam", "Bebek"
+    jenisKelamin: String, // "Jantan", "Betina"
+    umurTernak: String,
+    statusTernak: String, // Based on animal type and gender
+    kondisiKesehatan: String, // "Sehat", "Sakit"
+    createdAt: Date,
+    updatedAt: Date
+  }
+];
 ```
 
-### 3. Training Programs Collection
+### 3. Training Programs Data
 Stores training program information managed by penyuluh users.
 
 ```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId, // Reference to Users collection (penyuluh)
-  judul: String,
-  deskripsi: String,
-  gambar: String, // File path or URL
-  tanggal: Date,
-  createdAt: Date,
-  updatedAt: Date
-}
+const staticTrainingPrograms = [
+  {
+    id: String,
+    userId: String, // Reference to Users data (penyuluh)
+    judul: String,
+    deskripsi: String,
+    tanggal: Date,
+    createdAt: Date,
+    updatedAt: Date
+  }
+];
 ```
 
-### 4. Articles Collection
+### 4. Articles Data
 Stores articles managed by admin users.
 
 ```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId, // Reference to Users collection (admin/penyuluh)
-  judul: String,
-  konten: String,
-  gambar: String, // File path or URL
-  kategori: String,
-  status: String, // "published", "draft"
-  createdAt: Date,
-  updatedAt: Date
-}
+const staticArticles = [
+  {
+    id: String,
+    userId: String, // Reference to Users data (admin/penyuluh)
+    judul: String,
+    deskripsi: String,
+    kategori: String,
+    status: String, // "published", "draft"
+    createdAt: Date,
+    updatedAt: Date
+  }
+];
 ```
 
-### 5. Questionnaires Collection
+### 5. Questionnaires Data
 Stores questionnaire templates created by penyuluh for peternak.
 
 ```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId, // Reference to Users collection (penyuluh)
-  judul: String,
-  deskripsi: String,
-  pertanyaan: [
-    {
-      id: Number,
-      teks: String,
-      tipe: String, // "pilihan_ganda", "text"
-      opsi: [String] // For multiple choice questions
-    }
-  ],
-  createdAt: Date,
-  updatedAt: Date
-}
+const staticQuestionnaires = [
+  {
+    id: String,
+    userId: String, // Reference to Users data (penyuluh)
+    judul: String,
+    deskripsi: String,
+    pertanyaan: [
+      {
+        id: String,
+        text: String,
+        type: String // "text", "boolean"
+      }
+    ],
+    createdAt: Date,
+    updatedAt: Date
+  }
+];
 ```
 
-### 6. Questionnaire Responses Collection
+### 6. Questionnaire Responses Data
 Stores responses from peternak to questionnaires.
 
 ```javascript
-{
-  _id: ObjectId,
-  questionnaireId: ObjectId, // Reference to Questionnaires collection
-  userId: ObjectId, // Reference to Users collection (peternak)
-  responses: [
-    {
-      pertanyaanId: Number,
-      jawaban: String
-    }
-  ],
-  submittedAt: Date
-}
+const staticQuestionnaireResponses = [
+  {
+    id: String,
+    questionnaireId: String, // Reference to Questionnaires data
+    userId: String, // Reference to Users data (peternak)
+    jawaban: [
+      {
+        questionId: String,
+        answer: String
+      }
+    ],
+    submittedAt: Date
+  }
+];
 ```
 
-### 7. Farmer Groups Collection
+### 7. Farmer Groups Data
 Stores information about farmer groups/communities.
 
 ```javascript
-{
-  _id: ObjectId,
-  nama: String,
-  alamat: String,
-  jenisTernakUtama: String,
-  jumlahTernak: Number,
-  tahunBerdiri: Number,
-  gambar: String, // File path or URL
-  anggota: [
-    {
-      userId: ObjectId, // Reference to Users collection
-      role: String // "ketua", "anggota"
-    }
-  ],
-  createdAt: Date,
-  updatedAt: Date
-}
+const staticFarmerGroups = [
+  {
+    id: String,
+    nama: String,
+    deskripsi: String,
+    anggota: [
+      {
+        userId: String, // Reference to Users data
+        nama: String,
+        role: String // "member"
+      }
+    ],
+    createdAt: Date,
+    updatedAt: Date
+  }
+];
 ```
 
-### 8. Training Participation Collection
+### 8. Training Participation Data
 Tracks which farmers participated in which training programs.
 
 ```javascript
-{
-  _id: ObjectId,
-  trainingId: ObjectId, // Reference to Training Programs collection
-  userId: ObjectId, // Reference to Users collection (peternak)
-  status: String, // "registered", "completed", "cancelled"
-  registrationDate: Date,
-  completionDate: Date
-}
+const staticTrainingParticipations = [
+  {
+    id: String,
+    trainingId: String, // Reference to Training Programs data
+    userId: String, // Reference to Users data (peternak)
+    status: String, // "registered", "completed"
+    registrationDate: Date,
+    completionDate: Date
+  }
+];
 ```
 
-## Relationships
+## Predefined Users
 
-1. **Users** (1) → (Many) **Livestock** - One peternak can have many livestock
-2. **Users** (1) → (Many) **Training Programs** - One penyuluh can create many training programs
-3. **Users** (1) → (Many) **Articles** - Users can create many articles
-4. **Users** (1) → (Many) **Questionnaires** - Penyuluh can create many questionnaires
-5. **Questionnaires** (1) → (Many) **Questionnaire Responses** - One questionnaire can have many responses
-6. **Farmer Groups** (Many) ↔ (Many) **Users** - Many groups can have many users (with roles)
-7. **Training Programs** (1) → (Many) **Training Participation** - One training can have many participants
+The application comes with predefined users for testing:
 
-## Indexes
+1. **Admin User**
+   - Username: admin
+   - Password: password
+   - Role: admin
 
-To optimize query performance, the following indexes should be created:
+2. **Penyuluh User**
+   - Username: penyuluh
+   - Password: password
+   - Role: penyuluh
 
-1. Users collection:
-   - `username` (unique)
-   - `email` (unique)
-   - `role`
+3. **Peternak User**
+   - Username: peternak
+   - Password: password
+   - Role: peternak
 
-2. Livestock collection:
-   - `userId`
-   - `jenisHewan`
-   - `kondisiKesehatan`
+## Data Persistence
 
-3. Training Programs collection:
-   - `userId`
-   - `tanggal`
+Note: In the static implementation, all data is stored in memory and will be reset when the server restarts. For production use, a proper database implementation would be needed.
 
-4. Articles collection:
-   - `userId`
-   - `status`
-   - `kategori`
+## Benefits of Static Implementation
 
-5. Questionnaires collection:
-   - `userId`
-
-6. Questionnaire Responses collection:
-   - `questionnaireId`
-   - `userId`
-
-7. Farmer Groups collection:
-   - `nama`
-
-8. Training Participation collection:
-   - `trainingId`
-   - `userId`
-   - `status`
+1. **No Database Setup Required**: Eliminates all database configuration issues
+2. **Simplified Deployment**: No need to configure MongoDB Atlas or any database service
+3. **Faster Development**: No database connection delays or issues
+4. **Easier Testing**: Predefined data makes testing more predictable
+5. **Reduced Dependencies**: Removed MongoDB and related packages

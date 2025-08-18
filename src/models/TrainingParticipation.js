@@ -1,141 +1,116 @@
-import { connectToDatabase } from '../lib/mongodb';
-import { ObjectId } from 'mongodb';
+// Static implementation of TrainingParticipation model
+const staticTrainingParticipations = [
+  {
+    id: '1',
+    trainingId: '1',
+    userId: '3', // peternak user
+    status: 'registered',
+    registrationDate: new Date('2025-01-15')
+  },
+  {
+    id: '2',
+    trainingId: '2',
+    userId: '3', // peternak user
+    status: 'completed',
+    registrationDate: new Date('2025-02-01'),
+    completionDate: new Date('2025-02-10')
+  }
+];
 
 export class TrainingParticipationModel {
   static async create(participationData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
-    
-    // Add timestamp
-    const participationWithTimestamp = {
+    // In static implementation, we'll just add to the array
+    const newParticipation = {
+      id: String(staticTrainingParticipations.length + 1),
       ...participationData,
       registrationDate: new Date()
     };
     
-    const result = await collection.insertOne(participationWithTimestamp);
-    return { ...participationWithTimestamp, _id: result.insertedId };
+    staticTrainingParticipations.push(newParticipation);
+    return newParticipation;
   }
 
   static async findById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    return await collection.findOne({ _id: objectId });
+    return staticTrainingParticipations.find(p => p.id === id);
   }
 
   static async findByTrainingId(trainingId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof trainingId === 'string' ? new ObjectId(trainingId) : trainingId;
-    return await collection.find({ trainingId: objectId }).toArray();
+    return staticTrainingParticipations.filter(p => p.trainingId === trainingId);
   }
 
   static async findByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    return await collection.find({ userId: objectId }).toArray();
+    return staticTrainingParticipations.filter(p => p.userId === userId);
   }
 
   static async findByTrainingAndUser(trainingId, userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
-    
-    // Convert string ids to ObjectId if needed
-    const trainingObjectId = typeof trainingId === 'string' ? new ObjectId(trainingId) : trainingId;
-    const userObjectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    
-    return await collection.findOne({ trainingId: trainingObjectId, userId: userObjectId });
+    return staticTrainingParticipations.find(p => 
+      p.trainingId === trainingId && p.userId === userId
+    );
   }
 
   static async findAll() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
-    return await collection.find({}).toArray();
+    return staticTrainingParticipations;
   }
 
   static async updateStatus(id, status) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
+    const participation = staticTrainingParticipations.find(p => p.id === id);
+    if (!participation) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const updateData = { status };
+    participation.status = status;
     if (status === 'completed') {
-      updateData.completionDate = new Date();
+      participation.completionDate = new Date();
     }
     
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { $set: updateData }
-    );
-    
-    return result.modifiedCount > 0;
+    return true;
   }
 
   static async deleteById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
+    const index = staticTrainingParticipations.findIndex(p => p.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.deleteOne({ _id: objectId });
-    return result.deletedCount > 0;
+    staticTrainingParticipations.splice(index, 1);
+    return true;
   }
 
   static async deleteByTrainingId(trainingId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
+    const initialLength = staticTrainingParticipations.length;
+    for (let i = staticTrainingParticipations.length - 1; i >= 0; i--) {
+      if (staticTrainingParticipations[i].trainingId === trainingId) {
+        staticTrainingParticipations.splice(i, 1);
+      }
+    }
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof trainingId === 'string' ? new ObjectId(trainingId) : trainingId;
-    
-    const result = await collection.deleteMany({ trainingId: objectId });
-    return result.deletedCount;
+    return initialLength - staticTrainingParticipations.length;
   }
 
   static async deleteByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
+    const initialLength = staticTrainingParticipations.length;
+    for (let i = staticTrainingParticipations.length - 1; i >= 0; i--) {
+      if (staticTrainingParticipations[i].userId === userId) {
+        staticTrainingParticipations.splice(i, 1);
+      }
+    }
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    
-    const result = await collection.deleteMany({ userId: objectId });
-    return result.deletedCount;
+    return initialLength - staticTrainingParticipations.length;
   }
 
   static async getStatistics(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_participations');
+    const participations = userId 
+      ? staticTrainingParticipations.filter(p => p.userId === userId)
+      : staticTrainingParticipations;
     
-    // Convert string id to ObjectId if needed
-    const userObjectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    const matchQuery = userId ? { userId: userObjectId } : {};
+    const stats = { registered: 0, completed: 0, cancelled: 0 };
     
-    const stats = await collection.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 }
-        }
+    participations.forEach(p => {
+      if (p.status === 'registered') {
+        stats.registered++;
+      } else if (p.status === 'completed') {
+        stats.completed++;
+      } else if (p.status === 'cancelled') {
+        stats.cancelled++;
       }
-    ]).toArray();
-    
-    const result = { registered: 0, completed: 0, cancelled: 0 };
-    stats.forEach(stat => {
-      result[stat._id] = stat.count;
     });
     
-    return result;
+    return stats;
   }
 }

@@ -1,22 +1,19 @@
 import { NextResponse } from 'next/server';
-import { UserModel } from '../../models/User';
-import { connectToDatabase } from '../../lib/mongodb';
+import { staticUsers } from '../../lib/static-users';
 
 // GET /api/test-api - Test endpoint to check users in database
 export async function GET() {
   try {
-    // Connect to database
-    const { db } = await connectToDatabase();
-    console.log('Connected to database');
+    console.log('Using static user data');
     
-    // Get all users
-    const users = await UserModel.findAll();
-    console.log('Users in database:', users);
+    // Get all users from static data
+    const users = staticUsers;
+    console.log('Users in static data:', users);
     
     return NextResponse.json({
-      message: 'Database connection successful',
+      message: 'Static data implementation successful',
       users: users.map(user => ({
-        id: user._id,
+        id: user.id,
         username: user.username,
         role: user.role
       }))

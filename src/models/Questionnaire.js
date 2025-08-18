@@ -1,177 +1,170 @@
-import { connectToDatabase } from '../lib/mongodb';
-import { ObjectId } from 'mongodb';
+// Static implementation of Questionnaire model
+const staticQuestionnaires = [
+  {
+    id: '1',
+    userId: '2', // penyuluh user
+    judul: 'Kuesioner Kesehatan Ternak',
+    deskripsi: 'Kuesioner untuk menilai kesehatan ternak secara berkala',
+    pertanyaan: [
+      {
+        id: 'q1',
+        text: 'Bagaimana kondisi kesehatan ternak Anda saat ini?',
+        type: 'text'
+      },
+      {
+        id: 'q2',
+        text: 'Apakah ternak Anda mendapatkan vaksinasi secara rutin?',
+        type: 'boolean'
+      }
+    ],
+    createdAt: new Date('2025-01-15'),
+    updatedAt: new Date('2025-01-15')
+  }
+];
+
+// Static implementation of QuestionnaireResponse model
+const staticQuestionnaireResponses = [
+  {
+    id: '1',
+    questionnaireId: '1',
+    userId: '3', // peternak user
+    jawaban: [
+      {
+        questionId: 'q1',
+        answer: 'Ternak dalam keadaan sehat'
+      },
+      {
+        questionId: 'q2',
+        answer: true
+      }
+    ],
+    submittedAt: new Date('2025-01-20')
+  }
+];
 
 export class QuestionnaireModel {
   static async create(questionnaireData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaires');
-    
-    // Add timestamps
-    const questionnaireWithTimestamps = {
+    // In static implementation, we'll just add to the array
+    const newQuestionnaire = {
+      id: String(staticQuestionnaires.length + 1),
       ...questionnaireData,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    const result = await collection.insertOne(questionnaireWithTimestamps);
-    return { ...questionnaireWithTimestamps, _id: result.insertedId };
+    staticQuestionnaires.push(newQuestionnaire);
+    return newQuestionnaire;
   }
 
   static async findById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaires');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    return await collection.findOne({ _id: objectId });
+    return staticQuestionnaires.find(q => q.id === id);
   }
 
   static async findByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaires');
-    return await collection.find({ userId }).toArray();
+    return staticQuestionnaires.filter(q => q.userId === userId);
   }
 
   static async findAll() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaires');
-    return await collection.find({}).toArray();
+    return staticQuestionnaires;
   }
 
   static async updateById(id, updateData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaires');
+    const index = staticQuestionnaires.findIndex(q => q.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
+    staticQuestionnaires[index] = {
+      ...staticQuestionnaires[index],
+      ...updateData,
+      updatedAt: new Date()
+    };
     
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { 
-        $set: { 
-          ...updateData, 
-          updatedAt: new Date() 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    return true;
   }
 
   static async deleteById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaires');
+    const index = staticQuestionnaires.findIndex(q => q.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.deleteOne({ _id: objectId });
-    return result.deletedCount > 0;
+    staticQuestionnaires.splice(index, 1);
+    return true;
   }
 
   static async deleteByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaires');
+    const initialLength = staticQuestionnaires.length;
+    for (let i = staticQuestionnaires.length - 1; i >= 0; i--) {
+      if (staticQuestionnaires[i].userId === userId) {
+        staticQuestionnaires.splice(i, 1);
+      }
+    }
     
-    const result = await collection.deleteMany({ userId });
-    return result.deletedCount;
+    return initialLength - staticQuestionnaires.length;
   }
 
   static async searchByTitle(searchTerm) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaires');
-    
-    const query = {
-      judul: { $regex: searchTerm, $options: 'i' }
-    };
-    
-    return await collection.find(query).toArray();
+    return staticQuestionnaires.filter(q => 
+      q.judul.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   }
 }
 
 export class QuestionnaireResponseModel {
   static async create(responseData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaire_responses');
-    
-    // Add timestamp
-    const responseWithTimestamp = {
+    // In static implementation, we'll just add to the array
+    const newResponse = {
+      id: String(staticQuestionnaireResponses.length + 1),
       ...responseData,
       submittedAt: new Date()
     };
     
-    const result = await collection.insertOne(responseWithTimestamp);
-    return { ...responseWithTimestamp, _id: result.insertedId };
+    staticQuestionnaireResponses.push(newResponse);
+    return newResponse;
   }
 
   static async findByQuestionnaireId(questionnaireId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaire_responses');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof questionnaireId === 'string' ? new ObjectId(questionnaireId) : questionnaireId;
-    return await collection.find({ questionnaireId: objectId }).toArray();
+    return staticQuestionnaireResponses.filter(r => r.questionnaireId === questionnaireId);
   }
 
   static async findByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaire_responses');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    return await collection.find({ userId: objectId }).toArray();
+    return staticQuestionnaireResponses.filter(r => r.userId === userId);
   }
 
   static async findByQuestionnaireAndUser(questionnaireId, userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaire_responses');
-    
-    // Convert string ids to ObjectId if needed
-    const questionnaireObjectId = typeof questionnaireId === 'string' ? new ObjectId(questionnaireId) : questionnaireId;
-    const userObjectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    
-    return await collection.findOne({ 
-      questionnaireId: questionnaireObjectId, 
-      userId: userObjectId 
-    });
+    return staticQuestionnaireResponses.find(r => 
+      r.questionnaireId === questionnaireId && r.userId === userId
+    );
   }
 
   static async findAll() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaire_responses');
-    return await collection.find({}).toArray();
+    return staticQuestionnaireResponses;
   }
 
   static async deleteById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaire_responses');
+    const index = staticQuestionnaireResponses.findIndex(r => r.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.deleteOne({ _id: objectId });
-    return result.deletedCount > 0;
+    staticQuestionnaireResponses.splice(index, 1);
+    return true;
   }
 
   static async deleteByQuestionnaireId(questionnaireId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaire_responses');
+    const initialLength = staticQuestionnaireResponses.length;
+    for (let i = staticQuestionnaireResponses.length - 1; i >= 0; i--) {
+      if (staticQuestionnaireResponses[i].questionnaireId === questionnaireId) {
+        staticQuestionnaireResponses.splice(i, 1);
+      }
+    }
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof questionnaireId === 'string' ? new ObjectId(questionnaireId) : questionnaireId;
-    
-    const result = await collection.deleteMany({ questionnaireId: objectId });
-    return result.deletedCount;
+    return initialLength - staticQuestionnaireResponses.length;
   }
 
   static async deleteByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('questionnaire_responses');
+    const initialLength = staticQuestionnaireResponses.length;
+    for (let i = staticQuestionnaireResponses.length - 1; i >= 0; i--) {
+      if (staticQuestionnaireResponses[i].userId === userId) {
+        staticQuestionnaireResponses.splice(i, 1);
+      }
+    }
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    
-    const result = await collection.deleteMany({ userId: objectId });
-    return result.deletedCount;
+    return initialLength - staticQuestionnaireResponses.length;
   }
 }

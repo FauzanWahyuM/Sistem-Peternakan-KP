@@ -77,6 +77,3 @@ Thumbs.db
 # IDE specific files
 .vscode/settings.json
 .idea/
-
-# MongoDB connection files (if any)
-mongo-*.log

@@ -1,147 +1,123 @@
-import { connectToDatabase } from '../lib/mongodb';
-import { ObjectId } from 'mongodb';
+// Static implementation of TrainingProgram model
+const staticTrainingPrograms = [
+  {
+    id: '1',
+    userId: '2', // penyuluh user
+    judul: 'Pelatihan Manajemen Pakan Ternak',
+    deskripsi: 'Pelatihan tentang teknik manajemen pakan yang efektif',
+    tanggal: new Date('2025-02-15'),
+    createdAt: new Date('2025-01-10'),
+    updatedAt: new Date('2025-01-10')
+  },
+  {
+    id: '2',
+    userId: '2', // penyuluh user
+    judul: 'Pemahaman Kesehatan Ternak',
+    deskripsi: 'Pelatihan tentang pengenalan gejala penyakit pada ternak',
+    tanggal: new Date('2025-03-10'),
+    createdAt: new Date('2025-01-20'),
+    updatedAt: new Date('2025-01-20')
+  }
+];
 
 export class TrainingProgramModel {
   static async create(trainingData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
-    
-    // Add timestamps
-    const trainingWithTimestamps = {
+    // In static implementation, we'll just add to the array
+    const newTraining = {
+      id: String(staticTrainingPrograms.length + 1),
       ...trainingData,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    const result = await collection.insertOne(trainingWithTimestamps);
-    return { ...trainingWithTimestamps, _id: result.insertedId };
+    staticTrainingPrograms.push(newTraining);
+    return newTraining;
   }
 
   static async findById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    return await collection.findOne({ _id: objectId });
+    return staticTrainingPrograms.find(t => t.id === id);
   }
 
   static async findByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
-    return await collection.find({ userId }).toArray();
+    return staticTrainingPrograms.filter(t => t.userId === userId);
   }
 
   static async findAll() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
-    return await collection.find({}).toArray();
+    return staticTrainingPrograms;
   }
 
   static async findByDateRange(startDate, endDate) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
-    
-    const query = {
-      tanggal: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      }
-    };
-    
-    return await collection.find(query).toArray();
+    return staticTrainingPrograms.filter(t => {
+      const trainingDate = new Date(t.tanggal);
+      return trainingDate >= new Date(startDate) && trainingDate <= new Date(endDate);
+    });
   }
 
   static async updateById(id, updateData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
+    const index = staticTrainingPrograms.findIndex(t => t.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
+    staticTrainingPrograms[index] = {
+      ...staticTrainingPrograms[index],
+      ...updateData,
+      updatedAt: new Date()
+    };
     
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { 
-        $set: { 
-          ...updateData, 
-          updatedAt: new Date() 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    return true;
   }
 
   static async deleteById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
+    const index = staticTrainingPrograms.findIndex(t => t.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.deleteOne({ _id: objectId });
-    return result.deletedCount > 0;
+    staticTrainingPrograms.splice(index, 1);
+    return true;
   }
 
   static async deleteByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
+    const initialLength = staticTrainingPrograms.length;
+    for (let i = staticTrainingPrograms.length - 1; i >= 0; i--) {
+      if (staticTrainingPrograms[i].userId === userId) {
+        staticTrainingPrograms.splice(i, 1);
+      }
+    }
     
-    const result = await collection.deleteMany({ userId });
-    return result.deletedCount;
+    return initialLength - staticTrainingPrograms.length;
   }
 
   static async searchByTitle(searchTerm) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
-    
-    const query = {
-      judul: { $regex: searchTerm, $options: 'i' }
-    };
-    
-    return await collection.find(query).toArray();
+    return staticTrainingPrograms.filter(t => 
+      t.judul.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   }
 
   static async getStatistics(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('training_programs');
+    const trainings = userId 
+      ? staticTrainingPrograms.filter(t => t.userId === userId)
+      : staticTrainingPrograms;
     
-    const matchQuery = userId ? { userId } : {};
+    const total = trainings.length;
+    const now = new Date();
+    let thisMonth = 0;
+    let upcoming = 0;
+    let past = 0;
     
-    const stats = await collection.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          thisMonth: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: [{ $month: "$tanggal" }, { $month: new Date() }] },
-                    { $eq: [{ $year: "$tanggal" }, { $year: new Date() }] }
-                  ]
-                },
-                1,
-                0
-              ]
-            }
-          },
-          upcoming: {
-            $sum: {
-              $cond: [{ $gt: ["$tanggal", new Date()] }, 1, 0]
-            }
-          },
-          past: {
-            $sum: {
-              $cond: [{ $lte: ["$tanggal", new Date()] }, 1, 0]
-            }
-          }
-        }
+    trainings.forEach(t => {
+      const trainingDate = new Date(t.tanggal);
+      // Check if training is in this month
+      if (trainingDate.getMonth() === now.getMonth() && 
+          trainingDate.getFullYear() === now.getFullYear()) {
+        thisMonth++;
       }
-    ]).toArray();
+      
+      // Check if training is upcoming or past
+      if (trainingDate > now) {
+        upcoming++;
+      } else {
+        past++;
+      }
+    });
     
-    return stats.length > 0 ? stats[0] : { total: 0, thisMonth: 0, upcoming: 0, past: 0 };
+    return { total, thisMonth, upcoming, past };
   }
 }

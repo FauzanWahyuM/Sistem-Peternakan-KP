@@ -1,136 +1,121 @@
-import { connectToDatabase } from '../lib/mongodb';
-import { ObjectId } from 'mongodb';
+// Static implementation of Article model
+const staticArticles = [
+  {
+    id: '1',
+    userId: '2', // penyuluh user
+    judul: 'Panduan Lengkap Peternakan Modern',
+    deskripsi: 'Panduan lengkap tentang teknik-teknik modern dalam peternakan',
+    kategori: 'Peternakan',
+    status: 'published',
+    createdAt: new Date('2025-01-15'),
+    updatedAt: new Date('2025-01-15')
+  },
+  {
+    id: '2',
+    userId: '2', // penyuluh user
+    judul: 'Manajemen Pakan Ternak',
+    deskripsi: 'Teknik manajemen pakan yang efektif untuk meningkatkan produktivitas ternak',
+    kategori: 'Pakan',
+    status: 'published',
+    createdAt: new Date('2025-02-01'),
+    updatedAt: new Date('2025-02-01')
+  }
+];
 
 export class ArticleModel {
   static async create(articleData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
-    
-    // Add timestamps
-    const articleWithTimestamps = {
+    // In static implementation, we'll just add to the array
+    const newArticle = {
+      id: String(staticArticles.length + 1),
       ...articleData,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    const result = await collection.insertOne(articleWithTimestamps);
-    return { ...articleWithTimestamps, _id: result.insertedId };
+    staticArticles.push(newArticle);
+    return newArticle;
   }
 
   static async findById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    return await collection.findOne({ _id: objectId });
+    return staticArticles.find(article => article.id === id);
   }
 
   static async findByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
-    return await collection.find({ userId }).toArray();
+    return staticArticles.filter(article => article.userId === userId);
   }
 
   static async findAll() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
-    return await collection.find({}).toArray();
+    return staticArticles;
   }
 
   static async findByStatus(status) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
-    return await collection.find({ status }).toArray();
+    return staticArticles.filter(article => article.status === status);
   }
 
   static async findByCategory(category) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
-    return await collection.find({ kategori: category }).toArray();
+    return staticArticles.filter(article => article.kategori === category);
   }
 
   static async searchByTitle(searchTerm) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
-    
-    const query = {
-      judul: { $regex: searchTerm, $options: 'i' }
-    };
-    
-    return await collection.find(query).toArray();
+    return staticArticles.filter(article => 
+      article.judul.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   }
 
   static async updateById(id, updateData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
+    const index = staticArticles.findIndex(article => article.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
+    staticArticles[index] = {
+      ...staticArticles[index],
+      ...updateData,
+      updatedAt: new Date()
+    };
     
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { 
-        $set: { 
-          ...updateData, 
-          updatedAt: new Date() 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    return true;
   }
 
   static async deleteById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
+    const index = staticArticles.findIndex(article => article.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.deleteOne({ _id: objectId });
-    return result.deletedCount > 0;
+    staticArticles.splice(index, 1);
+    return true;
   }
 
   static async deleteByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
+    const initialLength = staticArticles.length;
+    for (let i = staticArticles.length - 1; i >= 0; i--) {
+      if (staticArticles[i].userId === userId) {
+        staticArticles.splice(i, 1);
+      }
+    }
     
-    const result = await collection.deleteMany({ userId });
-    return result.deletedCount;
+    return initialLength - staticArticles.length;
   }
 
   static async getLatest(limit = 3) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
-    
-    return await collection.find({ status: 'published' })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .toArray();
+    return staticArticles
+      .filter(article => article.status === 'published')
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, limit);
   }
 
   static async getStatistics(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('articles');
+    const articles = userId 
+      ? staticArticles.filter(article => article.userId === userId)
+      : staticArticles;
     
-    const matchQuery = userId ? { userId } : {};
+    const stats = { published: 0, draft: 0 };
     
-    const stats = await collection.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 }
-        }
+    articles.forEach(article => {
+      if (article.status === 'published') {
+        stats.published++;
+      } else if (article.status === 'draft') {
+        stats.draft++;
       }
-    ]).toArray();
-    
-    const result = { published: 0, draft: 0 };
-    stats.forEach(stat => {
-      result[stat._id] = stat.count;
     });
     
-    return result;
+    return stats;
   }
 }

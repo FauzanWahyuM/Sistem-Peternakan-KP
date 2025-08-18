@@ -1,180 +1,125 @@
-import { connectToDatabase } from '../lib/mongodb';
-import { ObjectId } from 'mongodb';
+// Static implementation of Livestock model
+const staticLivestock = [
+  {
+    id: '1',
+    userId: '3', // peternak user
+    jenisHewan: 'Sapi',
+    jenisKelamin: 'Betina',
+    umurTernak: '3 tahun',
+    statusTernak: 'Indukan',
+    kondisiKesehatan: 'Sehat',
+    createdAt: new Date('2025-01-15'),
+    updatedAt: new Date('2025-01-15')
+  },
+  {
+    id: '2',
+    userId: '3', // peternak user
+    jenisHewan: 'Kambing',
+    jenisKelamin: 'Jantan',
+    umurTernak: '2 tahun',
+    statusTernak: 'Pejantan',
+    kondisiKesehatan: 'Sehat',
+    createdAt: new Date('2025-02-20'),
+    updatedAt: new Date('2025-02-20')
+  }
+];
 
 export class LivestockModel {
   static async create(livestockData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
-    
-    // Add timestamps
-    const livestockWithTimestamps = {
+    // In static implementation, we'll just add to the array
+    const newLivestock = {
+      id: String(staticLivestock.length + 1),
       ...livestockData,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    const result = await collection.insertOne(livestockWithTimestamps);
-    return { ...livestockWithTimestamps, _id: result.insertedId };
+    staticLivestock.push(newLivestock);
+    return newLivestock;
   }
 
   static async findById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    return await collection.findOne({ _id: objectId });
+    return staticLivestock.find(livestock => livestock.id === id);
   }
 
   static async findByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
-    return await collection.find({ userId }).toArray();
+    return staticLivestock.filter(livestock => livestock.userId === userId);
   }
 
   static async findByFilters(filters) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
-    
-    // Build query based on filters
-    const query = {};
-    
-    if (filters.userId) {
-      query.userId = filters.userId;
-    }
-    
-    if (filters.jenisHewan) {
-      query.jenisHewan = filters.jenisHewan;
-    }
-    
-    if (filters.jenisKelamin) {
-      query.jenisKelamin = filters.jenisKelamin;
-    }
-    
-    if (filters.statusTernak) {
-      query.statusTernak = filters.statusTernak;
-    }
-    
-    if (filters.kondisiKesehatan) {
-      query.kondisiKesehatan = filters.kondisiKesehatan;
-    }
-    
-    if (filters.umurTernak) {
-      // For umurTernak, we'll do a text search
-      query.umurTernak = { $regex: filters.umurTernak, $options: 'i' };
-    }
-    
-    return await collection.find(query).toArray();
+    return staticLivestock.filter(livestock => {
+      // Check each filter condition
+      if (filters.userId && livestock.userId !== filters.userId) return false;
+      if (filters.jenisHewan && livestock.jenisHewan !== filters.jenisHewan) return false;
+      if (filters.jenisKelamin && livestock.jenisKelamin !== filters.jenisKelamin) return false;
+      if (filters.statusTernak && livestock.statusTernak !== filters.statusTernak) return false;
+      if (filters.kondisiKesehatan && livestock.kondisiKesehatan !== filters.kondisiKesehatan) return false;
+      if (filters.umurTernak && !livestock.umurTernak.includes(filters.umurTernak)) return false;
+      
+      return true;
+    });
   }
 
   static async updateById(id, updateData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
+    const index = staticLivestock.findIndex(livestock => livestock.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
+    staticLivestock[index] = {
+      ...staticLivestock[index],
+      ...updateData,
+      updatedAt: new Date()
+    };
     
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { 
-        $set: { 
-          ...updateData, 
-          updatedAt: new Date() 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    return true;
   }
 
   static async deleteById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
+    const index = staticLivestock.findIndex(livestock => livestock.id === id);
+    if (index === -1) return false;
     
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.deleteOne({ _id: objectId });
-    return result.deletedCount > 0;
+    staticLivestock.splice(index, 1);
+    return true;
   }
 
   static async deleteByUserId(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
+    const initialLength = staticLivestock.length;
+    for (let i = staticLivestock.length - 1; i >= 0; i--) {
+      if (staticLivestock[i].userId === userId) {
+        staticLivestock.splice(i, 1);
+      }
+    }
     
-    const result = await collection.deleteMany({ userId });
-    return result.deletedCount;
+    return initialLength - staticLivestock.length;
   }
 
   static async findAll() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
-    return await collection.find({}).toArray();
+    return staticLivestock;
   }
 
   static async getStatistics(userId) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('livestock');
+    const livestock = userId 
+      ? staticLivestock.filter(livestock => livestock.userId === userId)
+      : staticLivestock;
     
-    const matchQuery = userId ? { userId } : {};
-    
-    // First, get the count of each jenisHewan
-    const jenisHewanStats = await collection.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: "$jenisHewan",
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { _id: 1 }
+    // Group by jenisHewan
+    const jenisHewanStats = {};
+    livestock.forEach(item => {
+      if (!jenisHewanStats[item.jenisHewan]) {
+        jenisHewanStats[item.jenisHewan] = { total: 0, sehat: 0, sakit: 0 };
       }
-    ]).toArray();
-    
-    // Then, get health condition stats for each jenisHewan
-    const healthStats = await collection.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: {
-            jenisHewan: "$jenisHewan",
-            kondisiKesehatan: "$kondisiKesehatan"
-          },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $group: {
-          _id: "$_id.jenisHewan",
-          sehat: {
-            $sum: {
-              $cond: [{ $eq: ["$_id.kondisiKesehatan", "Sehat"] }, "$count", 0]
-            }
-          },
-          sakit: {
-            $sum: {
-              $cond: [{ $eq: ["$_id.kondisiKesehatan", "Sakit"] }, "$count", 0]
-            }
-          }
-        }
-      },
-      {
-        $sort: { _id: 1 }
+      
+      jenisHewanStats[item.jenisHewan].total++;
+      if (item.kondisiKesehatan === 'Sehat') {
+        jenisHewanStats[item.jenisHewan].sehat++;
+      } else if (item.kondisiKesehatan === 'Sakit') {
+        jenisHewanStats[item.jenisHewan].sakit++;
       }
-    ]).toArray();
-    
-    // Combine the results
-    const result = jenisHewanStats.map(stat => {
-      const healthStat = healthStats.find(hs => hs._id === stat._id);
-      return {
-        _id: stat._id,
-        total: stat.count,
-        sehat: healthStat ? healthStat.sehat : 0,
-        sakit: healthStat ? healthStat.sakit : 0
-      };
     });
     
-    return result;
+    // Convert to array format
+    return Object.entries(jenisHewanStats).map(([jenisHewan, stats]) => ({
+      _id: jenisHewan,
+      ...stats
+    }));
   }
 }

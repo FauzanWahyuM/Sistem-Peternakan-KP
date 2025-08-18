@@ -20,9 +20,28 @@ You can start editing the page by modifying `app/page.js`. The page auto-updates
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## MongoDB Setup
+## Static Implementation
 
-This application requires MongoDB to function properly. Please follow the instructions in [README-MONGODB.md](README-MONGODB.md) to set up MongoDB.
+This application now uses a static data implementation instead of MongoDB. All data is stored in memory and will be reset when the server restarts.
+
+### Predefined Users
+
+The application comes with predefined users for testing:
+
+1. **Admin User**
+   - Username: admin
+   - Password: password
+   - Role: admin
+
+2. **Penyuluh User**
+   - Username: penyuluh
+   - Password: password
+   - Role: penyuluh
+
+3. **Peternak User**
+   - Username: peternak
+   - Password: password
+   - Role: peternak
 
 ## Testing
 
