@@ -1,19 +1,14 @@
-// route.ts
 import { NextResponse } from "next/server";
 import connectDB from "../../../lib/dbConnect";
-import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-
-// Karena User.js masih JS, kita pakai dynamic import dengan tipe mongoose.Model
-const User = mongoose.models.User || mongoose.model("User");
-
+import User from "../../../models/User";  // langsung import, sudah ada tipe
 
 export async function POST(req: Request) {
     try {
         await connectDB();
         const { username, password } = await req.json();
 
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username });  // sekarang aman ✅
         if (!user) {
             return NextResponse.json({ message: "User tidak ditemukan" }, { status: 401 });
         }
