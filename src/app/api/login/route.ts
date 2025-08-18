@@ -1,23 +1,27 @@
 import { NextResponse } from "next/server";
+// pakai relative path dulu
+import connectDB from "../../../lib/dbConnect";
+import User from "../../../models/User";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
-        const { email, password } = body;
+        await connectDB();
+        const { username, password } = await req.json();
 
-        // 👉 Di sini biasanya cek ke database
-        if (email === "test@example.com" && password === "123456") {
-            return NextResponse.json({ message: "Login success" }, { status: 200 });
+        const user = await User.findOne({ username });
+        if (!user) {
+            return NextResponse.json({ message: "User tidak ditemukan" }, { status: 401 });
         }
 
-        return NextResponse.json(
-            { error: "Invalid credentials" },
-            { status: 401 }
-        );
-    } catch (err) {
-        return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
-        );
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return NextResponse.json({ message: "Password salah" }, { status: 401 });
+        }
+
+        return NextResponse.json({ message: "Login berhasil", user }, { status: 200 });
+    } catch (error) {
+        console.error("Login Error:", error);
+        return NextResponse.json({ message: "Terjadi kesalahan server" }, { status: 500 });
     }
 }
