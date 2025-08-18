@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AuthClient } from '../../lib/api-client';
-
+import { ClientAuth } from '../../lib/client-auth';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -16,7 +15,7 @@ export default function LoginPage() {
         e.preventDefault();
 
         try {
-            const response = await AuthClient.login(username, password);
+            const response = await ClientAuth.login(username, password);
             console.log('Login response:', response);
             
             // Save token to localStorage for future requests

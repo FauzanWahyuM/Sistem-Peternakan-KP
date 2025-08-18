@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthClient } from '../../lib/api-client';
+import { ClientAuth } from '../../lib/client-auth';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -38,8 +38,8 @@ export default function RegisterPage() {
                 status: 'Aktif' // Default status
             };
 
-            // Save user to database
-            await AuthClient.register(userData);
+            // Save user to static data
+            await ClientAuth.register(userData);
             
             setSuccessMsg('Registrasi berhasil! Mengarahkan ke login...');
             setTimeout(() => {
