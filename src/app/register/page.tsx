@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ClientAuth } from '../../lib/client-auth';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -14,7 +13,7 @@ export default function RegisterPage() {
         kelompok: '',
         role: '',
     });
-    const [successMsg, setSuccessMsg] = useState('');
+    const [message, setMessage] = useState('');
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({
@@ -25,34 +24,36 @@ export default function RegisterPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setMessage('');
 
         try {
-            // Create user object matching the database schema
-            const userData = {
-                nama: form.name,
-                username: form.username,
-                email: form.email,
-                password: form.password,
-                kelompok: form.kelompok,
-                role: form.role.toLowerCase(),
-                status: 'Aktif' // Default status
-            };
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nama: form.name,
+                    username: form.username,
+                    email: form.email,
+                    password: form.password,
+                    kelompok: form.kelompok,
+                    role: form.role.toLowerCase(),
+                    status: 'Aktif',
+                }),
+            });
 
-            // Save user to static data
-            await ClientAuth.register(userData);
-            
-            setSuccessMsg('Registrasi berhasil! Mengarahkan ke login...');
-            setTimeout(() => {
-                router.push('/login');
-            }, 2000);
+            const data = await res.json();
+
+            if (res.ok) {
+                setMessage('✅ Registrasi berhasil! Mengarahkan ke login...');
+                setTimeout(() => {
+                    router.push('/login');
+                }, 2000);
+            } else {
+                setMessage(`❌ Registrasi gagal: ${data.error || 'Terjadi kesalahan'}`);
+            }
         } catch (error) {
             console.error('Registration error:', error);
-            // Show more specific error messages
-            if (error.message) {
-                setSuccessMsg(`Registrasi gagal: ${error.message}`);
-            } else {
-                setSuccessMsg('Registrasi gagal. Silakan coba lagi.');
-            }
+            setMessage('❌ Gagal terhubung ke server');
         }
     };
 
@@ -66,7 +67,7 @@ export default function RegisterPage() {
                         <input
                             type="text"
                             name="name"
-                            placeholder='Masukkan Nama Lengkap'
+                            placeholder="Masukkan Nama Lengkap"
                             value={form.name}
                             onChange={handleChange}
                             required
@@ -78,7 +79,7 @@ export default function RegisterPage() {
                         <input
                             type="text"
                             name="username"
-                            placeholder='Masukkan Username'
+                            placeholder="Masukkan Username"
                             value={form.username}
                             onChange={handleChange}
                             required
@@ -90,7 +91,7 @@ export default function RegisterPage() {
                         <input
                             type="email"
                             name="email"
-                            placeholder='Masukkan Email'
+                            placeholder="Masukkan Email"
                             value={form.email}
                             onChange={handleChange}
                             required
@@ -102,7 +103,7 @@ export default function RegisterPage() {
                         <input
                             type="password"
                             name="password"
-                            placeholder='Masukkan Password'
+                            placeholder="Masukkan Password"
                             value={form.password}
                             onChange={handleChange}
                             required
@@ -114,7 +115,7 @@ export default function RegisterPage() {
                         <input
                             type="text"
                             name="kelompok"
-                            placeholder='Masukkan Kelompok Peternak'
+                            placeholder="Masukkan Kelompok Peternak"
                             value={form.kelompok}
                             onChange={handleChange}
                             required
@@ -141,8 +142,8 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
-                    {successMsg && (
-                        <p className="text-sm text-green-600 text-center">{successMsg}</p>
+                    {message && (
+                        <p className="text-sm text-center mt-2 text-red-600">{message}</p>
                     )}
 
                     <button
