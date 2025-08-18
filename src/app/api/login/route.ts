@@ -1,8 +1,12 @@
+// route.ts
 import { NextResponse } from "next/server";
-// pakai relative path dulu
 import connectDB from "../../../lib/dbConnect";
-import User from "../../../models/User";
+import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+
+// Karena User.js masih JS, kita pakai dynamic import dengan tipe mongoose.Model
+const User = mongoose.models.User || mongoose.model("User");
+
 
 export async function POST(req: Request) {
     try {
