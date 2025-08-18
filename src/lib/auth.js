@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { staticUsers, findUserByUsername } from './static-users';
 
 const SALT_ROUNDS = 10;
 
@@ -14,6 +15,12 @@ export async function hashPassword(password) {
 
 export async function verifyPassword(password, hashedPassword) {
   try {
+    // For static users, we're using a placeholder hash
+    // In a real implementation, you would compare with actual hashed passwords
+    if (hashedPassword === '$2b$10$example_hashed_password') {
+      // For demo purposes, we'll just check if password is 'password'
+      return password === 'password';
+    }
     const isMatch = await bcrypt.compare(password, hashedPassword);
     return isMatch;
   } catch (error) {
@@ -25,7 +32,7 @@ export function generateToken(user) {
   // In a real application, you would use a proper JWT library
   // This is a simplified version for demonstration
   return Buffer.from(JSON.stringify({
-    id: user._id ? user._id.toString() : user.id,
+    id: user.id,
     username: user.username,
     role: user.role
   })).toString('base64');

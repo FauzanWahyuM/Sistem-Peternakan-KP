@@ -1,102 +1,52 @@
-import { connectToDatabase } from '../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { staticUsers, findUserByUsername, findUserByEmail, findUserById, addUser } from '../lib/static-users';
 
 export class UserModel {
   static async create(userData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    
-    // Add timestamps
-    const userWithTimestamps = {
-      ...userData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    const result = await collection.insertOne(userWithTimestamps);
-    return { ...userWithTimestamps, _id: result.insertedId };
+    try {
+      const user = addUser(userData);
+      return user;
+    } catch (error) {
+      throw error;
+    }
   }
 
   static async findByUsername(username) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    return await collection.findOne({ username });
+    return findUserByUsername(username);
   }
 
   static async findByEmail(email) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    return await collection.findOne({ email });
+    return findUserByEmail(email);
   }
 
   static async findById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    return await collection.findOne({ _id: objectId });
+    return findUserById(id);
   }
 
   static async updateById(id, updateData) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { 
-        $set: { 
-          ...updateData, 
-          updatedAt: new Date() 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    // In static implementation, we'll just return true to indicate success
+    // since we're not actually updating anything
+    console.log(`Update request for user ${id} with data:`, updateData);
+    return true;
   }
 
   static async updateLastLogin(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.updateOne(
-      { _id: objectId },
-      { 
-        $set: { 
-          lastLogin: new Date() 
-        } 
-      }
-    );
-    
-    return result.modifiedCount > 0;
+    // In static implementation, we'll just return true to indicate success
+    console.log(`Update last login for user ${id}`);
+    return true;
   }
 
   static async deleteById(id) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    
-    // Convert string id to ObjectId if needed
-    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-    
-    const result = await collection.deleteOne({ _id: objectId });
-    return result.deletedCount > 0;
+    // In static implementation, we'll just return true to indicate success
+    // since we're not actually deleting anything
+    console.log(`Delete request for user ${id}`);
+    return true;
   }
 
   static async findAll() {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    return await collection.find({}).toArray();
+    return staticUsers;
   }
 
   static async findByRole(role) {
-    const { db } = await connectToDatabase();
-    const collection = db.collection('users');
-    return await collection.find({ role }).toArray();
+    return staticUsers.filter(user => user.role === role);
   }
 }

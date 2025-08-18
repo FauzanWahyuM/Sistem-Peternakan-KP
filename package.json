@@ -8,18 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "setup-env": "node setup-env.js",
-    "setup": "npm run setup-env && echo 'Environment setup complete! Please install MongoDB dependencies with: npm install mongodb bcryptjs'",
-    "test-auth": "node test-auth.js",
-    "test-atlas": "node src/lib/test-atlas-connection.js",
-    "atlas-ip-config": "node src/lib/update-atlas-ip-whitelist.js",
-    "test-new-mongodb": "node src/lib/test-new-mongodb.js",
-    "test-atlas-direct": "node src/lib/test-atlas-connection-direct.js",
-    "test-api-client": "node src/lib/test-api-client.js"
+    "setup": "npm run setup-env && echo 'Environment setup complete for static implementation'",
+    "test-auth": "node test-auth.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "lucide-react": "^0.525.0",
-    "mongodb": "^6.18.0",
     "next": "15.4.2",
     "react": "19.1.0",
     "react-data-table-component": "^7.7.0",
