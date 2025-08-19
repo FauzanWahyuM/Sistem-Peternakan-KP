@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -14,6 +15,7 @@ export default function RegisterPage() {
         role: '',
     });
     const [message, setMessage] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({
@@ -100,15 +102,24 @@ export default function RegisterPage() {
                     </div>
                     <div>
                         <label className="text-sm text-gray-700 block mb-1">Password</label>
-                        <input
-                            type="password"
-                            name="password"
-                            placeholder="Masukkan Password"
-                            value={form.password}
-                            onChange={handleChange}
-                            required
-                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-black"
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                placeholder="Masukkan Password"
+                                value={form.password}
+                                onChange={handleChange}
+                                required
+                                className="w-full border border-gray-300 rounded px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-green-500 text-black"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label className="text-sm text-gray-700 block mb-1">Kelompok Peternak</label>

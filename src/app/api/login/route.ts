@@ -8,7 +8,7 @@ export async function POST(req: Request) {
         await connectDB();
         const { username, password } = await req.json();
 
-        const user = await User.findOne({ username });  // sekarang aman ✅
+        const user = await User.findOne({ username: new RegExp(`^${username}$`, "i") });  // sekarang aman ✅
         if (!user) {
             return NextResponse.json({ message: "User tidak ditemukan" }, { status: 401 });
         }

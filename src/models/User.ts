@@ -1,18 +1,30 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IUser extends Document {
+    nama: string;
     username: string;
     email: string;
     password: string;
+    kelompok: string;
+    role: string;
+    status: string;
 }
 
-const UserSchema: Schema<IUser> = new Schema({
-    username: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-});
+// Definisikan Schema
+const UserSchema = new Schema<IUser>(
+    {
+        nama: { type: String, required: true },
+        username: { type: String, required: true, unique: true },
+        email: { type: String, required: true, unique: true },
+        password: { type: String, required: true },
+        kelompok: { type: String, required: true },
+        role: { type: String, required: true },
+        status: { type: String, required: true },
+    },
+    { timestamps: true }
+);
 
-// Cek apakah model sudah ada (biar tidak duplikat di Next.js hot reload)
+// Model dengan typing yang benar
 const User: Model<IUser> =
     mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
 
