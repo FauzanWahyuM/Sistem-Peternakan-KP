@@ -3,15 +3,18 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { Home, Users, FileText, LogOut, Newspaper, BookOpen } from 'lucide-react';
 import Image from 'next/image';
+import { useSession } from 'next-auth/react';
 
 interface SidebarProps {
   userType: 'admin' | 'penyuluh' | 'peternak';
-  username: string; // 👈 tambah prop username
 }
 
-export default function UnifiedSidebar({ userType, username }: SidebarProps) {
+export default function UnifiedSidebar({ userType }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  const username = session?.user?.username || 'User';
 
   const handleLogout = () => {
     router.push('/login');
@@ -67,45 +70,46 @@ export default function UnifiedSidebar({ userType, username }: SidebarProps) {
         />
         <nav className="space-y-4">
           {navItems.map((item, index) => {
+            const active = isActive(item.href);
+
+            // 👉 peternak pakai icon custom (svg lokal)
             if (userType === 'peternak') {
-              const active = isActive(item.href);
               return (
                 <a
                   key={index}
                   href={item.href}
                   className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${active
-                      ? 'text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
-                      : 'text-white hover:bg-green-700 px-3 py-2 rounded'
+                    ? 'text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
+                    : 'text-white hover:bg-green-700 px-3 py-2 rounded'
                     }`}
                 >
-                  <Image src={item.icon as string} alt={item.label} width={25} height={25} />
-                  <span>{item.label}</span>
-                </a>
-              );
-            } else {
-              const Icon = item.icon as React.ElementType;
-              const active = isActive(item.href);
-              return (
-                <a
-                  key={index}
-                  href={item.href}
-                  className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${active
-                      ? 'text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
-                      : 'text-white hover:bg-green-700 px-3 py-2 rounded'
-                    }`}
-                >
-                  <Icon size={25} />
+                  <img src={item.icon as string} alt={item.label} width={25} height={25} />
                   <span>{item.label}</span>
                 </a>
               );
             }
+
+            // 👉 admin & penyuluh pakai lucide-react
+            const Icon = item.icon as React.ElementType;
+            return (
+              <a
+                key={index}
+                href={item.href}
+                className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${active
+                  ? 'text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
+                  : 'text-white hover:bg-green-700 px-3 py-2 rounded'
+                  }`}
+              >
+                <Icon size={25} />
+                <span>{item.label}</span>
+              </a>
+            );
           })}
         </nav>
       </div>
       <div className="mt-8 px-3">
         <div className="flex items-center gap-3 mb-6 ml-4">
           <Image src="/Vector.svg" alt="User Icon" width={40} height={40} />
-          {/* 👇 username tampil di sini */}
           <p className="font-[Judson] text-xl">Hi, {username}</p>
         </div>
         <button
