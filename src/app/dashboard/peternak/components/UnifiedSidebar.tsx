@@ -19,13 +19,17 @@ interface NavItem {
 export default function UnifiedSidebar({ userType }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session } = useSession();
 
-  // ✅ fallback aman: coba username → name → email
+  // ⛑️ jangan destructuring: hindari error saat prerender (useSession() bisa undefined)
+  const sessionState = useSession() as
+    | { data?: any; status?: 'loading' | 'authenticated' | 'unauthenticated' }
+    | undefined;
+
+  // ✅ fallback aman: coba username → name → email → 'User'
   const username =
-    (session?.user as any)?.username ||
-    session?.user?.name ||
-    session?.user?.email ||
+    (sessionState?.data?.user as any)?.username ||
+    sessionState?.data?.user?.name ||
+    sessionState?.data?.user?.email ||
     'User';
 
   const handleLogout = () => {
