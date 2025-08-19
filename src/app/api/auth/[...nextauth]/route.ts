@@ -52,19 +52,23 @@ const handler = NextAuth({
     secret: process.env.NEXTAUTH_SECRET,
 
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, profile }) {
             if (user) {
-                token.username = (user as any).username || token.name; // simpan username
+                token.username =
+                    (user as any).username ||
+                    profile?.name ||
+                    (profile?.email ? profile.email.split("@")[0] : "Peternak");
             }
             return token;
         },
 
         async session({ session, token }) {
-            if (token) {
-                session.user.username = token.username; // taruh username ke session
+            if (session.user) {
+                session.user.username = (token as any).username as string;
             }
             return session;
         },
+
 
         async redirect({ url, baseUrl }) {
             return baseUrl + "/dashboard/peternak";
