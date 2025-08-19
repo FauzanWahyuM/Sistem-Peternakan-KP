@@ -1,14 +1,15 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { Home, Users, FileText, LogOut, Newspaper, BookOpen, Group } from 'lucide-react';
+import { Home, Users, FileText, LogOut, Newspaper, BookOpen } from 'lucide-react';
 import Image from 'next/image';
 
 interface SidebarProps {
   userType: 'admin' | 'penyuluh' | 'peternak';
+  username: string; // 👈 tambah prop username
 }
 
-export default function UnifiedSidebar({ userType }: SidebarProps) {
+export default function UnifiedSidebar({ userType, username }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -52,59 +53,46 @@ export default function UnifiedSidebar({ userType }: SidebarProps) {
     return pathname.startsWith(href);
   };
 
-  const getUserGreeting = () => {
-    switch (userType) {
-      case 'admin': return 'Admin';
-      case 'penyuluh': return 'Penyuluh';
-      case 'peternak': return 'Peternak';
-      default: return 'User';
-    }
-  };
-
   const navItems = getNavItems();
 
   return (
     <aside className="bg-green-600 text-white w-64 flex flex-col justify-between min-h-screen py-6 px-4">
       <div>
-        <Image 
-          src="/img/Logo Sistem.png" 
-          alt="Logo Sistem Peternakan" 
-          width={200} 
-          height={200} 
+        <Image
+          src="/img/Logo Sistem.png"
+          alt="Logo Sistem Peternakan"
+          width={200}
+          height={200}
           className="mx-auto mb-5"
         />
         <nav className="space-y-4">
           {navItems.map((item, index) => {
             if (userType === 'peternak') {
-              // For peternak, we use Image components for icons
               const active = isActive(item.href);
               return (
                 <a
                   key={index}
                   href={item.href}
-                  className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${
-                    active
+                  className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${active
                       ? 'text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
                       : 'text-white hover:bg-green-700 px-3 py-2 rounded'
-                  }`}
+                    }`}
                 >
                   <Image src={item.icon as string} alt={item.label} width={25} height={25} />
                   <span>{item.label}</span>
                 </a>
               );
             } else {
-              // For admin and penyuluh, we use Lucide icons
               const Icon = item.icon as React.ElementType;
               const active = isActive(item.href);
               return (
                 <a
                   key={index}
                   href={item.href}
-                  className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${
-                    active
+                  className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${active
                       ? 'text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
                       : 'text-white hover:bg-green-700 px-3 py-2 rounded'
-                  }`}
+                    }`}
                 >
                   <Icon size={25} />
                   <span>{item.label}</span>
@@ -117,7 +105,8 @@ export default function UnifiedSidebar({ userType }: SidebarProps) {
       <div className="mt-8 px-3">
         <div className="flex items-center gap-3 mb-6 ml-4">
           <Image src="/Vector.svg" alt="User Icon" width={40} height={40} />
-          <p className="font-[Judson] text-xl">Hi, {getUserGreeting()}</p>
+          {/* 👇 username tampil di sini */}
+          <p className="font-[Judson] text-xl">Hi, {username}</p>
         </div>
         <button
           onClick={handleLogout}
