@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB = process.env.MONGODB_DB || "simantek"; // ✅ tambahin ini
 
 if (!MONGODB_URI) {
     throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
@@ -18,6 +19,7 @@ async function connectDB() {
     if (!cached.promise) {
         cached.promise = mongoose.connect(MONGODB_URI, {
             bufferCommands: false,
+            dbName: MONGODB_DB, // ✅ pakai dbName dari env
         }).then((mongoose) => mongoose);
     }
     cached.conn = await cached.promise;
