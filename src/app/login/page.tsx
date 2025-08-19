@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
+import { signIn } from "next-auth/react";
+import Image from 'next/image';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -110,6 +112,42 @@ export default function LoginPage() {
                     >
                         Masuk
                     </button>
+
+                    <p className='text-sm text-black text-center'>
+                        Atau Login menggunakan:
+                    </p>
+
+                    <div className="flex justify-center space-x-4 mb-4">
+                        {/* Tombol Facebook */}
+                        <button
+                            type="button"
+                            onClick={() => router.push('/dashboard/peternak')}
+                            className="w-12 h-12"
+                        >
+                            <Image
+                                src="/facebook.svg"
+                                alt="facebook"
+                                width={48}
+                                height={48}
+                                className="object-contain"
+                            />
+                        </button>
+
+                        {/* Tombol Google G */}
+                        <button
+                            type="button"
+                            onClick={() => signIn("google")}
+                            className="w-12 h-12"
+                        >
+                            <Image
+                                src="/google.svg"
+                                alt="google"
+                                width={48}
+                                height={48}
+                                className="object-contain"
+                            />
+                        </button>
+                    </div>
 
                     <p className="text-center text-sm mt-3 text-gray-600">
                         Belum punya akun?{' '}
