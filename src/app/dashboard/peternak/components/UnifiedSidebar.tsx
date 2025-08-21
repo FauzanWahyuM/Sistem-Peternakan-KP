@@ -3,40 +3,20 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { Home, Users, FileText, LogOut, Newspaper, BookOpen } from 'lucide-react';
 import Image from 'next/image';
-import { useSession } from 'next-auth/react';
 
 interface SidebarProps {
   userType: 'admin' | 'penyuluh' | 'peternak';
-}
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon?: React.ElementType; // untuk admin & penyuluh
-  iconPath?: string; // untuk peternak
 }
 
 export default function UnifiedSidebar({ userType }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // ⛑️ jangan destructuring: hindari error saat prerender (useSession() bisa undefined)
-  const sessionState = useSession() as
-    | { data?: any; status?: 'loading' | 'authenticated' | 'unauthenticated' }
-    | undefined;
-
-  // ✅ fallback aman: coba username → name → email → 'User'
-  const username =
-    (sessionState?.data?.user as any)?.username ||
-    sessionState?.data?.user?.name ||
-    sessionState?.data?.user?.email ||
-    'User';
-
   const handleLogout = () => {
     router.push('/login');
   };
 
-  const getNavItems = (): NavItem[] => {
+  const getNavItems = () => {
     switch (userType) {
       case 'admin':
         return [
@@ -54,11 +34,11 @@ export default function UnifiedSidebar({ userType }: SidebarProps) {
         ];
       case 'peternak':
         return [
-          { href: '/dashboard/peternak', iconPath: '/group.svg', label: 'Dashboard' },
-          { href: '/peternak/kuesioner', iconPath: '/task-square-white.svg', label: 'Kuesioner' },
-          { href: '/peternak/ternak', iconPath: '/folder-2-white.svg', label: 'Data Ternak' },
-          { href: '/peternak/pelatihan', iconPath: '/book-white.svg', label: 'Pelatihan' },
-          { href: '/peternak/hasil', iconPath: '/clipboard-text-white.svg', label: 'Hasil Evaluasi' },
+          { href: '/dashboard/peternak', icon: '/group.svg', label: 'Dashboard' },
+          { href: '/peternak/kuesioner', icon: '/task-square-white.svg', label: 'Kuesioner' },
+          { href: '/peternak/ternak', icon: '/folder-2-white.svg', label: 'Data Ternak' },
+          { href: '/peternak/pelatihan', icon: '/book-white.svg', label: 'Pelatihan' },
+          { href: '/peternak/hasil', icon: '/clipboard-text-white.svg', label: 'Hasil Evaluasi' },
         ];
       default:
         return [];
@@ -88,8 +68,7 @@ export default function UnifiedSidebar({ userType }: SidebarProps) {
           {navItems.map((item, index) => {
             const active = isActive(item.href);
 
-            // 👉 Peternak pakai SVG
-            if (userType === 'peternak' && item.iconPath) {
+            if (userType === 'peternak') {
               return (
                 <a
                   key={index}
@@ -99,38 +78,34 @@ export default function UnifiedSidebar({ userType }: SidebarProps) {
                       : 'text-white hover:bg-green-700 px-3 py-2 rounded'
                     }`}
                 >
-                  <img src={item.iconPath} alt={item.label} width={25} height={25} />
+                  <Image src={item.icon as string} alt={item.label} width={25} height={25} />
                   <span>{item.label}</span>
                 </a>
               );
             }
 
-            // 👉 Admin & penyuluh pakai komponen
-            if (item.icon) {
-              const Icon = item.icon;
-              return (
-                <a
-                  key={index}
-                  href={item.href}
-                  className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${active
-                      ? 'text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
-                      : 'text-white hover:bg-green-700 px-3 py-2 rounded'
-                    }`}
-                >
-                  <Icon size={25} />
-                  <span>{item.label}</span>
-                </a>
-              );
-            }
-
-            return null;
+            const Icon = item.icon as React.ElementType;
+            return (
+              <a
+                key={index}
+                href={item.href}
+                className={`flex items-center gap-3 font-[Judson] text-xl transition-colors ${active
+                    ? 'text-black bg-gray-100 px-5 py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
+                    : 'text-white hover:bg-green-700 px-3 py-2 rounded'
+                  }`}
+              >
+                <Icon size={25} />
+                <span>{item.label}</span>
+              </a>
+            );
           })}
         </nav>
       </div>
       <div className="mt-8 px-3">
         <div className="flex items-center gap-3 mb-6 ml-4">
           <Image src="/Vector.svg" alt="User Icon" width={40} height={40} />
-          <p className="font-[Judson] text-xl">Hi, {username}</p>
+          {/* 🔥 static text */}
+          <p className="font-[Judson] text-xl">Hi, Peternak</p>
         </div>
         <button
           onClick={handleLogout}
