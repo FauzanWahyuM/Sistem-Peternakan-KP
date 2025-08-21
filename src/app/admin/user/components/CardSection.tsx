@@ -50,7 +50,13 @@ export default function UserManagement() {
         try {
             setLoading(true);
             const response = await ApiClient.getUsers();
-            const users = response.users || [];
+
+            // ✅ jika API return array langsung
+            // ✅ jika API return object {users: [...]}
+            const users: User[] = Array.isArray(response)
+                ? response
+                : response.users || [];
+
             setData(users);
         } catch (error) {
             console.error("Gagal mengambil data pengguna:", error);
@@ -74,7 +80,7 @@ export default function UserManagement() {
         if (selectedUser) {
             try {
                 await ApiClient.deleteUser(selectedUser._id);
-                await fetchUsers(); // Refresh the user list
+                await fetchUsers(); // Refresh list setelah hapus
                 closeModal();
             } catch (error) {
                 console.error("Gagal menghapus pengguna:", error);
@@ -129,8 +135,8 @@ export default function UserManagement() {
         },
     ];
 
-    const filteredData = data.filter((user) =>
-        user.nama && user.nama.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredData = data.filter(
+        (user) => user.nama && user.nama.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (loading) {
@@ -181,7 +187,7 @@ export default function UserManagement() {
             {/* Modal Konfirmasi */}
             {isModalOpen && selectedUser && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative">
                         <div className="flex items-center mb-4 gap-2 text-red-600">
                             <AlertTriangle size={24} />
                             <h2 className="text-lg font-bold">Konfirmasi Hapus</h2>
