@@ -9,7 +9,7 @@ import { ApiClient } from "../../../../lib/api-client";
 
 const DataTable = dynamic(() => import("react-data-table-component"), { ssr: false });
 
-type User = {
+export type User = {
     _id: string;
     nama: string;
     role: string;

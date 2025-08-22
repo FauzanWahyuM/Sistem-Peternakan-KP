@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
-import { ChevronLeft, Edit, Trash2 } from 'lucide-react';
+import { ChevronLeft, Edit, Trash2, AlertTriangle, X } from 'lucide-react';
 
 function LihatTernakContent() {
     const router = useRouter();
@@ -12,8 +12,13 @@ function LihatTernakContent() {
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [statistics, setStatistics] = useState([]);
-    
+
+    // ✅ State modal
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalType, setModalType] = useState<'delete' | 'success' | null>(null);
+    const [modalMessage, setModalMessage] = useState('');
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+
     // Filter states
     const [filters, setFilters] = useState({
         jenisHewan: searchParams?.get('jenis') || '',
@@ -28,31 +33,21 @@ function LihatTernakContent() {
     const jenisKelaminOptions = ['Jantan', 'Betina'];
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
 
-    // Load data from MongoDB
+    // Load data
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
-                // In a real implementation, you would get the actual user ID from session/context
-                const userId = 'user-id-placeholder'; // This should be replaced with actual user ID
-                
-                // Fetch livestock data
-                const response = await fetch(`/api/livestock?userId=${userId}`);
+
+                const response = await fetch('/api/ternak', { cache: "no-store" });
                 if (!response.ok) {
                     throw new Error('Failed to fetch data');
                 }
-                
+
                 const result = await response.json();
-                setTernakList(result.livestock);
-                setFilteredData(result.livestock);
-                
-                // Fetch statistics
-                const statsResponse = await fetch(`/api/livestock/stats?userId=${userId}`);
-                if (statsResponse.ok) {
-                    const statsResult = await statsResponse.json();
-                    setStatistics(statsResult.statistics);
-                }
-                
+                setTernakList(result);
+                setFilteredData(result);
+
                 setError(null);
             } catch (err) {
                 console.error('Error loading data:', err);
@@ -65,33 +60,24 @@ function LihatTernakContent() {
         loadData();
     }, []);
 
-    // Apply filters whenever filters or data change
+    // Apply filters
     useEffect(() => {
         let filtered = [...ternakList];
 
-        // Filter by jenis hewan
         if (filters.jenisHewan) {
             filtered = filtered.filter(item => item.jenisHewan === filters.jenisHewan);
         }
-
-        // Filter by jenis kelamin
         if (filters.jenisKelamin) {
             filtered = filtered.filter(item => item.jenisKelamin === filters.jenisKelamin);
         }
-
-        // Filter by status ternak
         if (filters.statusTernak) {
             filtered = filtered.filter(item => item.statusTernak === filters.statusTernak);
         }
-
-        // Filter by umur ternak
         if (filters.umurTernak) {
             filtered = filtered.filter(item =>
                 item.umurTernak && item.umurTernak.toLowerCase().includes(filters.umurTernak.toLowerCase())
             );
         }
-
-        // Filter by kondisi kesehatan
         if (filters.kondisiKesehatan) {
             filtered = filtered.filter(item => item.kondisiKesehatan === filters.kondisiKesehatan);
         }
@@ -99,40 +85,19 @@ function LihatTernakContent() {
         setFilteredData(filtered);
     }, [filters, ternakList]);
 
-    // Get status options based on selected animal type and gender (same logic as add form)
     const getStatusOptions = () => {
         const { jenisHewan, jenisKelamin } = filters;
-        
-        // If no animal type or gender selected, show all unique statuses from data
         if (!jenisHewan || !jenisKelamin) {
             const uniqueStatuses = [...new Set(ternakList.map(item => item.statusTernak))];
-            return uniqueStatuses.filter(status => status); // Remove empty values
+            return uniqueStatuses.filter(status => status);
         }
-
-        // Same status logic as in the add form
         const statusOptions = {
-            'Sapi': {
-                'Jantan': ['Pejantan', 'Sapi Potong', 'Sapi Kerja', 'Bibit', 'Penggemukan'],
-                'Betina': ['Indukan', 'Sapi Perah', 'Sapi Potong', 'Bibit', 'Dara']
-            },
-            'Kambing': {
-                'Jantan': ['Pejantan', 'Kambing Potong', 'Bibit', 'Penggemukan', 'Kambing Kerja'],
-                'Betina': ['Indukan', 'Kambing Perah', 'Kambing Potong', 'Bibit', 'Dara']
-            },
-            'Domba': {
-                'Jantan': ['Pejantan', 'Domba Potong', 'Bibit', 'Penggemukan', 'Domba Wol'],
-                'Betina': ['Indukan', 'Domba Potong', 'Bibit', 'Dara', 'Domba Wol']
-            },
-            'Ayam': {
-                'Jantan': ['Pejantan', 'Ayam Potong', 'Ayam Aduan', 'Bibit', 'Ayam Hias'],
-                'Betina': ['Indukan', 'Ayam Petelur', 'Ayam Potong', 'Bibit', 'Ayam Hias']
-            },
-            'Bebek': {
-                'Jantan': ['Pejantan', 'Bebek Potong', 'Bibit', 'Bebek Hias', 'Penggemukan'],
-                'Betina': ['Indukan', 'Bebek Petelur', 'Bebek Potong', 'Bibit', 'Bebek Hias']
-            }
+            'Sapi': { 'Jantan': ['Pejantan', 'Sapi Potong', 'Sapi Kerja', 'Bibit', 'Penggemukan'], 'Betina': ['Indukan', 'Sapi Perah', 'Sapi Potong', 'Bibit', 'Dara'] },
+            'Kambing': { 'Jantan': ['Pejantan', 'Kambing Potong', 'Bibit', 'Penggemukan', 'Kambing Kerja'], 'Betina': ['Indukan', 'Kambing Perah', 'Kambing Potong', 'Bibit', 'Dara'] },
+            'Domba': { 'Jantan': ['Pejantan', 'Domba Potong', 'Bibit', 'Penggemukan', 'Domba Wol'], 'Betina': ['Indukan', 'Domba Potong', 'Bibit', 'Dara', 'Domba Wol'] },
+            'Ayam': { 'Jantan': ['Pejantan', 'Ayam Potong', 'Ayam Aduan', 'Bibit', 'Ayam Hias'], 'Betina': ['Indukan', 'Ayam Petelur', 'Ayam Potong', 'Bibit', 'Ayam Hias'] },
+            'Bebek': { 'Jantan': ['Pejantan', 'Bebek Potong', 'Bibit', 'Bebek Hias', 'Penggemukan'], 'Betina': ['Indukan', 'Bebek Petelur', 'Bebek Potong', 'Bibit', 'Bebek Hias'] }
         };
-
         return statusOptions[jenisHewan]?.[jenisKelamin] || [];
     };
 
@@ -140,7 +105,6 @@ function LihatTernakContent() {
         setFilters(prev => ({
             ...prev,
             [filterName]: value,
-            // Reset status ternak if jenis hewan or kelamin changes
             ...(filterName === 'jenisHewan' || filterName === 'jenisKelamin' ? { statusTernak: '' } : {})
         }));
     };
@@ -150,32 +114,40 @@ function LihatTernakContent() {
     };
 
     const handleEdit = (id) => {
-        console.log('Edit ternak:', id);
-        // Navigate to edit page with ternak ID
         router.push(`/peternak/ternak/edit?id=${id}`);
     };
 
-    const handleDelete = async (id) => {
-        if (confirm('Apakah Anda yakin ingin menghapus data ternak ini?')) {
-            try {
-                const response = await fetch(`/api/livestock/${id}`, {
-                    method: 'DELETE',
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to delete data');
-                }
-                
-                // Update local state
-                const updatedList = ternakList.filter(item => item._id !== id);
-                setTernakList(updatedList);
-                setFilteredData(updatedList);
-                
-                alert('Data ternak berhasil dihapus!');
-            } catch (error) {
-                console.error('Error deleting ternak:', error);
-                alert('Gagal menghapus data ternak: ' + error.message);
-            }
+    // ✅ Ubah delete -> pakai modal
+    const handleDelete = (id) => {
+        setSelectedId(id);
+        setModalType('delete');
+        setModalMessage('Apakah Anda yakin ingin menghapus data ternak ini?');
+        setIsModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!selectedId) return;
+        try {
+            const response = await fetch('/api/ternak', {
+                method: 'DELETE',
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: selectedId }),
+            });
+
+            if (!response.ok) throw new Error('Failed to delete data');
+
+            const updatedList = ternakList.filter(item => item._id !== selectedId);
+            setTernakList(updatedList);
+            setFilteredData(updatedList);
+
+            setModalType('success');
+            setModalMessage('Data ternak berhasil dihapus!');
+        } catch (error) {
+            console.error('Error deleting ternak:', error);
+            setModalType('success');
+            setModalMessage('Gagal menghapus data ternak.');
+        } finally {
+            setSelectedId(null);
         }
     };
 
@@ -189,24 +161,6 @@ function LihatTernakContent() {
         });
     };
 
-    // Function to get animal icon based on jenis hewan
-    const getAnimalIcon = (jenisHewan) => {
-        switch (jenisHewan) {
-            case 'Sapi':
-                return '🐄';
-            case 'Kambing':
-                return '🐐';
-            case 'Domba':
-                return '🐑';
-            case 'Ayam':
-                return '🐔';
-            case 'Bebek':
-                return '🦆';
-            default:
-                return '🐾';
-        }
-    };
-
     if (loading) {
         return (
             <div className="flex min-h-screen">
@@ -214,19 +168,6 @@ function LihatTernakContent() {
                 <main className="flex-1 bg-gray-100 p-6">
                     <div className="flex items-center justify-center h-full">
                         <p className="text-lg font-[Judson]">Memuat data...</p>
-                    </div>
-                </main>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex min-h-screen">
-                <Sidebar userType="peternak" />
-                <main className="flex-1 bg-gray-100 p-6">
-                    <div className="flex items-center justify-center h-full">
-                        <p className="text-lg font-[Judson] text-red-500">{error}</p>
                     </div>
                 </main>
             </div>
@@ -247,34 +188,6 @@ function LihatTernakContent() {
                             <ChevronLeft size={24} />
                         </button>
                         <h1 className="text-3xl font-bold font-[Judson] text-center flex-1">Data Ternak</h1>
-                    </div>
-
-                    {/* Statistics Section - Updated to match image reference */}
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <h2 className="text-2xl font-bold font-[Judson] mb-4 text-gray-800">Jenis Ternak</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                            {statistics.map((stat, index) => (
-                                <div key={index} className="border border-gray-200 rounded-lg p-4 text-center">
-                                    <div className="text-4xl mb-2">
-                                        {getAnimalIcon(stat._id)}
-                                    </div>
-                                    <h3 className="text-lg font-semibold font-[Judson] text-gray-700 mb-2">
-                                        {stat._id}
-                                    </h3>
-                                    <div className="text-2xl font-bold font-[Judson] text-green-600 mb-1">
-                                        {stat.total}
-                                    </div>
-                                    <div className="text-sm font-[Judson] text-gray-500">
-                                        Ekor
-                                    </div>
-                                </div>
-                            ))}
-                            {statistics.length === 0 && (
-                                <p className="text-gray-500 col-span-full text-center py-4">
-                                    Belum ada data ternak tersedia
-                                </p>
-                            )}
-                        </div>
                     </div>
 
                     {/* Filters */}
@@ -503,6 +416,66 @@ function LihatTernakContent() {
                             Menampilkan {filteredData.length} dari {ternakList.length} data ternak
                         </div>
                     )}
+
+                    {error && (
+                        <div className="mt-6 flex justify-center">
+                            <p className="text-lg font-[Judson] text-red-500">{error}</p>
+                        </div>
+                    )}
+
+                    {/* ✅ Modal */}
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative">
+                                {modalType === 'delete' && (
+                                    <>
+                                        <div className="flex items-center mb-4 gap-2 text-red-600">
+                                            <AlertTriangle size={24} />
+                                            <h2 className="text-lg font-bold">Konfirmasi Hapus</h2>
+                                        </div>
+                                        <p className="text-gray-700 mb-6">{modalMessage}</p>
+                                        <div className="flex justify-end gap-3">
+                                            <button
+                                                onClick={() => setIsModalOpen(false)}
+                                                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                                            >
+                                                Batal
+                                            </button>
+                                            <button
+                                                onClick={confirmDelete}
+                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                                            >
+                                                Ya, Hapus
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+
+                                {modalType === 'success' && (
+                                    <>
+                                        <h2 className="text-lg font-bold text-green-600 mb-4">Notifikasi</h2>
+                                        <p className="text-gray-700 mb-6">{modalMessage}</p>
+                                        <div className="flex justify-end">
+                                            <button
+                                                onClick={() => setIsModalOpen(false)}
+                                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                                            >
+                                                OK
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+
+                                <button
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                                >
+                                    <X />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    
                 </div>
             </main>
         </div>

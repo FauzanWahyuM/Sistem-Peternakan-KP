@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, CheckCircle, XCircle } from 'lucide-react';
 
 export default function TambahTernakPage() {
     const router = useRouter();
@@ -15,13 +15,17 @@ export default function TambahTernakPage() {
         kondisiKesehatan: ''
     });
 
+    const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+    const [isErrorOpen, setIsErrorOpen] = useState(false);
+    const [message, setMessage] = useState('');
+
     const jenisHewanOptions = ['Sapi', 'Kambing', 'Domba', 'Ayam', 'Bebek'];
     const jenisKelaminOptions = ['Jantan', 'Betina'];
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
 
     const getStatusTernakOptions = () => {
         const { jenisHewan, jenisKelamin } = formData;
-        
+
         if (!jenisHewan || !jenisKelamin) return [];
 
         const statusOptions = {
@@ -60,34 +64,37 @@ export default function TambahTernakPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         try {
+            // 👉 nanti bisa diganti dengan id user login
             const userId = 'user-id-placeholder';
-            
+
             const newTernak = {
-                userId: userId,
+                userId,
                 ...formData
             };
-            
-            const response = await fetch('/api/livestock', {
+
+            const response = await fetch('/api/ternak', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(newTernak),
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to save data');
             }
-            
+
             const result = await response.json();
-            console.log('Data ternak saved to MongoDB:', result.livestock);
-            alert('Data ternak berhasil disimpan ke database!');
-            router.push('/peternak/ternak');
+            console.log('Data ternak saved to MongoDB:', result);
+
+            setMessage('Data ternak berhasil disimpan!');
+            setIsSuccessOpen(true);
         } catch (error) {
             console.error('Error saving ternak data:', error);
-            alert('Gagal menyimpan data ternak: ' + error.message);
+            setMessage('Gagal menyimpan data ternak: ' + error.message);
+            setIsErrorOpen(true);
         }
     };
 
@@ -97,6 +104,15 @@ export default function TambahTernakPage() {
 
     const handleBack = () => {
         router.push('/peternak/ternak');
+    };
+
+    const closeSuccess = () => {
+        setIsSuccessOpen(false);
+        router.push('/peternak/ternak');
+    };
+
+    const closeError = () => {
+        setIsErrorOpen(false);
     };
 
     return (
@@ -111,7 +127,7 @@ export default function TambahTernakPage() {
                         >
                             <ChevronLeft size={24} />
                         </button>
-                        <h1 className="text-3xl font-bold font-[Judson] text-center flex-1">Tambah Ternak</h1>
+                        <h1 className="text-3xl font-bold font-[Judson] text-gray-800 text-center flex-1">Tambah Ternak</h1>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -241,6 +257,44 @@ export default function TambahTernakPage() {
                                 Batal
                             </button>
                         </div>
+
+                        {/* Modal Success */}
+                        {isSuccessOpen && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                                <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative text-center">
+                                    <div className="flex justify-center text-green-600 mb-4">
+                                        <CheckCircle size={48} />
+                                    </div>
+                                    <h2 className="text-lg font-bold text-green-600 mb-4">Berhasil</h2>
+                                    <p className="text-gray-700 mb-6">{message}</p>
+                                    <button
+                                        onClick={closeSuccess}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                                    >
+                                        OK
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Modal Error */}
+                        {isErrorOpen && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                                <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative text-center">
+                                    <div className="flex justify-center text-red-600 mb-4">
+                                        <XCircle size={48} />
+                                    </div>
+                                    <h2 className="text-lg font-bold text-red-600 mb-4">Gagal</h2>
+                                    <p className="text-gray-700 mb-6">{message}</p>
+                                    <button
+                                        onClick={closeError}
+                                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                                    >
+                                        Tutup
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </form>
                 </div>
             </main>

@@ -3,13 +3,14 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, CheckCircle } from 'lucide-react';
+
 
 function EditTernakContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const ternakId = searchParams?.get('id');
-    
+
     const [formData, setFormData] = useState({
         jenisHewan: '',
         jenisKelamin: '',
@@ -20,16 +21,13 @@ function EditTernakContent() {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false); // 🔔 state modal
 
-    // Data untuk dropdown
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
 
-    // Status ternak berdasarkan jenis hewan dan kelamin (sama seperti form tambah)
     const getStatusTernakOptions = () => {
         const { jenisHewan, jenisKelamin } = formData;
-        
         if (!jenisHewan || !jenisKelamin) return [];
-
         const statusOptions = {
             'Sapi': {
                 'Jantan': ['Pejantan', 'Sapi Potong', 'Sapi Kerja', 'Bibit', 'Penggemukan'],
@@ -52,26 +50,20 @@ function EditTernakContent() {
                 'Betina': ['Indukan', 'Bebek Petelur', 'Bebek Potong', 'Bibit', 'Bebek Hias']
             }
         };
-
         return statusOptions[jenisHewan]?.[jenisKelamin] || [];
     };
 
-    // Load data ternak yang akan diedit
     useEffect(() => {
         if (!ternakId) {
             alert('ID ternak tidak ditemukan!');
             router.push('/peternak/ternak');
             return;
         }
-
         const loadData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`/api/livestock/${ternakId}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch data');
-                }
-                
+                const response = await fetch(`/api/ternak/${ternakId}`);
+                if (!response.ok) throw new Error('Failed to fetch data');
                 const result = await response.json();
                 setFormData({
                     jenisHewan: result.livestock.jenisHewan,
@@ -88,7 +80,6 @@ function EditTernakContent() {
                 setLoading(false);
             }
         };
-
         loadData();
     }, [ternakId, router]);
 
@@ -101,59 +92,40 @@ function EditTernakContent() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
         try {
-            const response = await fetch(`/api/livestock/${ternakId}`, {
+            const response = await fetch(`/api/ternak/${ternakId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
-            
-            if (!response.ok) {
-                throw new Error('Failed to update data');
-            }
-            
+            if (!response.ok) throw new Error('Failed to update data');
+
             const result = await response.json();
             console.log('Data ternak updated:', result.livestock);
-            alert('Data ternak berhasil diperbarui!');
-            router.push('/peternak/ternak/lihat');
+
+            // 🔔 tampilkan modal sukses
+            setShowSuccessModal(true);
+
+            // setelah 2 detik, redirect ke lihat data
+            setTimeout(() => {
+                setShowSuccessModal(false);
+                router.push('/peternak/ternak/lihat');
+            }, 2000);
         } catch (error) {
             console.error('Error updating ternak data:', error);
             alert('Gagal memperbarui data ternak: ' + error.message);
         }
     };
 
-    const handleCancel = () => {
-        router.push('/peternak/ternak/lihat');
-    };
-
-    const handleBack = () => {
-        router.push('/peternak/ternak/lihat');
-    };
+    const handleCancel = () => router.push('/peternak/ternak/lihat');
+    const handleBack = () => router.push('/peternak/ternak/lihat');
 
     if (loading) {
         return (
             <div className="flex min-h-screen">
                 <Sidebar userType="peternak" />
-                <main className="flex-1 bg-gray-100 p-6">
-                    <div className="flex items-center justify-center h-full">
-                        <p className="text-lg font-[Judson]">Memuat data...</p>
-                    </div>
-                </main>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex min-h-screen">
-                <Sidebar userType="peternak" />
-                <main className="flex-1 bg-gray-100 p-6">
-                    <div className="flex items-center justify-center h-full">
-                        <p className="text-lg font-[Judson] text-red-500">{error}</p>
-                    </div>
+                <main className="flex-1 bg-gray-100 p-6 flex items-center justify-center">
+                    <p className="text-lg font-[Judson]">Memuat data...</p>
                 </main>
             </div>
         );
@@ -172,7 +144,7 @@ function EditTernakContent() {
                         >
                             <ChevronLeft size={24} />
                         </button>
-                        <h1 className="text-3xl font-bold font-[Judson] text-center flex-1">Edit Data Ternak</h1>
+                        <h1 className="text-3xl font-bold font-[Judson] text-gray-800 text-center flex-1">Edit Data Ternak</h1>
                     </div>
 
                     {/* Form */}
@@ -300,6 +272,42 @@ function EditTernakContent() {
                                 Batal
                             </button>
                         </div>
+
+                        {/* 🔔 Modal sukses */}
+                        {showSuccessModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                                <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative text-center">
+
+                                    {/* Icon centang */}
+                                    <div className="flex justify-center text-green-600 mb-4">
+                                        <CheckCircle size={48} />
+                                    </div>
+
+                                    {/* Judul */}
+                                    <h2 className="text-lg font-bold text-green-600 mb-4">Berhasil</h2>
+
+                                    {/* Pesan */}
+                                    <p className="text-gray-700 mb-6">Data berhasil diubah!</p>
+
+                                    {/* Tombol OK full width */}
+                                    <button
+                                        onClick={() => {
+                                            setShowSuccessModal(false);
+                                            router.push("/peternak/ternak/lihat");
+                                        }}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                                    >
+                                        OK
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {error && (
+                            <div className="mt-6 text-center">
+                                <p className="text-red-500 font-[Judson]">{error}</p>
+                            </div>
+                        )}
                     </form>
                 </div>
             </main>

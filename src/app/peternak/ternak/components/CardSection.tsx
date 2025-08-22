@@ -39,7 +39,7 @@ export default function CardSection() {
                 };
 
                 // result.statistics = [{_id: "Sapi", total: 10}, ...]
-                result.statistics.forEach((stat: any) => {
+                result.forEach((stat: any) => {
                     if (counts.hasOwnProperty(stat._id)) {
                         counts[stat._id] = stat.total;
                     }
@@ -82,8 +82,47 @@ export default function CardSection() {
 
     if (error) {
         return (
-            <div className="flex justify-center items-center h-32">
-                <p className="text-lg font-[Judson] text-red-500">{error}</p>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex justify-end">
+                    <button
+                        onClick={handleTambahData}
+                        className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium font-[Judson]"
+                    >
+                        Tambah Data
+                    </button>
+                </div>
+
+                {/* Cards */}
+                <div className="space-y-4">
+                    {ternakData.map((ternak, i) => (
+                        <div key={i} className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-3xl font-bold text-gray-800 mb-2 font-[Judson]">
+                                        {ternak.jenis}
+                                    </h2>
+                                    <p className="text-gray-600 text-xl font-[Judson]">
+                                        Jumlah Ternak : {ternak.jumlah}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => handleLihatData(ternak.jenis)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium font-[Judson]"
+                                >
+                                    Lihat Data
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Error Message di bawah */}
+                {error && (
+                    <div className="flex justify-center items-center mt-4">
+                        <p className="text-lg font-[Judson] text-red-500">{error}</p>
+                    </div>
+                )}
             </div>
         );
     }
