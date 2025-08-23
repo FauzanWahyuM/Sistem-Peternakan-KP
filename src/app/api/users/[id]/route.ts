@@ -5,18 +5,18 @@ import User from "../../../../models/User";
 // ✅ GET user by ID
 export async function GET(
     _req: Request,
-    context: { params: Promise<{ id: string }> } // <-- params Promise
+    context: { params: { id: string } } // langsung object, bukan Promise
 ) {
     try {
         await connectDB();
-        const { id } = await context.params; // <-- wajib pakai await
+        const { id } = context.params; // ga perlu await
 
         const user = await User.findById(id);
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        return NextResponse.json(user);
+        return NextResponse.json({ user }); // bungkus biar konsisten dengan ApiClient
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -25,11 +25,11 @@ export async function GET(
 // ✅ PUT update user
 export async function PUT(
     request: Request,
-    context: { params: Promise<{ id: string }> }
+    context: { params: { id: string } }
 ) {
     try {
         await connectDB();
-        const { id } = await context.params; // <-- wajib await
+        const { id } = context.params;
         const body = await request.json();
 
         const updatedUser = await User.findByIdAndUpdate(id, body, { new: true });
@@ -37,7 +37,7 @@ export async function PUT(
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        return NextResponse.json(updatedUser);
+        return NextResponse.json({ user: updatedUser });
     } catch (error: any) {
         return NextResponse.json(
             { error: error.message || "Failed to update user" },
@@ -49,11 +49,11 @@ export async function PUT(
 // ✅ DELETE hapus user
 export async function DELETE(
     _req: Request,
-    context: { params: Promise<{ id: string }> }
+    context: { params: { id: string } }
 ) {
     try {
         await connectDB();
-        const { id } = await context.params; // <-- wajib await
+        const { id } = context.params;
 
         const deletedUser = await User.findByIdAndDelete(id);
         if (!deletedUser) {

@@ -45,14 +45,23 @@ const EditUser: React.FC = () => {
             const user = response.user;
 
             if (user) {
-                // Merge user data with default form data to ensure all fields are present
+                // Normalisasi role supaya huruf besar depan (Peternak, Penyuluh, Admin)
+                let normalizedRole: "" | "Peternak" | "Penyuluh" | "Admin" = "";
+                if (user.role) {
+                    const roleLower = user.role.toLowerCase();
+                    if (roleLower === 'peternak') normalizedRole = 'Peternak';
+                    else if (roleLower === 'penyuluh') normalizedRole = 'Penyuluh';
+                    else if (roleLower === 'admin') normalizedRole = 'Admin';
+                }
+
+                // Merge user data dengan form
                 setFormData({
                     nama: user.nama || '',
                     username: user.username || '',
                     email: user.email || '',
                     password: '',
                     kelompok: user.kelompok || '',
-                    role: user.role || '',
+                    role: normalizedRole,
                     status: user.status || '',
                 });
             } else {
@@ -67,6 +76,7 @@ const EditUser: React.FC = () => {
             setLoading(false);
         }
     };
+
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
