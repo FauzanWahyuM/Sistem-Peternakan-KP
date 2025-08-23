@@ -1,44 +1,89 @@
 import connectDB from "../../../../lib/dbConnect";
 import Ternak from "../../../../models/Ternak";
 
-// GET detail ternak by ID
-export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+// GET: ambil data ternak
+export async function GET(req) {
     await connectDB();
-    const { id } = await context.params; // <-- pakai await di sini
     try {
-        const ternak = await Ternak.findById(id);
-        if (!ternak) {
-            return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), { status: 404 });
+        const { searchParams } = new URL(req.url);
+        const stats = searchParams.get("stats");
+        const id = searchParams.get("id");
+
+        if (stats === "true") {
+            // Hitung jumlah ternak per jenis
+            const statistics = await Ternak.aggregate([
+                {
+                    $group: {
+                        _id: "$jenisHewan",
+                        total: { $sum: 1 }
+                    }
+                }
+            ]);
+            return new Response(JSON.stringify(statistics), { status: 200 });
         }
-        return new Response(JSON.stringify({ livestock: ternak }), { status: 200 });
+
+        if (id) {
+            // Ambil detail ternak by id
+            const ternak = await Ternak.findById(id);
+            if (!ternak) {
+                return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), { status: 404 });
+            }
+            return new Response(JSON.stringify(ternak), { status: 200 });
+        }
+
+        // Default: ambil semua data ternak
+        const ternak = await Ternak.find();
+        return new Response(JSON.stringify(ternak), { status: 200 });
+
     } catch (error) {
-        console.error("Error GET ternak by id:", error);
+        console.error("Error GET ternak:", error);
         return new Response(JSON.stringify({ error: "Gagal ambil data" }), { status: 500 });
     }
 }
 
-// PUT update ternak by ID
-export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
+// POST: tambah ternak
+export async function POST(req) {
     await connectDB();
-    const { id } = await context.params; // <-- wajib di-await juga
     try {
-        const data = await req.json();
+        const body = await req.json();
+        const { jenisHewan, jenisKelamin, umurTernak, statusTernak, kondisiKesehatan } = body;
+
+        const ternakBaru = await Ternak.create({
+            jenisHewan,
+            jenisKelamin,
+            umurTernak,
+            statusTernak,
+            kondisiKesehatan,
+        });
+
+        return new Response(JSON.stringify(ternakBaru), { status: 201 });
+    } catch (error) {
+        console.error("Error tambah ternak:", error);
+        return new Response(JSON.stringify({ error: "Gagal tambah data", detail: error.message }), { status: 500 });
+    }
+}
+
+// PUT: update ternak
+export async function PUT(req) {
+    await connectDB();
+    try {
+        const { id, ...data } = await req.json();
         const ternakUpdate = await Ternak.findByIdAndUpdate(id, data, { new: true });
         if (!ternakUpdate) {
             return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), { status: 404 });
         }
-        return new Response(JSON.stringify({ livestock: ternakUpdate }), { status: 200 });
+        return new Response(JSON.stringify(ternakUpdate), { status: 200 });
     } catch (error) {
         console.error("Error update ternak:", error);
         return new Response(JSON.stringify({ error: "Gagal update data" }), { status: 500 });
     }
 }
 
-// DELETE hapus ternak by ID
-export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
+// DELETE: hapus ternak
+export async function DELETE(req) {
     await connectDB();
-    const { id } = await context.params; // <-- juga sama
     try {
+        const { id } = await req.json();
         const ternakHapus = await Ternak.findByIdAndDelete(id);
         if (!ternakHapus) {
             return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), { status: 404 });
