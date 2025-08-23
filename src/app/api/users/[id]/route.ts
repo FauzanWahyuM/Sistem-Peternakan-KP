@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "../../../../lib/dbConnect";
+import connectDB from "../../../../lib/dbConnect"; // langsung import
 import User from "../../../../models/User";
 
 // ✅ GET user by ID
