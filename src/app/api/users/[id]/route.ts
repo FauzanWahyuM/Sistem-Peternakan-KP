@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "../../../../lib/dbConnect"; // langsung import
+import connectDB from "../../../../lib/dbConnect";
 import User from "../../../../models/User";
 
 // ✅ GET user by ID
 export async function GET(
     _req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         await connectDB();
-        const { id } = params;
+        const { id } = await params; // ⬅️ harus pakai await
 
         const user = await User.findById(id);
         if (!user) {
@@ -25,11 +25,11 @@ export async function GET(
 // ✅ PUT update user
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         await connectDB();
-        const { id } = params;
+        const { id } = await params; // ⬅️ harus pakai await
         const body = await req.json();
 
         const updatedUser = await User.findByIdAndUpdate(id, body, { new: true });
@@ -49,11 +49,11 @@ export async function PUT(
 // ✅ DELETE hapus user
 export async function DELETE(
     _req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         await connectDB();
-        const { id } = params;
+        const { id } = await params; // ⬅️ harus pakai await
 
         const deletedUser = await User.findByIdAndDelete(id);
         if (!deletedUser) {
