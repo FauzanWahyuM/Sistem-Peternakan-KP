@@ -1,22 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "../../../../lib/dbConnect";
 import User from "../../../../models/User";
 
 // ✅ GET user by ID
 export async function GET(
-    _req: Request,
-    context: { params: { id: string } } // langsung object, bukan Promise
+    _req: NextRequest,
+    { params }: { params: { id: string } }
 ) {
     try {
         await connectDB();
-        const { id } = context.params; // ga perlu await
+        const { id } = params;
 
         const user = await User.findById(id);
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        return NextResponse.json({ user }); // bungkus biar konsisten dengan ApiClient
+        return NextResponse.json({ user });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -24,13 +24,13 @@ export async function GET(
 
 // ✅ PUT update user
 export async function PUT(
-    request: Request,
-    context: { params: { id: string } }
+    req: NextRequest,
+    { params }: { params: { id: string } }
 ) {
     try {
         await connectDB();
-        const { id } = context.params;
-        const body = await request.json();
+        const { id } = params;
+        const body = await req.json();
 
         const updatedUser = await User.findByIdAndUpdate(id, body, { new: true });
         if (!updatedUser) {
@@ -48,12 +48,12 @@ export async function PUT(
 
 // ✅ DELETE hapus user
 export async function DELETE(
-    _req: Request,
-    context: { params: { id: string } }
+    _req: NextRequest,
+    { params }: { params: { id: string } }
 ) {
     try {
         await connectDB();
-        const { id } = context.params;
+        const { id } = params;
 
         const deletedUser = await User.findByIdAndDelete(id);
         if (!deletedUser) {
