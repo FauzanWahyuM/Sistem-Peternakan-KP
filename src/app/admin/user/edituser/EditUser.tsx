@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback } from 'react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ApiClient } from '../../../../lib/api-client';
@@ -32,20 +32,15 @@ const EditUser: React.FC = () => {
     });
     const [loading, setLoading] = useState<boolean>(true);
 
-    useEffect(() => {
-        if (userId) {
-            fetchUser();
-        }
-    }, [userId]);
-
-    const fetchUser = async () => {
+    // ✅ useCallback agar fetchUser tidak berubah tiap render
+    const fetchUser = useCallback(async () => {
+        if (!userId) return;
         try {
             setLoading(true);
             const response = await ApiClient.getUserById(userId);
             const user = response.user;
 
             if (user) {
-                // Normalisasi role supaya huruf besar depan (Peternak, Penyuluh, Admin)
                 let normalizedRole: "" | "Peternak" | "Penyuluh" | "Admin" = "";
                 if (user.role) {
                     const roleLower = user.role.toLowerCase();
@@ -54,7 +49,6 @@ const EditUser: React.FC = () => {
                     else if (roleLower === 'admin') normalizedRole = 'Admin';
                 }
 
-                // Merge user data dengan form
                 setFormData({
                     nama: user.nama || '',
                     username: user.username || '',
@@ -75,8 +69,11 @@ const EditUser: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [userId, router]);
 
+    useEffect(() => {
+        fetchUser();
+    }, [fetchUser]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
