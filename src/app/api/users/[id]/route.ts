@@ -1,48 +1,70 @@
+import { NextResponse } from "next/server";
 import connectDB from "../../../../lib/dbConnect";
-import Ternak from "../../../../models/Ternak";
+import User from "../../../../models/User";
 
-// GET detail ternak by ID
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-    await connectDB();
+// ✅ GET user by ID
+export async function GET(
+    _req: Request,
+    context: { params: { id: string } } // langsung object, bukan Promise
+) {
     try {
-        const ternak = await Ternak.findById(params.id);
-        if (!ternak) {
-            return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), { status: 404 });
+        await connectDB();
+        const { id } = context.params; // ga perlu await
+
+        const user = await User.findById(id);
+        if (!user) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
-        return new Response(JSON.stringify({ livestock: ternak }), { status: 200 });
-    } catch (error) {
-        console.error("Error GET ternak by id:", error);
-        return new Response(JSON.stringify({ error: "Gagal ambil data" }), { status: 500 });
+
+        return NextResponse.json({ user }); // bungkus biar konsisten dengan ApiClient
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
-// PUT update ternak by ID
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-    await connectDB();
+// ✅ PUT update user
+export async function PUT(
+    request: Request,
+    context: { params: { id: string } }
+) {
     try {
-        const data = await req.json();
-        const ternakUpdate = await Ternak.findByIdAndUpdate(params.id, data, { new: true });
-        if (!ternakUpdate) {
-            return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), { status: 404 });
+        await connectDB();
+        const { id } = context.params;
+        const body = await request.json();
+
+        const updatedUser = await User.findByIdAndUpdate(id, body, { new: true });
+        if (!updatedUser) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
-        return new Response(JSON.stringify({ livestock: ternakUpdate }), { status: 200 });
-    } catch (error) {
-        console.error("Error update ternak:", error);
-        return new Response(JSON.stringify({ error: "Gagal update data" }), { status: 500 });
+
+        return NextResponse.json({ user: updatedUser });
+    } catch (error: any) {
+        return NextResponse.json(
+            { error: error.message || "Failed to update user" },
+            { status: 500 }
+        );
     }
 }
 
-// DELETE hapus ternak by ID
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-    await connectDB();
+// ✅ DELETE hapus user
+export async function DELETE(
+    _req: Request,
+    context: { params: { id: string } }
+) {
     try {
-        const ternakHapus = await Ternak.findByIdAndDelete(params.id);
-        if (!ternakHapus) {
-            return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), { status: 404 });
+        await connectDB();
+        const { id } = context.params;
+
+        const deletedUser = await User.findByIdAndDelete(id);
+        if (!deletedUser) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
-        return new Response(JSON.stringify({ message: "Data berhasil dihapus" }), { status: 200 });
-    } catch (error) {
-        console.error("Error hapus ternak:", error);
-        return new Response(JSON.stringify({ error: "Gagal hapus data" }), { status: 500 });
+
+        return NextResponse.json({ message: "User deleted successfully" });
+    } catch (error: any) {
+        return NextResponse.json(
+            { error: error.message || "Failed to delete user" },
+            { status: 500 }
+        );
     }
 }
