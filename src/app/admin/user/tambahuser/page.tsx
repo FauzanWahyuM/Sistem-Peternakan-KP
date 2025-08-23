@@ -88,47 +88,30 @@ const TambahUser: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            // Create user object matching the database schema
             const userData = {
                 nama: formData.nama,
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
                 kelompok: formData.kelompok,
-                role: formData.role,
+                role: formData.role.toLowerCase(),
                 status: formData.status
             };
 
-            // Save user to database using API client
-            await ApiClient.createUser(userData);
-            
-            alert('User berhasil ditambahkan!');
-            router.push('/admin/user');
-        } catch (error) {
-                    console.error('Gagal menyimpan ke database:', error);
-                    // Check if the error is a response object with a specific message
-                    if (error instanceof Response) {
-                        // Handle HTTP errors
-                        if (error.status === 400) {
-                            alert('Username atau email sudah digunakan. Silakan gunakan yang lain.');
-                        } else {
-                            alert('Terjadi kesalahan saat menyimpan data. Silakan coba lagi.');
-                        }
-                    } else if (error.message) {
-                        // Handle custom error messages
-                        if (error.message.includes('Username already exists')) {
-                            alert('Username sudah digunakan. Silakan gunakan yang lain.');
-                        } else if (error.message.includes('Email already exists')) {
-                            alert('Email sudah digunakan. Silakan gunakan yang lain.');
-                        } else {
-                            alert('Terjadi kesalahan saat menyimpan data: ' + error.message);
-                        }
-                    } else {
-                        alert('Terjadi kesalahan saat menyimpan data. Silakan coba lagi.');
-                    }
-                } finally {
-                    setIsSubmitting(false);
-                }
+            const res = await ApiClient.createUser(userData);
+
+            if (res.error) {
+                alert(res.error || 'Terjadi kesalahan saat menyimpan data.');
+            } else {
+                alert('User berhasil ditambahkan!');
+                router.push('/admin/user');
+            }
+        } catch (error: any) {
+            console.error('Gagal menyimpan ke database:', error);
+            alert('Terjadi kesalahan saat menyimpan data.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (

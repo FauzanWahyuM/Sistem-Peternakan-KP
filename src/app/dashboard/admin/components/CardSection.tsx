@@ -79,7 +79,7 @@ export default function CardSection() {
     const [data, setData] = useState<User[]>([]);
     const [userData, setUserData] = useState<User[]>([]);
     const [artikelData, setArtikelData] = useState<Artikel[]>([]);
-    const [selectedItem, setSelectedItem] = useState<{type: 'user' | 'artikel', data: User | Artikel} | null>(null);
+    const [selectedItem, setSelectedItem] = useState<{ type: 'user' | 'artikel', data: User | Artikel } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
 
@@ -87,18 +87,20 @@ export default function CardSection() {
         try {
             setLoading(true);
             const response = await ApiClient.getUsers();
-            const users = response.users || [];
-            
-            // Sort users by createdAt in descending order (newest first)
+
+            // Pastikan response berbentuk array
+            const users: User[] = Array.isArray(response) ? response : response.users || [];
+
+            // Sort users by createdAt (descending)
             const sortedUsers = users.sort((a: User, b: User) => {
                 if (a.createdAt && b.createdAt) {
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                 }
                 return 0;
             });
-            
-            setData(sortedUsers);
-            setUserData(sortedUsers.slice(0, 5)); // Show only 5 most recent users
+
+            setData(sortedUsers);              // simpan semua user
+            setUserData(sortedUsers.slice(0, 5)); // hanya ambil 5 user terbaru
         } catch (error) {
             console.error("Gagal mengambil data users:", error);
             setData([]);
@@ -107,6 +109,7 @@ export default function CardSection() {
             setLoading(false);
         }
     };
+
 
     const handleDeleteUser = async (id: string) => {
         try {
@@ -126,7 +129,7 @@ export default function CardSection() {
     };
 
     const openModal = (type: 'user' | 'artikel', item: User | Artikel) => {
-        setSelectedItem({type, data: item});
+        setSelectedItem({ type, data: item });
         setIsModalOpen(true);
     };
 
@@ -151,7 +154,7 @@ export default function CardSection() {
 
     useEffect(() => {
         fetchUsers();
-        
+
         try {
             // Ambil dan parse data artikels
             const localArtikelData = JSON.parse(localStorage.getItem("artikels") || "[]");
@@ -305,7 +308,7 @@ export default function CardSection() {
                     <ArrowRight size={16} />
                 </button>
             </section>
-            
+
             {/* Modal Konfirmasi Hapus */}
             {isModalOpen && selectedItem && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
