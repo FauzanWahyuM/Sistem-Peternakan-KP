@@ -26,6 +26,10 @@ function IsiFormContent() {
             return;
         }
 
+        const now = new Date();
+        const month = now.getMonth() + 1; // Januari = 1
+        const year = now.getFullYear();
+
         try {
             const res = await fetch("/api/kuesioner", {
                 method: "POST",
@@ -33,6 +37,8 @@ function IsiFormContent() {
                 body: JSON.stringify({
                     questionnaireId,
                     userId: "123", // ganti dengan user login
+                    month,
+                    year,
                     formData,
                 }),
             });
@@ -48,6 +54,7 @@ function IsiFormContent() {
             alert("Terjadi error saat menyimpan jawaban");
         }
     };
+
 
     return (
         <div className="flex">

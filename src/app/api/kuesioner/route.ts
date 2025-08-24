@@ -7,18 +7,24 @@ export async function POST(req: NextRequest) {
     await connectDB();
     try {
         const body = await req.json();
-        const { questionnaireId, userId, formData } = body;
+        let { questionnaireId, userId, formData, month, year } = body;
 
-        // ubah formData ke format array of {questionId, answer}
-        const answers = Object.entries(formData).map(([questionId, answer]) => ({
-            questionId,
-            answer: String(answer),
-        }));
+        // ✅ ubah huruf awal questionnaireId jadi uppercase
+        if (typeof questionnaireId === "string" && questionnaireId.length > 0) {
+            questionnaireId = questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
+        }
+
+        const answers = Object.entries(formData).map(([questionId, answer]) => Number(answer));
 
         const response = new QuestionnaireResponse({
             questionnaireId,
             userId,
-            answers,
+            bulan: month,
+            tahun: year,
+            answers: Object.entries(formData).map(([questionId, answer]) => ({
+                questionId,
+                answer: String(answer),
+            })),
         });
 
         await response.save();
@@ -36,21 +42,23 @@ export async function POST(req: NextRequest) {
     }
 }
 
-
 export async function GET(req: NextRequest) {
     await connectDB();
     try {
         const { searchParams } = new URL(req.url);
         const questionnaireId = searchParams.get("questionnaireId");
         const userId = searchParams.get("userId");
+        const month = searchParams.get("month");
+        const year = searchParams.get("year");
 
-        const response = await QuestionnaireResponse.findOne({
-            questionnaireId,
-            userId,
-        });
+        const query: any = { questionnaireId, userId };
+        if (month) query.month = Number(month);
+        if (year) query.year = Number(year);
+
+        const response = await QuestionnaireResponse.findOne(query);
 
         if (!response) {
-            return NextResponse.json(null, { status: 200 }); // ⬅️ biar frontend tahu belum ada data
+            return NextResponse.json(null, { status: 200 });
         }
 
         return NextResponse.json(response, { status: 200 });
