@@ -38,10 +38,14 @@ export default function CardSection() {
                 const userId = "123";
                 const newStatus: { [key: string]: boolean } = {};
 
-                for (const month of months) {
-                    const res = await fetch(`/api/kuesioner?questionnaireId=${month.id}&userId=${userId}`);
+                // pakai entries supaya ada idx
+                for (const [idx, month] of months.entries()) {
+                    const res = await fetch(
+                        `/api/kuesioner?questionnaireId=${month.name}&userId=${userId}&month=${idx + 1}&year=${year}`
+                    );
                     const data = res.ok ? await res.json() : null;
-                    newStatus[month.id] = !!data;
+                    // ✅ cek status dari API, bukan sekadar cek ada data
+                    newStatus[month.id] = data?.status === true;
                 }
 
                 setStatus(newStatus);
@@ -51,7 +55,7 @@ export default function CardSection() {
         };
 
         fetchStatus();
-    }, []); // ✅ sekarang aman, months gak perlu jadi dependency
+    }, [year]); // ✅ tambahkan year sebagai dependency
 
 
     const handleViewForm = (id: string) => {

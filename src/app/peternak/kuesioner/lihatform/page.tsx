@@ -18,7 +18,7 @@ function LihatFormContent() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await fetch(`/api/kuesioner?questionnaireId=${questionnaireId}&userId=123`);
+                const res = await fetch(`/api/kuesioner?questionnaireId=${questionnaireId}&userId=123&detail=true`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data?.answers) {

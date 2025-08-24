@@ -9,17 +9,15 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         let { questionnaireId, userId, formData, month, year } = body;
 
-        // ✅ ubah huruf awal questionnaireId jadi uppercase
         if (typeof questionnaireId === "string" && questionnaireId.length > 0) {
-            questionnaireId = questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
+            questionnaireId =
+                questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
         }
-
-        const answers = Object.entries(formData).map(([questionId, answer]) => Number(answer));
 
         const response = new QuestionnaireResponse({
             questionnaireId,
             userId,
-            bulan: month,
+            bulan: month, // pastikan field sama dengan model
             tahun: year,
             answers: Object.entries(formData).map(([questionId, answer]) => ({
                 questionId,
@@ -46,22 +44,37 @@ export async function GET(req: NextRequest) {
     await connectDB();
     try {
         const { searchParams } = new URL(req.url);
-        const questionnaireId = searchParams.get("questionnaireId");
+        let questionnaireId = searchParams.get("questionnaireId");
         const userId = searchParams.get("userId");
         const month = searchParams.get("month");
         const year = searchParams.get("year");
+        const detail = searchParams.get("detail"); // 👈 cek mode
+
+        if (questionnaireId) {
+            questionnaireId =
+                questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
+        }
+
+        if (!questionnaireId || !userId) {
+            return NextResponse.json(
+                { error: "questionnaireId dan userId wajib ada" },
+                { status: 400 }
+            );
+        }
 
         const query: any = { questionnaireId, userId };
-        if (month) query.month = Number(month);
-        if (year) query.year = Number(year);
+        if (month) query.bulan = Number(month);
+        if (year) query.tahun = Number(year);
 
         const response = await QuestionnaireResponse.findOne(query);
 
-        if (!response) {
-            return NextResponse.json(null, { status: 200 });
+        // 🔹 kalau detail=true → balikin semua data termasuk answers
+        if (detail === "true") {
+            return NextResponse.json(response, { status: 200 });
         }
 
-        return NextResponse.json(response, { status: 200 });
+        // 🔹 default → hanya balikin status
+        return NextResponse.json({ status: !!response }, { status: 200 });
     } catch (err) {
         console.error("Error getting response:", err);
         return NextResponse.json(
