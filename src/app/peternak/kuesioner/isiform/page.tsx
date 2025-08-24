@@ -73,7 +73,7 @@ function IsiFormContent() {
 
                 {questions.map((q, i) => (
                     <div key={q.id} className="max-w-4xl mx-auto bg-white rounded-lg border border-gray-300 p-6 mb-6">
-                        <h3 className="font-semibold mb-6">{i + 1}. {q.text}</h3>
+                        <h3 className="font-semibold mb-6 text-gray-800">{i + 1}. {q.text}</h3>
                         <div className="flex justify-center space-x-6">
                             {[1, 2, 3, 4, 5].map(val => (
                                 <label key={val} className="flex flex-col items-center">
