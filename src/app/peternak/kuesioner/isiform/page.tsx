@@ -7,6 +7,7 @@ import Header from '../components/Header';
 import { ChevronLeft } from 'lucide-react';
 import { questions } from '../pertanyaan/questions';
 import { Suspense } from 'react';
+import '../dashboard.css';
 
 function IsiFormContent() {
     const router = useRouter();

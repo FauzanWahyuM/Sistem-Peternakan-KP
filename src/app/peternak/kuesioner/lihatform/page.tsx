@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft } from 'lucide-react';
 import { questions } from '../pertanyaan/questions';
+import '../dashboard.css';
 
 function LihatFormContent() {
     const router = useRouter();
