@@ -65,12 +65,13 @@ function EditTernakContent() {
                 const response = await fetch(`/api/ternak/${ternakId}`);
                 if (!response.ok) throw new Error('Failed to fetch data');
                 const result = await response.json();
+
                 setFormData({
-                    jenisHewan: result.livestock.jenisHewan,
-                    jenisKelamin: result.livestock.jenisKelamin,
-                    umurTernak: result.livestock.umurTernak,
-                    statusTernak: result.livestock.statusTernak,
-                    kondisiKesehatan: result.livestock.kondisiKesehatan
+                    jenisHewan: result.jenisHewan,
+                    jenisKelamin: result.jenisKelamin,
+                    umurTernak: result.umurTernak,
+                    statusTernak: result.statusTernak,
+                    kondisiKesehatan: result.kondisiKesehatan
                 });
                 setError(null);
             } catch (err) {
