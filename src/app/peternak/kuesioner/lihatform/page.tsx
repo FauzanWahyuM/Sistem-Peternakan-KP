@@ -1,16 +1,16 @@
-// LihatForm.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft } from 'lucide-react';
 import { questions } from '../pertanyaan/questions';
 
-export default function LihatForm() {
+function LihatFormContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const questionnaireId = searchParams.get('id') || '0';
+
     const [formData, setFormData] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
 
@@ -54,7 +54,9 @@ export default function LihatForm() {
                     >
                         <ChevronLeft size={24} />
                     </button>
-                    <h1 className="text-4xl font-[Judson] font-bold text-gray-800 ml-45">Kuesioner - Hasil Jawaban</h1>
+                    <h1 className="text-4xl font-[Judson] font-bold text-gray-800 ml-45">
+                        Kuesioner - Hasil Jawaban
+                    </h1>
                 </div>
 
                 {questions.map((q, i) => (
@@ -79,5 +81,13 @@ export default function LihatForm() {
                 ))}
             </main>
         </div>
+    );
+}
+
+export default function LihatForm() {
+    return (
+        <Suspense fallback={<p>Loading halaman...</p>}>
+            <LihatFormContent />
+        </Suspense>
     );
 }
