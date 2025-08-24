@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
         const response = new QuestionnaireResponse({
             questionnaireId,
             userId,
-            bulan: month, // pastikan field sama dengan model
+            bulan: month,
             tahun: year,
             answers: Object.entries(formData).map(([questionId, answer]) => ({
                 questionId,
@@ -48,13 +48,27 @@ export async function GET(req: NextRequest) {
         const userId = searchParams.get("userId");
         const month = searchParams.get("month");
         const year = searchParams.get("year");
-        const detail = searchParams.get("detail"); // 👈 cek mode
+        const detail = searchParams.get("detail");
+        const count = searchParams.get("count"); // 👈 untuk dashboard
 
         if (questionnaireId) {
             questionnaireId =
                 questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
         }
 
+        // === MODE COUNT (buat dashboard) ===
+        if (count === "true") {
+            const query: any = {};
+            if (questionnaireId) query.questionnaireId = questionnaireId;
+            if (userId) query.userId = userId;
+            if (month) query.bulan = Number(month);
+            if (year) query.tahun = Number(year);
+
+            const total = await QuestionnaireResponse.countDocuments(query);
+            return NextResponse.json({ total }, { status: 200 });
+        }
+
+        // === MODE DETAIL ATAU STATUS ===
         if (!questionnaireId || !userId) {
             return NextResponse.json(
                 { error: "questionnaireId dan userId wajib ada" },
@@ -68,12 +82,10 @@ export async function GET(req: NextRequest) {
 
         const response = await QuestionnaireResponse.findOne(query);
 
-        // 🔹 kalau detail=true → balikin semua data termasuk answers
         if (detail === "true") {
             return NextResponse.json(response, { status: 200 });
         }
 
-        // 🔹 default → hanya balikin status
         return NextResponse.json({ status: !!response }, { status: 200 });
     } catch (err) {
         console.error("Error getting response:", err);
