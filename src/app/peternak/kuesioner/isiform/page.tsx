@@ -66,24 +66,24 @@ function IsiFormContent() {
                 </div>
 
                 <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border border-gray-300 mb-6">
-                    <h2 className="text-lg font-semibold mb-2">Petunjuk:</h2>
-                    <p className="mb-2">Pilihlah angka yang paling sesuai dengan pendapat Anda.</p>
-                    <p className="mb-4">1 = Sangat Tidak Setuju, 2 = Tidak Setuju, 3 = Netral, 4 = Setuju, 5 = Sangat Setuju</p>
+                    <h2 className="text-lg font-semibold mb-2 text-gray-800">Petunjuk:</h2>
+                    <p className="mb-2 text-gray-800">Pilihlah angka yang paling sesuai dengan pendapat Anda.</p>
+                    <p className="mb-4 text-gray-800">1 = Sangat Tidak Setuju, 2 = Tidak Setuju, 3 = Netral, 4 = Setuju, 5 = Sangat Setuju</p>
                 </div>
 
                 {questions.map((q, i) => (
                     <div key={q.id} className="max-w-4xl mx-auto bg-white rounded-lg border border-gray-300 p-6 mb-6">
                         <h3 className="font-semibold mb-6 text-gray-800">{i + 1}. {q.text}</h3>
-                        <div className="flex justify-center space-x-6">
+                        <div className="flex justify-center space-x-6 text-gray-800">
                             {[1, 2, 3, 4, 5].map(val => (
-                                <label key={val} className="flex flex-col items-center">
+                                <label key={val} className="flex flex-col items-center text-gray-800">
                                     <input
                                         type="radio"
                                         name={q.id}
                                         value={val}
                                         checked={formData[q.id] === String(val)}
                                         onChange={(e) => handleChange(q.id, e.target.value)}
-                                        className="w-5 h-5 text-green-600"
+                                        className="w-5 h-5 text-blue-600"
                                     />
                                     <span className="mt-1">{val}</span>
                                 </label>
