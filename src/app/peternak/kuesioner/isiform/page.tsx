@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -6,8 +6,9 @@ import Sidebar from '../components/UnifiedSidebar';
 import Header from '../components/Header';
 import { ChevronLeft } from 'lucide-react';
 import { questions } from '../pertanyaan/questions';
+import { Suspense } from 'react';
 
-export default function IsiForm() {
+function IsiFormContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const questionnaireId = searchParams.get('id') || '0';
@@ -99,5 +100,13 @@ export default function IsiForm() {
                 </button>
             </main>
         </div>
+    );
+}
+
+export default function IsiForm() {
+    return (
+        <Suspense fallback={<div className="p-6">Loading form...</div>}>
+            <IsiFormContent />
+        </Suspense>
     );
 }
