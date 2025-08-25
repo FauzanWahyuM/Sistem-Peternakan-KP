@@ -12,56 +12,52 @@ const TambahArtikel: React.FC = () => {
     const [gambar, setGambar] = useState('');
     const [gambarFileName, setGambarFileName] = useState('');
     const [tanggal, setTanggal] = useState('');
+    const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const handleGambarChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file && file.size < 20 * 1024 * 1024) {
+        if (file && file.size < 5 * 1024 * 1024) { // <= 5MB
             setGambarFileName(file.name);
             const reader = new FileReader();
             reader.onloadend = () => setGambar(reader.result as string);
             reader.readAsDataURL(file);
         } else {
-            alert('Ukuran gambar harus kurang dari 20MB!');
+            alert('Ukuran gambar harus kurang dari 5MB!');
         }
     };
 
-
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!judul || !deskripsi || !gambar || !tanggal) {
             alert('Semua kolom harus diisi!');
             return;
         }
 
+        setLoading(true);
         try {
-            let existingData = [];
-            try {
-                const stored = localStorage.getItem('artikels');
-                existingData = stored ? JSON.parse(stored) : [];
-            } catch (err) {
-                console.warn('Data artikel rusak, reset ke array kosong.');
-                existingData = [];
-            }
+            const res = await fetch('/api/artikel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    judul,
+                    deskripsi,
+                    gambar,
+                    tanggal: new Date(tanggal), // pastikan tanggal ke format Date
+                }),
+            });
 
-            const newArtikel = {
-                id: Date.now(),
-                judul,
-                deskripsi,
-                gambar,
-                tanggal,
-            };
+            if (!res.ok) throw new Error('Gagal menambahkan artikel');
 
-            const updatedData = [...existingData, newArtikel];
-            localStorage.setItem('artikels', JSON.stringify(updatedData));
             alert('Artikel berhasil ditambahkan!');
             router.push('/admin/artikel');
         } catch (error) {
             console.error('Gagal menyimpan artikel:', error);
             alert('Terjadi kesalahan saat menyimpan data.');
+        } finally {
+            setLoading(false);
         }
     };
-
 
     return (
         <div className="p-8 bg-gray-100 min-h-screen">
@@ -103,7 +99,7 @@ const TambahArtikel: React.FC = () => {
                         <label className="block font-semibold mb-1 text-black">Gambar</label>
                         <div className="border border-gray-300 rounded p-4 bg-gray-50">
                             <p className="text-xs italic text-gray-600 mb-2">
-                                * Upload gambar persegi, ukuran &lt; 20MB
+                                * Upload gambar persegi, ukuran &lt; 5MB
                             </p>
                             <div className="flex items-center gap-4 mb-2">
                                 <button
@@ -150,9 +146,10 @@ const TambahArtikel: React.FC = () => {
                     <div className="flex justify-end gap-4 pt-4">
                         <button
                             type="submit"
+                            disabled={loading}
                             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded"
                         >
-                            Simpan
+                            {loading ? "Menyimpan..." : "Simpan"}
                         </button>
                         <button
                             type="button"

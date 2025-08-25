@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
 interface ArtikelData {
-    id: number;
+    _id?: string;
     judul: string;
     deskripsi: string;
     gambar: string;
@@ -19,28 +19,40 @@ const EditArtikel: React.FC = () => {
     const artikelId = searchParams.get('id');
 
     const [formData, setFormData] = useState<ArtikelData>({
-        id: 0,
         judul: '',
         deskripsi: '',
         gambar: '',
         tanggal: '',
     });
+    const [loading, setLoading] = useState(true);
     const [gambarFileName, setGambarFileName] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+    // Ambil data artikel dari API
     useEffect(() => {
-        if (artikelId) {
-            const artikels = JSON.parse(localStorage.getItem('artikels') || '[]');
-            const artikelToEdit = artikels.find((a: ArtikelData) => a.id.toString() === artikelId);
-
-            if (artikelToEdit) {
-                setFormData(artikelToEdit);
-                setGambarFileName(artikelToEdit.gambar ? 'Sudah dipilih' : '');
-            } else {
+        const fetchArtikel = async () => {
+            if (!artikelId) return;
+            try {
+                const res = await fetch(`/api/artikel/${artikelId}`);
+                if (!res.ok) throw new Error('Gagal mengambil data artikel');
+                const data = await res.json();
+                setFormData({
+                    judul: data.judul,
+                    deskripsi: data.deskripsi,
+                    gambar: data.gambar,
+                    tanggal: data.tanggal?.substring(0, 10) || '',
+                });
+                setGambarFileName(data.gambar ? 'Sudah dipilih' : '');
+            } catch (err) {
+                console.error(err);
                 alert('Artikel tidak ditemukan');
                 router.push('/admin/artikel');
+            } finally {
+                setLoading(false);
             }
-        }
+        };
+
+        fetchArtikel();
     }, [artikelId, router]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -50,7 +62,7 @@ const EditArtikel: React.FC = () => {
 
     const handleGambarChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file && file.size < 20 * 1024 * 1024) {
+        if (file && file.size <= 5 * 1024 * 1024) { // max 5 MB
             setGambarFileName(file.name);
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -58,26 +70,32 @@ const EditArtikel: React.FC = () => {
             };
             reader.readAsDataURL(file);
         } else {
-            alert('Ukuran gambar maksimal 20MB!');
+            alert('Ukuran gambar maksimal 5MB!');
         }
     };
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-
         try {
-            const artikels = JSON.parse(localStorage.getItem('artikels') || '[]');
-            const updated = artikels.map((a: ArtikelData) =>
-                a.id.toString() === artikelId ? formData : a
-            );
-            localStorage.setItem('artikels', JSON.stringify(updated));
-            alert('Artikel berhasil diperbarui!');
-            router.push('/admin/artikel');
+            const res = await fetch(`/api/artikel/${artikelId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
+
+            if (res.ok) {
+                alert('Artikel berhasil diperbarui!');
+                router.push('/admin/artikel');
+            } else {
+                alert('Gagal memperbarui artikel.');
+            }
         } catch (error) {
-            console.error('Gagal menyimpan ke localStorage:', error);
+            console.error('Error update artikel:', error);
             alert('Terjadi kesalahan saat menyimpan data.');
         }
     };
+
+    if (loading) return <p className="text-center p-6">Loading...</p>;
 
     return (
         <div className="p-8 bg-gray-100 min-h-screen">
@@ -119,7 +137,7 @@ const EditArtikel: React.FC = () => {
                         <label className="block font-semibold mb-1 text-black">Gambar</label>
                         <div className="border border-gray-300 rounded p-4 bg-gray-50">
                             <p className="text-xs italic text-gray-600 mb-2">
-                                * Upload gambar maksimal 20MB
+                                * Upload gambar maksimal 5MB
                             </p>
                             <div className="flex items-center gap-4 mb-2">
                                 <button

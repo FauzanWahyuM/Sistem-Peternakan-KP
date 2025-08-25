@@ -24,25 +24,6 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 This application now uses a static data implementation instead of MongoDB. All data is stored in memory and will be reset when the server restarts.
 
-### Predefined Users
-
-The application comes with predefined users for testing:
-
-1. **Admin User**
-   - Username: admin
-   - Password: password
-   - Role: admin
-
-2. **Penyuluh User**
-   - Username: penyuluh
-   - Password: password
-   - Role: penyuluh
-
-3. **Peternak User**
-   - Username: peternak
-   - Password: password
-   - Role: peternak
-
 ## Testing
 
 To test the authentication system, follow the instructions in [TESTING.md](TESTING.md).
