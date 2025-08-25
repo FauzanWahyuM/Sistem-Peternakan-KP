@@ -8,8 +8,10 @@ import { ChevronLeft } from 'lucide-react';
 import { questions } from '../pertanyaan/questions';
 import { Suspense } from 'react';
 import '../dashboard.css';
+import { useSession } from "next-auth/react"; // ⬅️ import
 
 function IsiFormContent() {
+    const { data: session, status } = useSession(); // ⬅️ ambil session
     const router = useRouter();
     const searchParams = useSearchParams();
     const questionnaireId = searchParams.get('id') || '0';
@@ -21,13 +23,18 @@ function IsiFormContent() {
     };
 
     const handleSubmit = async () => {
+        if (status === "loading") return;
+        if (!session?.user?.id) {
+            alert("Anda harus login untuk mengisi kuesioner");
+            return;
+        }
         if (Object.keys(formData).length < questions.length) {
             alert("Mohon isi semua pertanyaan!");
             return;
         }
 
         const now = new Date();
-        const month = now.getMonth() + 1; // Januari = 1
+        const month = now.getMonth() + 1;
         const year = now.getFullYear();
 
         try {
@@ -36,7 +43,6 @@ function IsiFormContent() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     questionnaireId,
-                    userId: "123", // ganti dengan user login
                     month,
                     year,
                     formData,

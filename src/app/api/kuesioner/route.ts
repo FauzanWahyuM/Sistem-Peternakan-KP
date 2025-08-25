@@ -1,22 +1,32 @@
-// app/api/kuesioner/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../models/Kuesioner";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+
+const bulanOptions = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+];
 
 export async function POST(req: NextRequest) {
     await connectDB();
     try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: "Anda harus login" }, { status: 401 });
+        }
+
         const body = await req.json();
-        let { questionnaireId, userId, formData, month, year } = body;
+        let { questionnaireId, formData, month, year } = body;
 
         if (typeof questionnaireId === "string" && questionnaireId.length > 0) {
-            questionnaireId =
-                questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
+            questionnaireId = questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
         }
 
         const response = new QuestionnaireResponse({
             questionnaireId,
-            userId,
+            userId: session.user.id, // ambil dari session
             bulan: month,
             tahun: year,
             answers: Object.entries(formData).map(([questionId, answer]) => ({
@@ -43,24 +53,26 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
     await connectDB();
     try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const { searchParams } = new URL(req.url);
         let questionnaireId = searchParams.get("questionnaireId");
-        const userId = searchParams.get("userId");
         const month = searchParams.get("month");
         const year = searchParams.get("year");
         const detail = searchParams.get("detail");
-        const count = searchParams.get("count"); // 👈 untuk dashboard
+        const count = searchParams.get("count");
 
         if (questionnaireId) {
-            questionnaireId =
-                questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
+            questionnaireId = questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
         }
 
-        // === MODE COUNT (buat dashboard) ===
+        // === MODE COUNT (dashboard) ===
         if (count === "true") {
-            const query: any = {};
+            const query: any = { userId: session.user.id };
             if (questionnaireId) query.questionnaireId = questionnaireId;
-            if (userId) query.userId = userId;
             if (month) query.bulan = Number(month);
             if (year) query.tahun = Number(year);
 
@@ -68,15 +80,15 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ total }, { status: 200 });
         }
 
-        // === MODE DETAIL ATAU STATUS ===
-        if (!questionnaireId || !userId) {
+        // === MODE DETAIL / STATUS ===
+        if (!questionnaireId) {
             return NextResponse.json(
-                { error: "questionnaireId dan userId wajib ada" },
+                { error: "questionnaireId wajib ada" },
                 { status: 400 }
             );
         }
 
-        const query: any = { questionnaireId, userId };
+        const query: any = { questionnaireId, userId: session.user.id };
         if (month) query.bulan = Number(month);
         if (year) query.tahun = Number(year);
 

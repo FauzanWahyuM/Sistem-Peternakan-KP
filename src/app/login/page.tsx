@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import Image from 'next/image';
 
 export default function LoginPage() {
@@ -19,25 +19,24 @@ export default function LoginPage() {
         setErrorMsg('');
 
         try {
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
+            // LOGIN pakai NextAuth credentials
+            const res = await signIn('credentials', {
+                username,
+                password,
+                redirect: false,
             });
 
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.message || 'Login gagal');
+            if (!res?.ok) {
+                setErrorMsg('Login gagal, periksa username/password');
+                return;
             }
 
-            const data = await res.json();
-            console.log('Login success:', data);
+            // Ambil session terbaru
+            const session = await getSession();
+            const role = (session?.user as any)?.role?.toLowerCase();
 
-            // simpan token di localStorage
-            localStorage.setItem('token', data.token);
 
-            // redirect berdasarkan role
-            const role = data.user.role?.toLowerCase();
+            // redirect ke dashboard sesuai role
             switch (role) {
                 case 'admin':
                     router.push('/dashboard/admin');
@@ -51,11 +50,15 @@ export default function LoginPage() {
                 default:
                     router.push('/');
             }
+
         } catch (err: any) {
             console.error('Login error:', err);
-            setErrorMsg(err.message || 'Terjadi kesalahan saat login');
+            setErrorMsg('Terjadi kesalahan saat login');
         }
     };
+
+
+
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-green-100 via-white to-green-100 px-4">
