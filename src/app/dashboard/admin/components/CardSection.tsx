@@ -1,10 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Pencil, Trash2, FileDown, ArrowRight } from 'lucide-react';
+import { Pencil, Trash2, FileDown, ArrowRight, X, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
 import { ApiClient } from '../../../../lib/api-client';
 
 const DataTable = dynamic(() => import('react-data-table-component'), { ssr: false });
@@ -61,11 +60,12 @@ type User = {
 };
 
 type Artikel = {
-    id: number;
+    _id: string;
     judul: string;
     deskripsi: string;
     gambar: string;
     tanggal: string;
+    createdAt?: string;
 };
 
 type Laporan = {
@@ -87,20 +87,14 @@ export default function CardSection() {
         try {
             setLoading(true);
             const response = await ApiClient.getUsers();
-
-            // Pastikan response berbentuk array
             const users: User[] = Array.isArray(response) ? response : response.users || [];
-
-            // Sort users by createdAt (descending)
-            const sortedUsers = users.sort((a: User, b: User) => {
-                if (a.createdAt && b.createdAt) {
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                }
-                return 0;
-            });
-
-            setData(sortedUsers);              // simpan semua user
-            setUserData(sortedUsers.slice(0, 5)); // hanya ambil 5 user terbaru
+            const sortedUsers = users.sort((a, b) =>
+                a.createdAt && b.createdAt
+                    ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    : 0
+            );
+            setData(sortedUsers);
+            setUserData(sortedUsers.slice(0, 5));
         } catch (error) {
             console.error("Gagal mengambil data users:", error);
             setData([]);
@@ -110,22 +104,41 @@ export default function CardSection() {
         }
     };
 
+    const fetchArtikels = async () => {
+        try {
+            const response = await fetch("/api/artikel");
+            if (!response.ok) throw new Error("Gagal fetch artikel");
+            const artikels: Artikel[] = await response.json();
+            const sorted = artikels.sort((a, b) =>
+                a.createdAt && b.createdAt
+                    ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    : 0
+            );
+            setArtikelData(sorted.slice(0, 3)); // hanya 3 artikel terbaru
+        } catch (error) {
+            console.error("Gagal mengambil artikel:", error);
+            setArtikelData([]);
+        }
+    };
 
     const handleDeleteUser = async (id: string) => {
         try {
             await ApiClient.deleteUser(id);
-            await fetchUsers(); // Refresh the user list
+            await fetchUsers();
         } catch (error) {
             console.error("Gagal menghapus user:", error);
             alert("Gagal menghapus user");
         }
     };
 
-    const handleDeleteArtikel = (id: number) => {
-        const artikelList = JSON.parse(localStorage.getItem("artikels") || "[]");
-        const updatedArtikels = artikelList.filter((a: Artikel) => a.id !== id);
-        localStorage.setItem("artikels", JSON.stringify(updatedArtikels));
-        setArtikelData(updatedArtikels.slice(0, 5));
+    const handleDeleteArtikel = async (id: string) => {
+        try {
+            await fetch(`/api/artikel/${id}`, { method: "DELETE" });
+            await fetchArtikels();
+        } catch (error) {
+            console.error("Gagal menghapus artikel:", error);
+            alert("Gagal menghapus artikel");
+        }
     };
 
     const openModal = (type: 'user' | 'artikel', item: User | Artikel) => {
@@ -141,45 +154,18 @@ export default function CardSection() {
     const confirmDelete = async () => {
         if (selectedItem) {
             if (selectedItem.type === 'user') {
-                const user = selectedItem.data as User;
-                await handleDeleteUser(user._id);
+                await handleDeleteUser((selectedItem.data as User)._id);
             } else if (selectedItem.type === 'artikel') {
-                const artikel = selectedItem.data as Artikel;
-                handleDeleteArtikel(artikel.id);
+                await handleDeleteArtikel((selectedItem.data as Artikel)._id);
             }
             closeModal();
         }
     };
 
-
     useEffect(() => {
         fetchUsers();
-
-        try {
-            // Ambil dan parse data artikels
-            const localArtikelData = JSON.parse(localStorage.getItem("artikels") || "[]");
-            setArtikelData(localArtikelData.slice(0, 5));
-        } catch (error) {
-            console.error("Gagal parsing data artikels:", error);
-            setArtikelData([]);
-        }
+        fetchArtikels();
     }, []);
-
-
-    const laporanColumns = [
-        { name: 'Judul Laporan', selector: (row: Laporan) => row.judul },
-        { name: 'Nilai Kuesioner', selector: (row: Laporan) => row.nilai },
-        { name: 'Tanggal', selector: (row: Laporan) => row.tanggal },
-        {
-            name: 'Aksi',
-            cell: (row: Laporan) => (
-                <ActionButtons
-                    onDownload={() => console.log('Download laporan', row)}
-                    onDelete={() => console.log('Hapus laporan', row)}
-                />
-            ),
-        }
-    ];
 
     const artikelColumns = [
         { name: 'Judul', selector: (row: Artikel) => row.judul },
@@ -196,11 +182,26 @@ export default function CardSection() {
             name: 'Aksi',
             cell: (row: Artikel) => (
                 <ActionButtons
-                    onEdit={() => router.push(`/admin/artikel/editartikel?id=${row.id}`)}
+                    onEdit={() => router.push(`/admin/artikel/editartikel?id=${row._id}`)}
                     onDelete={() => openModal('artikel', row)}
                 />
             ),
         },
+    ];
+
+    const laporanColumns = [
+        { name: 'Judul Laporan', selector: (row: Laporan) => row.judul },
+        { name: 'Nilai Kuesioner', selector: (row: Laporan) => row.nilai },
+        { name: 'Tanggal', selector: (row: Laporan) => row.tanggal },
+        {
+            name: 'Aksi',
+            cell: (row: Laporan) => (
+                <ActionButtons
+                    onDownload={() => console.log('Download laporan', row)}
+                    onDelete={() => console.log('Hapus laporan', row)}
+                />
+            ),
+        }
     ];
 
     const laporanData: Laporan[] = [

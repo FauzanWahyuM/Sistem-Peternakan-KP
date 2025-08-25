@@ -10,7 +10,7 @@ import Image from 'next/image';
 const DataTable = dynamic(() => import('react-data-table-component'), { ssr: false });
 
 type Artikel = {
-    id: number;
+    _id: string;
     judul: string;
     deskripsi: string;
     gambar: string;
@@ -43,13 +43,16 @@ export default function ArtikelManagement() {
     const router = useRouter();
 
     useEffect(() => {
-        try {
-            const localData = JSON.parse(localStorage.getItem('artikels') || '[]');
-            setData(localData);
-        } catch (error) {
-            console.error('Gagal membaca artikel dari localStorage:', error);
-            setData([]);
+        async function fetchArtikels() {
+            try {
+                const res = await fetch("/api/artikel");
+                const data = await res.json();
+                setData(data);
+            } catch (err) {
+                console.error("Gagal fetch artikel:", err);
+            }
         }
+        fetchArtikels();
     }, []);
 
     const openModal = (artikel: Artikel) => {
@@ -62,17 +65,21 @@ export default function ArtikelManagement() {
         setSelectedArtikel(null);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (selectedArtikel) {
-            const updated = data.filter((a) => a.id !== selectedArtikel.id);
-            setData(updated);
-            localStorage.setItem('artikels', JSON.stringify(updated));
-            closeModal();
+            try {
+                await fetch(`/api/artikel/${selectedArtikel._id}`, { method: "DELETE" });
+                setData(data.filter((a) => a._id !== selectedArtikel._id));
+                closeModal();
+            } catch (err) {
+                console.error("Gagal hapus artikel:", err);
+            }
         }
     };
 
+
     const handleEdit = (artikel: Artikel) => {
-        router.push(`/admin/artikel/editartikel?id=${artikel.id}`);
+        router.push(`/admin/artikel/editartikel?id=${artikel._id}`);
     };
 
     const columns: TableColumn<Artikel>[] = [
