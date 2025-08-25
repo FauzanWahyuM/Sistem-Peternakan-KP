@@ -54,11 +54,6 @@ function HasilEvaluasiContent() {
         if (filters.tahun) {
             filtered = filtered.filter(item => String(item.tahun) === filters.tahun);
         }
-        if (filters.search) {
-            filtered = filtered.filter(item =>
-                item.nama?.toLowerCase().includes(filters.search.toLowerCase())
-            );
-        }
 
         setFilteredData(filtered);
     }, [filters, dataEvaluasi]);
@@ -80,9 +75,11 @@ function HasilEvaluasiContent() {
             {/* Filters */}
             <div className="flex justify-center">
                 <div className="bg-white rounded-lg shadow p-6 mb-6 max-w-6xl w-full mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+
+                    {/* Ganti grid -> flex agar dropdown rata penuh */}
+                    <div className="flex gap-4 mb-4">
                         {/* Bulan */}
-                        <div>
+                        <div className="flex-1">
                             <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
                                 Bulan
                             </label>
@@ -97,11 +94,16 @@ function HasilEvaluasiContent() {
                                         <option key={b} value={b}>{b}</option>
                                     ))}
                                 </select>
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
                             </div>
                         </div>
 
                         {/* Tahun */}
-                        <div>
+                        <div className="flex-1">
                             <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
                                 Tahun
                             </label>
@@ -116,22 +118,11 @@ function HasilEvaluasiContent() {
                                         <option key={tahun} value={tahun}>{tahun}</option>
                                     ))}
                                 </select>
-                            </div>
-                        </div>
-
-                        {/* Search */}
-                        <div>
-                            <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                Cari
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={filters.search}
-                                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                                    placeholder="Cari berdasarkan nama..."
-                                    className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
                             </div>
                         </div>
                     </div>
