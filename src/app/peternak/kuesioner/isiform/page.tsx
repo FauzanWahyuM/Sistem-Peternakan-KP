@@ -41,6 +41,7 @@ function IsiFormContent() {
             const res = await fetch("/api/kuesioner", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({
                     questionnaireId,
                     month,

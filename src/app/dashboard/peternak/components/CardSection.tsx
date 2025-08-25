@@ -20,12 +20,18 @@ export default function CardSection() {
                 setLoading(true);
 
                 // 🚜 Jumlah ternak
-                const ternakRes = await fetch("/api/ternak");
+                const ternakRes = await fetch("/api/ternak", {
+                    credentials: 'include'
+                });
+                if (!ternakRes.ok) throw new Error('Gagal mengambil data ternak');
                 const ternakData = await ternakRes.json();
                 setJumlahTernak(ternakData.length);
 
                 // 📝 Kuesioner → ambil total
-                const kuesionerRes = await fetch("/api/kuesioner?count=true");
+                const kuesionerRes = await fetch("/api/kuesioner?count=true", {
+                    credentials: 'include'
+                });
+                if (!kuesionerRes.ok) throw new Error('Gagal mengambil data kuesioner');
                 const kuesionerData = await kuesionerRes.json();
                 setTotalKuesioner(kuesionerData.total);
 
@@ -33,39 +39,49 @@ export default function CardSection() {
                 const bulanNama = new Date().toLocaleString("id-ID", { month: "long" });
                 const capitalized = bulanNama.charAt(0).toUpperCase() + bulanNama.slice(1);
                 const tahun = new Date().getFullYear();
-
-                // userId kalau memang masih dipakai route.ts
-                const userId = "123";
                 const bulanIndex = new Date().getMonth() + 1;
 
-                // ✅ Konsisten: sama persis kayak halaman kuesioner
+                // ✅ Cek apakah kuesioner bulan ini sudah diisi
                 const checkRes = await fetch(
-                    `/api/kuesioner?questionnaireId=${capitalized}&userId=${userId}&month=${bulanIndex}&year=${tahun}`
+                    `/api/kuesioner?questionnaireId=${capitalized}&month=${bulanIndex}&year=${tahun}`,
+                    { credentials: 'include' }
                 );
-                const checkData = checkRes.ok ? await checkRes.json() : null;
 
-                // ✅ cek status dari API, bukan sekadar array length
-                setIsFilled(checkData?.status === true);
+                if (checkRes.ok) {
+                    const checkData = await checkRes.json();
+                    setIsFilled(checkData.status === true);
+                } else {
+                    setIsFilled(false);
+                }
 
                 // 📊 Evaluasi → untuk card & grafik
-                const hasilRes = await fetch("/api/hasil");
+                const hasilRes = await fetch("/api/hasil", {
+                    credentials: 'include'
+                });
+
+                if (!hasilRes.ok) throw new Error('Gagal mengambil data evaluasi');
                 const hasilData = await hasilRes.json();
 
                 if (hasilData.length > 0) {
-                    const latest = hasilData[hasilData.length - 1];
-                    setEvaluasi(latest.nilaiEvaluasi);
+                    // Ambil nilai evaluasi terbaru
+                    const latest = hasilData[0]; // Data sudah diurutkan dari terbaru
+                    setEvaluasi(latest.nilaiEvaluasi || 0);
 
+                    // Siapkan data untuk chart
                     const mapped = hasilData.map((item: any) => ({
-                        bulan: item.bulan.substring(0, 3),
-                        nilai: item.nilaiEvaluasi,
+                        bulan: item.bulanSingkat || `Bln ${item.bulan}`, // Gunakan bulanSingkat dari API
+                        nilai: item.nilaiEvaluasi || 0,
                     }));
                     setChartData(mapped);
+                } else {
+                    setEvaluasi(0);
+                    setChartData([]);
                 }
 
                 setError(null);
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Error loading data:", err);
-                setError("Gagal memuat data");
+                setError(err.message || "Gagal memuat data");
             } finally {
                 setLoading(false);
             }
@@ -77,10 +93,10 @@ export default function CardSection() {
     const cards = [
         { title: 'Jumlah Ternak', value: `${jumlahTernak} Ekor` },
         { title: 'Kuesioner', value: `${totalKuesioner} Diisi` },
-        { title: 'Evaluasi', value: `${evaluasi} Baik` },
+        { title: 'Evaluasi', value: `${evaluasi > 0 ? evaluasi : 'Belum ada'}` },
     ];
 
-    // ✅ kalau chartData kosong fallback biar tidak error
+    // ✅ Data untuk chart
     const displayData = chartData.length > 0 ? chartData : [
         { bulan: 'Jan', nilai: 0 },
         { bulan: 'Feb', nilai: 0 },
@@ -112,40 +128,38 @@ export default function CardSection() {
                 ))}
             </div>
 
-            {/* Grafik Evaluasi Bulanan */}{
-                <div className="bg-white rounded-xl shadow p-6 max-w-4xl mx-auto mb-10">
-                    <h2 className="text-xl font-bold mb-4 text-gray-700 text-center">
-                        Performa Evaluasi Bulanan
-                    </h2>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={displayData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="bulan" />
-                            <YAxis domain={[0, 100]} />
-                            <Tooltip />
-                            <Line
-                                type="monotone"
-                                dataKey="nilai"
-                                stroke="#60c67a"
-                                strokeWidth={3}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
-            }
+            {/* Grafik Evaluasi Bulanan */}
+            <div className="bg-white rounded-xl shadow p-6 max-w-4xl mx-auto mb-10">
+                <h2 className="text-xl font-bold mb-4 text-gray-700 text-center">
+                    Performa Evaluasi Bulanan
+                </h2>
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={displayData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="bulan" />
+                        <YAxis domain={[0, 100]} />
+                        <Tooltip />
+                        <Line
+                            type="monotone"
+                            dataKey="nilai"
+                            stroke="#60c67a"
+                            strokeWidth={3}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
 
-            {/* Aktivitas Terakhir */}{
-                <div className="flex justify-center">
-                    <div className="bg-[#60c67a] text-white rounded-lg shadow-md px-6 py-4 text-center">
-                        <h2 className="text-3xl font-[Judson] font-bold mb-2">Aktivitas Terakhir</h2>
-                        <p className="text-2xl font-[Judson] font-semibold">
-                            {isFilled
-                                ? '✅ Sudah mengisi kuesioner bulan ini'
-                                : '⚠️ Belum mengisi kuesioner bulan ini'}
-                        </p>
-                    </div>
+            {/* Aktivitas Terakhir */}
+            <div className="flex justify-center">
+                <div className="bg-[#60c67a] text-white rounded-lg shadow-md px-6 py-4 text-center">
+                    <h2 className="text-3xl font-[Judson] font-bold mb-2">Aktivitas Terakhir</h2>
+                    <p className="text-2xl font-[Judson] font-semibold">
+                        {isFilled
+                            ? '✅ Sudah mengisi kuesioner bulan ini'
+                            : '⚠️ Belum mengisi kuesioner bulan ini'}
+                    </p>
                 </div>
-            }
+            </div>
 
             {error && (
                 <div className="flex justify-center items-center h-10 mb-4">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import connectDB from "../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../models/Kuesioner";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "../../../lib/authOptions"; 
 
 const bulanOptions = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",

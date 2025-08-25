@@ -21,38 +21,54 @@ function HasilEvaluasiContent() {
 
     // Ambil data dari API
     useEffect(() => {
-        let interval: NodeJS.Timeout;
-
         const loadData = async () => {
             try {
-                const res = await fetch('/api/hasil', { cache: "no-store" });
-                if (!res.ok) throw new Error('Gagal mengambil data');
-                const result = await res.json();
+                const res = await fetch('/api/hasil', {
+                    cache: "no-store",
+                    credentials: 'include' // Pastikan credentials include
+                });
 
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        router.push('/login');
+                        return;
+                    }
+                    throw new Error('Gagal mengambil data');
+                }
+
+                const result = await res.json();
                 setDataEvaluasi(result);
                 setFilteredData(result);
             } catch (err) {
-                console.error(err);
+                console.error('Error loading data:', err);
             } finally {
                 setLoading(false);
             }
         };
 
-        loadData(); // panggil pertama kali
-        interval = setInterval(loadData, 5000); // refresh tiap 5 detik
-
-        return () => clearInterval(interval); // bersihkan interval
-    }, []);
+        loadData();
+    }, [router]);
 
     // Terapkan filter
     useEffect(() => {
         let filtered = [...dataEvaluasi];
 
         if (filters.bulan) {
-            filtered = filtered.filter(item => item.bulan === filters.bulan);
+            filtered = filtered.filter(item =>
+                item.bulan === (bulanOptions.indexOf(filters.bulan) + 1)
+            );
         }
+
         if (filters.tahun) {
             filtered = filtered.filter(item => String(item.tahun) === filters.tahun);
+        }
+
+        if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            filtered = filtered.filter(item =>
+                item.nama.toLowerCase().includes(searchLower) ||
+                String(item.nilaiEvaluasi).includes(searchLower)
+            );
         }
 
         setFilteredData(filtered);
@@ -144,8 +160,8 @@ function HasilEvaluasiContent() {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">ID</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Nama</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">No</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Nama Kuesioner</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Bulan</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Tahun</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Nilai Evaluasi</th>
@@ -155,9 +171,9 @@ function HasilEvaluasiContent() {
                         {filteredData.length > 0 ? (
                             filteredData.map((item, idx) => (
                                 <tr key={item._id ?? idx} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 font-[Judson]">{String(idx + 1).padStart(2, '0')}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{item.nama ?? 'Hasil Kuesioner'}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{item.bulan}</td>
+                                    <td className="px-6 py-4 font-[Judson]">{String(item.id).padStart(2, '0')}</td>
+                                    <td className="px-6 py-4 font-[Judson]">{item.nama}</td>
+                                    <td className="px-6 py-4 font-[Judson]">{bulanOptions[item.bulan - 1] || item.bulan}</td>
                                     <td className="px-6 py-4 font-[Judson]">{item.tahun}</td>
                                     <td className="px-6 py-4 font-[Judson]">{item.nilaiEvaluasi}</td>
                                 </tr>
@@ -165,7 +181,7 @@ function HasilEvaluasiContent() {
                         ) : (
                             <tr>
                                 <td colSpan={5} className="text-center py-4 text-gray-500 font-[Judson]">
-                                    Tidak ada data hasil evaluasi.
+                                    {loading ? 'Memuat data...' : 'Tidak ada data hasil evaluasi.'}
                                 </td>
                             </tr>
                         )}
