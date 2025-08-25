@@ -3,6 +3,7 @@ import connectDB from "../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../models/Kuesioner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/authOptions";
+import User from "../../../models/User"; // Import model User
 
 export async function GET(req: NextRequest) {
     await connectDB();
@@ -12,32 +13,63 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        // Cek role user
+        const user = await User.findById(session.user.id);
+        if (!user) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
         const { searchParams } = new URL(req.url);
         const userId = searchParams.get("userId");
         const bulan = searchParams.get("bulan");
         const tahun = searchParams.get("tahun");
 
-        // Query untuk mengambil semua data kuesioner user
-        const query: any = { userId: session.user.id };
+        // Query untuk mengambil data
+        const query: any = {};
+
+        // Jika bukan admin, hanya bisa melihat data sendiri
+        if (user.role !== 'admin') {
+            query.userId = session.user.id;
+        }
+
+        // Jika admin ingin filter by user tertentu
+        if (userId && user.role === 'admin') {
+            query.userId = userId;
+        }
 
         if (bulan) query.bulan = Number(bulan);
         if (tahun) query.tahun = Number(tahun);
 
         const responses = await QuestionnaireResponse.find(query)
             .sort({ tahun: -1, bulan: -1 })
+            .populate('userId', 'username') // Populate user data
             .lean();
 
         // Format data untuk frontend
-        const formattedData = responses.map((item: any, index: number) => ({
-            _id: item._id,
-            id: index + 1,
-            nama: `Kuesioner ${item.questionnaireId}`,
-            bulan: item.bulan,
-            tahun: item.tahun,
-            bulanSingkat: getBulanSingkat(item.bulan),
-            nilaiEvaluasi: calculateEvaluationScore(item.answers),
-            questionnaireId: item.questionnaireId
-        }));
+        // Di bagian formattedData, pastikan nama user benar
+        const formattedData = responses.map((item: any, index: number) => {
+            // Pastikan nama user tidak null/undefined
+            let userName = 'Unknown User';
+            if (item.userId) {
+                if (typeof item.userId === 'object') {
+                    userName = item.userId.username || `User ${item.userId._id}`;
+                } else {
+                    userName = `User ${item.userId}`;
+                }
+            }
+
+            return {
+                _id: item._id,
+                id: index + 1,
+                nama: userName,
+                bulan: item.bulan,
+                tahun: item.tahun,
+                bulanSingkat: getBulanSingkat(item.bulan),
+                nilaiEvaluasi: calculateEvaluationScore(item.answers),
+                questionnaireId: item.questionnaireId,
+                userId: item.userId
+            };
+        });
 
         return NextResponse.json(formattedData, { status: 200 });
     } catch (err) {

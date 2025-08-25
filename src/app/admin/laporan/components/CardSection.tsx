@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -14,10 +14,10 @@ function HasilEvaluasiContent() {
         search: ''
     });
 
-    const bulanOptions = [
+    const bulanOptions = useMemo(() => [
         'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
         'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
+    ], []);
 
     // Ambil data dari API
     useEffect(() => {
@@ -25,35 +25,56 @@ function HasilEvaluasiContent() {
 
         const loadData = async () => {
             try {
-                const res = await fetch('/api/hasil', { cache: "no-store" });
-                if (!res.ok) throw new Error('Gagal mengambil data');
+                console.log('Fetching data from /api/hasil...');
+                const res = await fetch('/api/hasil', {
+                    cache: "no-store",
+                    credentials: 'include'
+                });
+
+                console.log('Response status:', res.status);
+
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        console.log('Unauthorized, redirecting to login...');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    throw new Error(`Gagal mengambil data: ${res.status} ${res.statusText}`);
+                }
+
                 const result = await res.json();
+                console.log('Data received:', result);
 
                 setDataEvaluasi(result);
                 setFilteredData(result);
             } catch (err) {
-                console.error(err);
+                console.error('Error loading data:', err);
             } finally {
                 setLoading(false);
             }
         };
 
-        loadData(); // panggil pertama kali
-        interval = setInterval(loadData, 5000); // refresh tiap 5 detik
+        loadData();
+        interval = setInterval(loadData, 5000);
 
-        return () => clearInterval(interval); // bersihkan interval
+        return () => clearInterval(interval);
     }, []);
 
     // Terapkan filter
+    // Replace the useEffect with this:
     useEffect(() => {
         let filtered = [...dataEvaluasi];
 
         if (filters.bulan) {
-            filtered = filtered.filter(item => item.bulan === filters.bulan);
+            // Konversi nama bulan ke angka (1-12)
+            const bulanIndex = bulanOptions.indexOf(filters.bulan) + 1;
+            filtered = filtered.filter(item => item.bulan === bulanIndex);
         }
+
         if (filters.tahun) {
             filtered = filtered.filter(item => String(item.tahun) === filters.tahun);
         }
+
         if (filters.search) {
             filtered = filtered.filter(item =>
                 item.nama?.toLowerCase().includes(filters.search.toLowerCase())
@@ -61,104 +82,290 @@ function HasilEvaluasiContent() {
         }
 
         setFilteredData(filtered);
-    }, [filters, dataEvaluasi]);
+    }, [filters, dataEvaluasi, bulanOptions]); // Added bulanOptions to dependencies
 
     const clearFilters = () => {
         setFilters({ bulan: '', tahun: '', search: '' });
     };
 
     // Fungsi Download PDF
+    // Fungsi Download PDF
     const handleDownload = async () => {
         try {
+            // Gunakan font yang support karakter Indonesia
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
 
-            // Tambahkan logo
-            const logo = await fetch('/img/Logo Sistem.png').then(res => res.blob());
-            const reader = new FileReader();
-
-            reader.readAsDataURL(logo);
-            reader.onloadend = () => {
-                const base64data = reader.result as string;
-
-                // Logo kiri atas
-                doc.addImage(base64data, 'PNG', 20, 12, 20, 20);
-
-                // === KOP SIMANTEK ===
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(14);
-                doc.text(
-                    "SISTEM INFORMASI PENJAMINAN MUTU KELOMPOK PETERNAK (SIMANTEK)",
-                    pageWidth / 2,
-                    22,
-                    { align: "center", maxWidth: 170 }
-                );
-
-                doc.setFontSize(10);
-                doc.setFont("helvetica", "normal");
-                doc.text(
-                    "Jl. Jend. Sudirman No.57, Pesayangan, Kedungwuluh, Kec. Purwokerto Bar.",
-                    pageWidth / 2,
-                    30,
-                    { align: "center", maxWidth: 170 }
-                );
-                doc.text(
-                    "Kabupaten Banyumas, Jawa Tengah 53131",
-                    pageWidth / 2,
-                    35,
-                    { align: "center" }
-                );
-
-                // === Garis Bawah Kop ===
-                doc.setLineWidth(0.7);
-                doc.line(15, 40, pageWidth - 15, 40);
-
-                // Judul Laporan
-                doc.setFontSize(12);
-                doc.setFont("helvetica", "bold");
-                doc.text("Laporan Hasil Evaluasi Kuesioner", pageWidth / 2, 48, { align: "center" });
-
-                // === Tabel Data ===
-                const tableColumn = ["No", "Nama", "Bulan", "Tahun", "Nilai Evaluasi"];
-                const tableRows: any[] = [];
-
-                filteredData.forEach((item, idx) => {
-                    tableRows.push([
-                        String(idx + 1).padStart(2, "0"),
-                        item.nama ?? "Hasil Kuesioner",
-                        item.bulan,
-                        item.tahun,
-                        item.nilaiEvaluasi,
-                    ]);
+            // Ganti bagian logo dengan error handling
+            try {
+                const logo = await fetch('/img/Logo Sistem.png').then(res => {
+                    if (!res.ok) throw new Error('Logo not found');
+                    return res.blob();
                 });
+                const reader = new FileReader();
 
-                autoTable(doc, {
-                    startY: 55,
-                    head: [tableColumn],
-                    body: tableRows,
-                    styles: { fontSize: 9, halign: "center" },
-                    headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: "bold" },
-                    columnStyles: {
-                        1: { halign: "left" } // Nama rata kiri, biar lebih natural
-                    }
-                });
+                reader.readAsDataURL(logo);
+                reader.onloadend = () => {
+                    const base64data = reader.result as string;
+                    doc.addImage(base64data, 'PNG', 10, 10, 30, 30);
+                    // Lanjutkan dengan membuat konten PDF
+                    createPDFContentWithLogo(doc, pageWidth, filteredData);
+                };
 
-                // Footer
-                const date = new Date().toLocaleDateString("id-ID");
-                doc.setFontSize(9);
-                doc.setFont("helvetica", "normal");
-                doc.text(`Dicetak pada: ${date}`, 15, doc.internal.pageSize.height - 10);
-
-                doc.save("laporan-hasil-evaluasi.pdf");
-            };
+                reader.onerror = () => {
+                    // Jika gagal load logo, buat PDF tanpa logo
+                    createPDFContentWithoutLogo(doc, pageWidth, filteredData);
+                };
+            } catch (error) {
+                console.warn("Logo tidak ditemukan, membuat PDF tanpa logo");
+                createPDFContentWithoutLogo(doc, pageWidth, filteredData);
+            }
         } catch (error) {
-            console.error("Gagal memuat logo:", error);
+            console.error("Gagal membuat PDF:", error);
+            // Fallback: buat PDF sederhana
+            createSimplePDF(filteredData);
         }
+    };
+
+    // Fungsi untuk membuat konten PDF dengan logo
+    // Fungsi untuk membuat konten PDF dengan logo
+    // Fungsi untuk membuat konten PDF dengan logo
+    // Fungsi untuk membuat konten PDF dengan logo
+    // Fungsi untuk membuat konten PDF dengan logo
+    const createPDFContentWithLogo = (doc: jsPDF, pageWidth: number, data: any[]) => {
+        // === KOP SIMANTEK ===
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(12);
+        doc.text(
+            "SISTEM INFORMASI PENJAMINAN MUTU KELOMPOK PETERNAK",
+            pageWidth / 2,
+            20,
+            { align: "center" }
+        );
+
+        doc.text(
+            "(SIMANTEK)",
+            pageWidth / 2,
+            25,
+            { align: "center" }
+        );
+
+        doc.setFontSize(9);
+        doc.text(
+            "Jl. Jend. Sudirman No.57, Pesayangan, Kedungwuluh, Kec. Purwokerto Bar.",
+            pageWidth / 2,
+            32,
+            { align: "center" }
+        );
+        doc.text(
+            "Kabupaten Banyumas, Jawa Tengah 53131",
+            pageWidth / 2,
+            37,
+            { align: "center" }
+        );
+
+        // === Garis Bawah Kop ===
+        doc.setLineWidth(0.5);
+        doc.line(15, 42, pageWidth - 15, 42);
+
+        // Judul Laporan
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text("Laporan Hasil Evaluasi Kuesioner", pageWidth / 2, 50, { align: "center" });
+
+        // === Tabel Data ===
+        const tableColumn = ["No", "Nama Pengguna", "Bulan", "Tahun", "Nilai"];
+        const tableRows: any[] = [];
+
+        data.forEach((item, idx) => {
+            const namaBulan = item.bulan && item.bulan >= 1 && item.bulan <= 12
+                ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][item.bulan - 1]
+                : item.bulan;
+
+            tableRows.push([
+                String(idx + 1).padStart(2, "0"),
+                item.nama || 'Unknown',
+                namaBulan,
+                item.tahun,
+                item.nilaiEvaluasi + '%',
+            ]);
+        });
+
+        // PERBAIKAN: Sesuaikan lebar kolom persis seperti contoh PDF
+        const columnStyles: { [key: string]: any } = {
+            0: { cellWidth: 15, halign: "center" },  // No
+            1: { cellWidth: 90, halign: "left" },    // Nama Pengguna
+            2: { cellWidth: 25, halign: "center" },  // Bulan
+            3: { cellWidth: 25, halign: "center" },  // Tahun
+            4: { cellWidth: 25, halign: "center" }   // Nilai
+        };
+
+        autoTable(doc, {
+            startY: 55,
+            head: [tableColumn],
+            body: tableRows,
+            theme: 'grid',
+            styles: {
+                fontSize: 10,
+                halign: "center",
+                font: "helvetica",
+                cellPadding: 3
+            },
+            headStyles: {
+                fillColor: [96, 198, 122],
+                textColor: 255,
+                fontStyle: "bold",
+                fontSize: 10,
+                cellPadding: 3
+            },
+            bodyStyles: {
+                fontSize: 9,
+                cellPadding: 3
+            },
+            columnStyles: columnStyles,
+            margin: { left: 15, right: 15 }
+        });
+
+        // Footer
+        const date = new Date().toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Dicetak pada: ${date}`, 15, doc.internal.pageSize.height - 15);
+
+        doc.save("laporan-hasil-evaluasi.pdf");
+    };
+
+    // Fungsi untuk membuat konten PDF tanpa logo
+    const createPDFContentWithoutLogo = (doc: jsPDF, pageWidth: number, data: any[]) => {
+        // === HEADER ===
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("LAPORAN HASIL EVALUASI KUESIONER", pageWidth / 2, 15, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("SIMANTEK - Sistem Informasi Penjaminan Mutu Kelompok Peternak", pageWidth / 2, 22, { align: "center" });
+
+        // === Tabel Data ===
+        const tableColumn = ["No", "Nama", "Bulan", "Tahun", "Nilai"];
+        const tableRows: any[] = [];
+
+        data.forEach((item, idx) => {
+            const namaBulan = item.bulan && item.bulan >= 1 && item.bulan <= 12
+                ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][item.bulan - 1]
+                : item.bulan;
+
+            tableRows.push([
+                String(idx + 1).padStart(2, "0"),
+                item.nama && item.nama.length > 20 ? item.nama.substring(0, 20) + '...' : item.nama || 'Unknown',
+                namaBulan,
+                item.tahun,
+                item.nilaiEvaluasi + '%',
+            ]);
+        });
+
+        autoTable(doc, {
+            startY: 30,
+            head: [tableColumn],
+            body: tableRows,
+            styles: { fontSize: 8, halign: "center" },
+            headStyles: {
+                fillColor: [96, 198, 122],
+                textColor: 255,
+                fontStyle: "bold"
+            },
+            columnStyles: {
+                0: { cellWidth: 10 },
+                1: { halign: "left", cellWidth: 60 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 20 }
+            },
+            margin: { left: 14, right: 14 } // Tambahkan margin ini
+        });
+
+        // Footer
+        const date = new Date().toLocaleDateString('id-ID');
+        doc.setFontSize(8);
+        doc.text(`Dicetak pada: ${date}`, 14, doc.internal.pageSize.height - 10);
+
+        doc.save("laporan-hasil-evaluasi.pdf");
+    };
+
+    // Fallback function untuk PDF sederhana tanpa logo
+    const createSimplePDF = (data: any[]) => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // === HEADER ===
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("LAPORAN HASIL EVALUASI KUESIONER", pageWidth / 2, 15, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("SIMANTEK - Sistem Informasi Penjaminan Mutu Kelompok Peternak", pageWidth / 2, 22, { align: "center" });
+
+        // === Tabel Data ===
+        const tableColumn = ["No", "Nama", "Bulan", "Tahun", "Nilai"];
+        const tableRows: any[] = [];
+
+        data.forEach((item, idx) => {
+            const namaBulan = item.bulan && item.bulan >= 1 && item.bulan <= 12
+                ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][item.bulan - 1]
+                : item.bulan;
+
+            tableRows.push([
+                String(idx + 1).padStart(2, "0"),
+                item.nama && item.nama.length > 20 ? item.nama.substring(0, 20) + '...' : item.nama || 'Unknown',
+                namaBulan,
+                item.tahun,
+                item.nilaiEvaluasi + '%',
+            ]);
+        });
+
+        autoTable(doc, {
+            startY: 30,
+            head: [tableColumn],
+            body: tableRows,
+            styles: { fontSize: 8, halign: "center" },
+            headStyles: {
+                fillColor: [96, 198, 122],
+                textColor: 255,
+                fontStyle: "bold"
+            },
+            columnStyles: {
+                0: { cellWidth: 10 },
+                1: { halign: "left", cellWidth: 60 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 20 }
+            },
+            margin: { left: 14, right: 14 } // Tambahkan margin ini
+        });
+
+        // Footer
+        const date = new Date().toLocaleDateString('id-ID');
+        doc.setFontSize(8);
+        doc.text(`Dicetak pada: ${date}`, 14, doc.internal.pageSize.height - 10);
+
+        doc.save("laporan-hasil-evaluasi.pdf");
     };
 
 
     if (loading) {
-        return <div className="p-6">Memuat data...</div>;
+        return (
+            <div className="min-h-screen bg-gray-100 p-6">
+                <div className="flex justify-center items-center h-64">
+                    <p className="text-lg font-[Judson]">Memuat data evaluasi...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -253,19 +460,26 @@ function HasilEvaluasiContent() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {filteredData.length > 0 ? (
-                            filteredData.map((item, idx) => (
-                                <tr key={item._id ?? idx} className="hover:bg-gray-50 text-black">
-                                    <td className="px-6 py-4 font-[Judson]">{String(idx + 1).padStart(2, '0')}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{item.nama ?? 'Hasil Kuesioner'}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{item.bulan}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{item.tahun}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{item.nilaiEvaluasi}</td>
-                                </tr>
-                            ))
+                            filteredData.map((item, idx) => {
+                                // Konversi angka bulan ke nama bulan
+                                const namaBulan = item.bulan && item.bulan >= 1 && item.bulan <= 12
+                                    ? bulanOptions[item.bulan - 1]
+                                    : item.bulan;
+
+                                return (
+                                    <tr key={item._id ?? idx} className="hover:bg-gray-50 text-black">
+                                        <td className="px-6 py-4 font-[Judson]">{String(idx + 1).padStart(2, '0')}</td>
+                                        <td className="px-6 py-4 font-[Judson]">{item.nama ?? 'Hasil Kuesioner'}</td>
+                                        <td className="px-6 py-4 font-[Judson]">{namaBulan}</td>
+                                        <td className="px-6 py-4 font-[Judson]">{item.tahun}</td>
+                                        <td className="px-6 py-4 font-[Judson]">{item.nilaiEvaluasi}</td>
+                                    </tr>
+                                );
+                            })
                         ) : (
                             <tr>
                                 <td colSpan={5} className="text-center py-4 text-gray-500 font-[Judson]">
-                                    Tidak ada data hasil evaluasi.
+                                    {loading ? 'Memuat data...' : 'Tidak ada data hasil evaluasi.'}
                                 </td>
                             </tr>
                         )}
