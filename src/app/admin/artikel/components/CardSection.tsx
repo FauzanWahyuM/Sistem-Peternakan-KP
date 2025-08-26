@@ -34,6 +34,20 @@ const customStyles = {
     },
 };
 
+// Fungsi untuk memformat tanggal
+const formatTanggal = (tanggalString: string) => {
+    try {
+        const tanggal = new Date(tanggalString);
+        return tanggal.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (error) {
+        return tanggalString; // Jika gagal, kembalikan string asli
+    }
+};
+
 export default function ArtikelManagement() {
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [data, setData] = useState<Artikel[]>([]);
@@ -101,7 +115,7 @@ export default function ArtikelManagement() {
         },
         {
             name: 'Tanggal',
-            selector: (row) => row.tanggal,
+            selector: (row) => formatTanggal(row.tanggal), // Format tanggal di sini
             sortable: true,
         },
         {
@@ -125,8 +139,6 @@ export default function ArtikelManagement() {
                 </div>
             ),
             ignoreRowClick: true,
-            allowOverflow: true,
-            button: true,
         },
     ];
 

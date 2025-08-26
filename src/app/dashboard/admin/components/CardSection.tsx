@@ -69,9 +69,25 @@ type Artikel = {
 };
 
 type Laporan = {
-    judul: string;
-    nilai: string;
-    tanggal: string;
+    _id?: string;
+    nama: string;
+    bulan: number;
+    tahun: number;
+    nilaiEvaluasi: number;
+};
+
+// Fungsi untuk memformat tanggal
+const formatTanggal = (tanggalString: string) => {
+    try {
+        const tanggal = new Date(tanggalString);
+        return tanggal.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (error) {
+        return tanggalString; // Jika gagal, kembalikan string asli
+    }
 };
 
 export default function CardSection() {
@@ -79,9 +95,11 @@ export default function CardSection() {
     const [data, setData] = useState<User[]>([]);
     const [userData, setUserData] = useState<User[]>([]);
     const [artikelData, setArtikelData] = useState<Artikel[]>([]);
-    const [selectedItem, setSelectedItem] = useState<{ type: 'user' | 'artikel', data: User | Artikel } | null>(null);
+    const [laporanData, setLaporanData] = useState<Laporan[]>([]);
+    const [selectedItem, setSelectedItem] = useState<{ type: 'user' | 'artikel' | 'laporan', data: User | Artikel | Laporan } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
+    const [laporanLoading, setLaporanLoading] = useState<boolean>(true);
 
     const fetchUsers = async () => {
         try {
@@ -114,10 +132,38 @@ export default function CardSection() {
                     ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     : 0
             );
-            setArtikelData(sorted.slice(0, 3)); // hanya 3 artikel terbaru
+            setArtikelData(sorted.slice(0, 3));
         } catch (error) {
             console.error("Gagal mengambil artikel:", error);
             setArtikelData([]);
+        }
+    };
+
+    const fetchLaporan = async () => {
+        try {
+            setLaporanLoading(true);
+            const response = await fetch('/api/hasil', {
+                cache: "no-store",
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.log('Unauthorized, redirecting to login...');
+                    return;
+                }
+                throw new Error(`Gagal mengambil data: ${response.status} ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            // Ambil hanya 5 data terbaru
+            const limitedData = result.slice(0, 5);
+            setLaporanData(limitedData);
+        } catch (err) {
+            console.error('Error loading laporan data:', err);
+            setLaporanData([]);
+        } finally {
+            setLaporanLoading(false);
         }
     };
 
@@ -141,7 +187,7 @@ export default function CardSection() {
         }
     };
 
-    const openModal = (type: 'user' | 'artikel', item: User | Artikel) => {
+    const openModal = (type: 'user' | 'artikel' | 'laporan', item: User | Artikel | Laporan) => {
         setSelectedItem({ type, data: item });
         setIsModalOpen(true);
     };
@@ -165,7 +211,13 @@ export default function CardSection() {
     useEffect(() => {
         fetchUsers();
         fetchArtikels();
+        fetchLaporan();
     }, []);
+
+    const bulanOptions = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
 
     const artikelColumns = [
         { name: 'Judul', selector: (row: Artikel) => row.judul },
@@ -177,7 +229,10 @@ export default function CardSection() {
                 <img src={row.gambar} alt="gambar artikel" className="w-12 h-12 object-cover rounded" />
             ),
         },
-        { name: 'Tanggal', selector: (row: Artikel) => row.tanggal },
+        {
+            name: 'Tanggal',
+            selector: (row: Artikel) => formatTanggal(row.tanggal) // Format tanggal di sini
+        },
         {
             name: 'Aksi',
             cell: (row: Artikel) => (
@@ -189,24 +244,33 @@ export default function CardSection() {
         },
     ];
 
+    // Kolom untuk laporan - TANPA kolom Aksi
     const laporanColumns = [
-        { name: 'Judul Laporan', selector: (row: Laporan) => row.judul },
-        { name: 'Nilai Kuesioner', selector: (row: Laporan) => row.nilai },
-        { name: 'Tanggal', selector: (row: Laporan) => row.tanggal },
         {
-            name: 'Aksi',
-            cell: (row: Laporan) => (
-                <ActionButtons
-                    onDownload={() => console.log('Download laporan', row)}
-                    onDelete={() => console.log('Hapus laporan', row)}
-                />
-            ),
+            name: 'Nama',
+            selector: (row: Laporan) => row.nama || 'Unknown',
+            sortable: true
+        },
+        {
+            name: 'Bulan',
+            selector: (row: Laporan) => {
+                return row.bulan && row.bulan >= 1 && row.bulan <= 12
+                    ? bulanOptions[row.bulan - 1]
+                    : row.bulan;
+            },
+            sortable: true
+        },
+        {
+            name: 'Tahun',
+            selector: (row: Laporan) => row.tahun,
+            sortable: true
+        },
+        {
+            name: 'Nilai Evaluasi',
+            selector: (row: Laporan) => `${row.nilaiEvaluasi}%`,
+            sortable: true
         }
-    ];
-
-    const laporanData: Laporan[] = [
-        { judul: 'Evaluasi Penyuluhan', nilai: '100/100', tanggal: '20/07/2025' },
-        { judul: 'Penilaian Program', nilai: '79/100', tanggal: '21/07/2025' }
+        // Kolom Aksi dihapus dari sini
     ];
 
     const userColumns = [
@@ -292,15 +356,26 @@ export default function CardSection() {
                 <div className="flex justify-between items-center mb-4">
                     <h1 className="text-xl font-bold">Laporan</h1>
                 </div>
-                <DataTable
-                    columns={laporanColumns}
-                    data={laporanData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    customStyles={customStyles}
-                />
+                {laporanLoading ? (
+                    <div className="flex justify-center items-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600"></div>
+                    </div>
+                ) : (
+                    <>
+                        <DataTable
+                            columns={laporanColumns}
+                            data={laporanData}
+                            pagination
+                            dense
+                            responsive
+                            highlightOnHover
+                            customStyles={customStyles}
+                        />
+                        <div className="mt-3 text-sm text-gray-600">
+                            Menampilkan {laporanData.length} data evaluasi
+                        </div>
+                    </>
+                )}
                 <button
                     className="mt-4 flex items-center gap-2 border border-black text-black px-4 py-2 rounded-md hover:bg-gray-100"
                     onClick={() => router.push('/admin/laporan')}

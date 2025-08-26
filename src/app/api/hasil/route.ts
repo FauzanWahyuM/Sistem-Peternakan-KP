@@ -3,7 +3,8 @@ import connectDB from "../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../models/Kuesioner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/authOptions";
-import User from "../../../models/User"; // Import model User
+import User from "../../../models/User";
+import mongoose from "mongoose";
 
 export async function GET(req: NextRequest) {
     await connectDB();
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
         const userId = searchParams.get("userId");
         const bulan = searchParams.get("bulan");
         const tahun = searchParams.get("tahun");
+        const questionnaireId = searchParams.get("questionnaireId");
 
         // Query untuk mengambil data
         const query: any = {};
@@ -34,25 +36,75 @@ export async function GET(req: NextRequest) {
 
         // Jika admin ingin filter by user tertentu
         if (userId && user.role === 'admin') {
-            query.userId = userId;
+            // Cari user berdasarkan username atau ID
+            const userFilter = await User.findOne({
+                $or: [
+                    { username: userId },
+                    { _id: mongoose.Types.ObjectId.isValid(userId) ? userId : null }
+                ]
+            });
+            if (userFilter) {
+                query.userId = userFilter._id;
+            } else {
+                return NextResponse.json({ error: "User not found" }, { status: 404 });
+            }
         }
 
         if (bulan) query.bulan = Number(bulan);
         if (tahun) query.tahun = Number(tahun);
+        if (questionnaireId) query.questionnaireId = questionnaireId;
 
+        // Temukan semua response yang sesuai
         const responses = await QuestionnaireResponse.find(query)
             .sort({ tahun: -1, bulan: -1 })
-            .populate('userId', 'username') // Populate user data
             .lean();
 
+        // Dapatkan semua user IDs dari responses
+        const userIds = responses.map(response => response.userId).filter(id => id);
+
+        // Pisahkan userIds menjadi ObjectId yang valid dan string
+        const validObjectIds = userIds.filter(id =>
+            mongoose.Types.ObjectId.isValid(id) && typeof id === 'string'
+        );
+        const stringUserIds = userIds.filter(id =>
+            !mongoose.Types.ObjectId.isValid(id) && typeof id === 'string'
+        );
+
+        // Temukan user data untuk ObjectId yang valid
+        const usersFromObjectIds = validObjectIds.length > 0
+            ? await User.find({ _id: { $in: validObjectIds } }).select('username nama').lean()
+            : [];
+
+        // Temukan user data untuk string userIds (username)
+        const usersFromStrings = stringUserIds.length > 0
+            ? await User.find({ username: { $in: stringUserIds } }).select('username nama').lean()
+            : [];
+
+        // Gabungkan hasil
+        const allUsers = [...usersFromObjectIds, ...usersFromStrings];
+
+        // Buat mapping user by ID dan username
+        const userMap = new Map();
+        allUsers.forEach(user => {
+            userMap.set(user._id.toString(), user);
+            userMap.set(user.username, user); // Juga mapping by username
+        });
+
         // Format data untuk frontend
-        // Di bagian formattedData, pastikan nama user benar
         const formattedData = responses.map((item: any, index: number) => {
-            // Pastikan nama user tidak null/undefined
             let userName = 'Unknown User';
+
             if (item.userId) {
-                if (typeof item.userId === 'object') {
-                    userName = item.userId.username || `User ${item.userId._id}`;
+                // Coba cari by ObjectId terlebih dahulu
+                let userData = userMap.get(item.userId.toString());
+
+                // Jika tidak ditemukan, coba cari by username (jika userId adalah string)
+                if (!userData && typeof item.userId === 'string') {
+                    userData = userMap.get(item.userId);
+                }
+
+                if (userData) {
+                    userName = userData.username || userData.nama || `User ${item.userId}`;
                 } else {
                     userName = `User ${item.userId}`;
                 }

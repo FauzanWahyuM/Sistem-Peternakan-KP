@@ -1,8 +1,8 @@
-import mongoose, { Document, Schema, Model } from "mongoose";
+import mongoose, { Document, Schema, Model, Types } from "mongoose";
 
 export interface IKuesioner extends Document {
     questionnaireId: string;
-    userId: string;
+    userId: Types.ObjectId;
     bulan: number;   // 👈 tambahkan
     tahun: number;   // 👈 tambahkan
     answers: {
@@ -15,7 +15,11 @@ export interface IKuesioner extends Document {
 const KuesionerSchema: Schema<IKuesioner> = new Schema(
     {
         questionnaireId: { type: String, required: true },
-        userId: { type: String, required: true },
+        userId: {
+            type: Schema.Types.ObjectId, // 👈 Ubah menjadi ObjectId
+            ref: 'User', // 👈 Tambahkan reference ke model User
+            required: true
+        },
         bulan: { type: Number, required: true },
         tahun: { type: Number, required: true },
         answers: [

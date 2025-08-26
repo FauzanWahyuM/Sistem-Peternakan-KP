@@ -107,12 +107,14 @@ function IsiFormContent() {
                     </div>
                 ))}
 
-                <button
-                    onClick={handleSubmit}
-                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-md font-medium ml-88 mb-6"
-                >
-                    Kirim
-                </button>
+                <div className="max-w-4xl mx-auto p-6 mb-4">
+                    <button
+                        onClick={handleSubmit}
+                        className="w-full bg-green-500 hover:bg-green-600 text-nigga px-6 py-3 rounded-md font-bold font-[Judson] text-2xl text-center"
+                    >
+                        Kirim
+                    </button>
+                </div>
             </main>
         </div>
     );

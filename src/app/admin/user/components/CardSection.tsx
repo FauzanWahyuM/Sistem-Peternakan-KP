@@ -130,8 +130,7 @@ export default function UserManagement() {
                 </div>
             ),
             ignoreRowClick: true,
-            allowOverflow: true,
-            button: true,
+            // Removed allowOverflow: true,
         },
     ];
 
