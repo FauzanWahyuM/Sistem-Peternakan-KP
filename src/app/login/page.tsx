@@ -13,10 +13,12 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg('');
+        setIsLoading(true);
 
         try {
             // LOGIN pakai NextAuth credentials
@@ -28,13 +30,13 @@ export default function LoginPage() {
 
             if (!res?.ok) {
                 setErrorMsg('Login gagal, periksa username/password');
+                setIsLoading(false);
                 return;
             }
 
             // Ambil session terbaru
             const session = await getSession();
             const role = (session?.user as any)?.role?.toLowerCase();
-
 
             // redirect ke dashboard sesuai role
             switch (role) {
@@ -54,11 +56,30 @@ export default function LoginPage() {
         } catch (err: any) {
             console.error('Login error:', err);
             setErrorMsg('Terjadi kesalahan saat login');
+            setIsLoading(false);
         }
     };
 
+    const handleGoogleLogin = async () => {
+        setErrorMsg('');
+        setIsLoading(true);
 
+        try {
+            const result = await signIn("google", {
+                redirect: false,
+                callbackUrl: '/dashboard/peternak',
+            });
 
+            if (result?.error) {
+                setErrorMsg('Login dengan Google gagal');
+                setIsLoading(false);
+            }
+        } catch (error) {
+            console.error('Google login error:', error);
+            setErrorMsg('Terjadi kesalahan saat login dengan Google');
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-green-100 via-white to-green-100 px-4">
@@ -81,6 +102,7 @@ export default function LoginPage() {
                             onChange={e => setUsername(e.target.value)}
                             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-black"
                             required
+                            disabled={isLoading}
                         />
                     </div>
 
@@ -94,11 +116,13 @@ export default function LoginPage() {
                                 onChange={e => setPassword(e.target.value)}
                                 required
                                 className="w-full border border-gray-300 rounded px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-green-500 text-black"
+                                disabled={isLoading}
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                                disabled={isLoading}
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
@@ -111,9 +135,10 @@ export default function LoginPage() {
 
                     <button
                         type="submit"
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition duration-200"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isLoading}
                     >
-                        Masuk
+                        {isLoading ? 'Memproses...' : 'Masuk'}
                     </button>
 
                     <p className='text-sm text-black text-center'>
@@ -125,7 +150,8 @@ export default function LoginPage() {
                         <button
                             type="button"
                             onClick={() => router.push('/dashboard/peternak')}
-                            className="w-12 h-12"
+                            className="w-12 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isLoading}
                         >
                             <Image
                                 src="/facebook.svg"
@@ -139,8 +165,9 @@ export default function LoginPage() {
                         {/* Tombol Google G */}
                         <button
                             type="button"
-                            onClick={() => signIn("google")}
-                            className="w-12 h-12"
+                            onClick={handleGoogleLogin}
+                            className="w-12 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isLoading}
                         >
                             <Image
                                 src="/google.svg"
@@ -166,7 +193,8 @@ export default function LoginPage() {
                 <Link href="/">
                     <button
                         type="button"
-                        className="mt-4 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg transition duration-200"
+                        className="mt-4 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isLoading}
                     >
                         Kembali ke Dashboard
                     </button>
