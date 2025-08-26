@@ -33,6 +33,7 @@ export const authOptions: NextAuthOptions = {
                 return {
                     id: user._id.toString(),
                     name: user.username,
+                    email: user.email,
                     role: user.role,
                 } as any;
             },
@@ -40,6 +41,13 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            authorization: {
+                params: {
+                    prompt: "consent",
+                    access_type: "offline",
+                    response_type: "code"
+                }
+            }
         }),
         FacebookProvider({
             clientId: process.env.FACEBOOK_CLIENT_ID!,
@@ -50,18 +58,104 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
     },
     callbacks: {
-        async jwt({ token, user }) {
+        async signIn({ user, account, profile }) {
+            if (account?.provider === "google") {
+                try {
+                    await connectDB();
+
+                    // Cari user berdasarkan email
+                    const existingUser = await User.findOne({
+                        email: profile?.email
+                    });
+
+                    if (!existingUser) {
+                        // Generate username dari email (tanpa @domain)
+                        const usernameBase = profile?.email?.split('@')[0] || 'user';
+                        let username = usernameBase;
+                        let counter = 1;
+
+                        // Cari username yang unik
+                        while (await User.findOne({ username })) {
+                            username = `${usernameBase}${counter}`;
+                            counter++;
+                        }
+
+                        // Buat user baru dengan data default yang required
+                        const newUser = new User({
+                            nama: profile?.name || 'User Google',
+                            username: username,
+                            email: profile?.email || '',
+                            password: await bcrypt.hash(Math.random().toString(36) + Date.now(), 12),
+                            kelompok: 'Kelompok Default', // Default value untuk kelompok
+                            role: 'peternak', // Default role untuk login Google
+                            status: 'Aktif'
+                        });
+
+                        await newUser.save();
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error("Error in Google signIn callback:", error);
+                    return false;
+                }
+            }
+            return true;
+        },
+
+        async jwt({ token, user, account, profile }) {
             if (user) {
                 token.role = (user as any).role;
             }
+
+            // Untuk user Google, ambil data dari database
+            if (account?.provider === "google" && profile?.email) {
+                try {
+                    await connectDB();
+                    const dbUser = await User.findOne({ email: profile.email });
+                    if (dbUser) {
+                        token.role = dbUser.role;
+                        token.id = dbUser._id.toString();
+                    }
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                }
+            }
+
             return token;
         },
+
         async session({ session, token }) {
             if (session.user) {
                 (session.user as any).role = token.role;
-                (session.user as any).id = token.sub; // tambahkan ID user ke session
+                (session.user as any).id = token.sub || token.id;
+
+                // Jika role masih undefined, coba ambil dari database
+                if (!token.role && session.user.email) {
+                    try {
+                        await connectDB();
+                        const dbUser = await User.findOne({ email: session.user.email });
+                        if (dbUser) {
+                            (session.user as any).role = dbUser.role;
+                            (session.user as any).id = dbUser._id.toString();
+                        }
+                    } catch (error) {
+                        console.error("Error fetching user data in session:", error);
+                    }
+                }
             }
             return session;
         },
+
+        async redirect({ url, baseUrl }) {
+            // Redirect ke dashboard/peternak setelah login Google
+            if (url.includes('/api/auth/signin')) {
+                return `${baseUrl}/dashboard/peternak`;
+            }
+            return url;
+        }
+    },
+    pages: {
+        signIn: '/login',
     },
 };

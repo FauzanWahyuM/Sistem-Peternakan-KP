@@ -65,15 +65,9 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            const result = await signIn("google", {
-                redirect: false,
-                callbackUrl: '/dashboard/peternak',
+            await signIn("google", {
+                callbackUrl: '/dashboard/peternak'
             });
-
-            if (result?.error) {
-                setErrorMsg('Login dengan Google gagal');
-                setIsLoading(false);
-            }
         } catch (error) {
             console.error('Google login error:', error);
             setErrorMsg('Terjadi kesalahan saat login dengan Google');
