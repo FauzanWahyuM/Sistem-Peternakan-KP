@@ -54,6 +54,12 @@ export async function GET(req: NextRequest) {
     await connectDB();
     try {
         const session = await getServerSession(authOptions);
+
+        // DEBUG: Log session information
+        console.log("Session user ID:", session?.user?.id);
+        console.log("Session user role:", (session?.user as any)?.role);
+        console.log("Session user email:", session?.user?.email);
+
         if (!session?.user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -102,7 +108,7 @@ export async function GET(req: NextRequest) {
     } catch (err) {
         console.error("Error getting response:", err);
         return NextResponse.json(
-            { error: "Gagal mengambil jawaban" },
+            { error: "Gagal mengambil jawaban", details: err.message },
             { status: 500 }
         );
     }

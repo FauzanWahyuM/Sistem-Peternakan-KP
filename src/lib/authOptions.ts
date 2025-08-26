@@ -63,37 +63,33 @@ export const authOptions: NextAuthOptions = {
                 try {
                     await connectDB();
 
-                    // Cari user berdasarkan email
                     const existingUser = await User.findOne({
                         email: profile?.email
                     });
 
                     if (!existingUser) {
-                        // Generate username dari email (tanpa @domain)
                         const usernameBase = profile?.email?.split('@')[0] || 'user';
                         let username = usernameBase;
                         let counter = 1;
 
-                        // Cari username yang unik
                         while (await User.findOne({ username })) {
                             username = `${usernameBase}${counter}`;
                             counter++;
                         }
 
-                        // Buat user baru dengan data default yang required
+                        // Pastikan kelompok valid
                         const newUser = new User({
                             nama: profile?.name || 'User Google',
                             username: username,
                             email: profile?.email || '',
                             password: await bcrypt.hash(Math.random().toString(36) + Date.now(), 12),
-                            kelompok: 'Kelompok Default', // Default value untuk kelompok
-                            role: 'peternak', // Default role untuk login Google
+                            kelompok: 'Default', // Pastikan nilai ini valid
+                            role: 'peternak',
                             status: 'Aktif'
                         });
 
                         await newUser.save();
                     }
-
                     return true;
                 } catch (error) {
                     console.error("Error in Google signIn callback:", error);
@@ -106,6 +102,7 @@ export const authOptions: NextAuthOptions = {
         async jwt({ token, user, account, profile }) {
             if (user) {
                 token.role = (user as any).role;
+                token.dbId = (user as any).id; // Simpan ID database
             }
 
             // Untuk user Google, ambil data dari database
@@ -115,7 +112,7 @@ export const authOptions: NextAuthOptions = {
                     const dbUser = await User.findOne({ email: profile.email });
                     if (dbUser) {
                         token.role = dbUser.role;
-                        token.id = dbUser._id.toString();
+                        token.dbId = dbUser._id.toString(); // Simpan ID database
                     }
                 } catch (error) {
                     console.error("Error fetching user data:", error);
@@ -128,10 +125,11 @@ export const authOptions: NextAuthOptions = {
         async session({ session, token }) {
             if (session.user) {
                 (session.user as any).role = token.role;
-                (session.user as any).id = token.sub || token.id;
+                // GUNAKAN token.dbId untuk ID database, bukan token.sub
+                (session.user as any).id = token.dbId || token.sub;
 
-                // Jika role masih undefined, coba ambil dari database
-                if (!token.role && session.user.email) {
+                // Backup: Ambil dari database jika masih belum ada ID
+                if (!(session.user as any).id && session.user.email) {
                     try {
                         await connectDB();
                         const dbUser = await User.findOne({ email: session.user.email });
