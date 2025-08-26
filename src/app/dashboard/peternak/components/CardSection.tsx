@@ -68,16 +68,10 @@ export default function CardSection() {
                     nilai: item.nilaiEvaluasi || 0,
                     fullName: `Bulan ${item.bulan}`
                 }));
+                // Ganti bagian else statement untuk chartData
             } else {
-                // Data placeholder jika tidak ada data
-                chartData = [
-                    { name: 'Jan', nilai: 35, fullName: 'Januari' },
-                    { name: 'Feb', nilai: 62, fullName: 'Februari' },
-                    { name: 'Mar', nilai: 78, fullName: 'Maret' },
-                    { name: 'Apr', nilai: 50, fullName: 'April' },
-                    { name: 'Mei', nilai: 85, fullName: 'Mei' },
-                    { name: 'Jun', nilai: 90, fullName: 'Juni' }
-                ];
+                // Jangan gunakan data placeholder, biarkan array kosong
+                chartData = [];
             }
 
             setDashboardData({
@@ -124,7 +118,7 @@ export default function CardSection() {
         {
             title: 'Evaluasi',
             value: evaluasi > 0 ? `${evaluasi}%` : 'Belum ada',
-            description: 'Nilai evaluasi terakhir'
+            description: evaluasi > 0 ? 'Nilai evaluasi terakhir' : 'Belum ada evaluasi'
         },
     ];
 
@@ -187,25 +181,35 @@ export default function CardSection() {
                         Performa Evaluasi Bulanan
                     </h2>
                     <div className="h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis domain={[0, 100]} />
-                                <Tooltip
-                                    formatter={(value) => [`${value}%`, 'Nilai Evaluasi']}
-                                    labelFormatter={(label) => `Bulan: ${label}`}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="nilai"
-                                    stroke="#60c67a"
-                                    strokeWidth={3}
-                                    dot={{ r: 5 }}
-                                    activeDot={{ r: 8 }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        {chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis domain={[0, 100]} />
+                                    <Tooltip
+                                        formatter={(value) => [`${value}%`, 'Nilai Evaluasi']}
+                                        labelFormatter={(label) => `Bulan: ${label}`}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="nilai"
+                                        stroke="#60c67a"
+                                        strokeWidth={3}
+                                        dot={{ r: 5 }}
+                                        activeDot={{ r: 8 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center text-gray-500">
+                                    <div className="text-4xl mb-2">📊</div>
+                                    <p className="text-lg font-semibold">Belum ada data evaluasi</p>
+                                    <p className="text-sm">Isi kuesioner untuk melihat grafik evaluasi</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
