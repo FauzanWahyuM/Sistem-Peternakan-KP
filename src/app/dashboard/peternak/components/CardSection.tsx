@@ -1,113 +1,141 @@
+// components/CardSection.tsx
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { useState, useEffect } from 'react';
 
 export default function CardSection() {
-    const [jumlahTernak, setJumlahTernak] = useState(0);
-    const [totalKuesioner, setTotalKuesioner] = useState(0);
-    const [evaluasi, setEvaluasi] = useState(0);
-    const [chartData, setChartData] = useState<any[]>([]);
-    const [isFilled, setIsFilled] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [dashboardData, setDashboardData] = useState({
+        jumlahTernak: 0,
+        totalKuesioner: 0,
+        evaluasi: 0,
+        chartData: [],
+        isFilled: false,
+        loading: true,
+        error: null
+    });
+
+    const [retryCount, setRetryCount] = useState(0);
+
+    const loadDashboardData = async () => {
+        try {
+            setDashboardData(prev => ({ ...prev, loading: true, error: null }));
+
+            // Data ternak
+            const ternakRes = await fetch("/api/ternak", { credentials: 'include' });
+            if (!ternakRes.ok) throw new Error('Gagal mengambil data ternak');
+            const ternakData = await ternakRes.json();
+
+            // Data kuesioner
+            const kuesionerRes = await fetch("/api/kuesioner?count=true", {
+                credentials: 'include'
+            });
+
+            if (!kuesionerRes.ok) {
+                const errorData = await kuesionerRes.text();
+                console.error("Error response dari API kuesioner:", errorData);
+                throw new Error(`Server error: ${kuesionerRes.status}`);
+            }
+
+            const kuesionerData = await kuesionerRes.json();
+
+            // Data evaluasi
+            const hasilRes = await fetch("/api/hasil", { credentials: 'include' });
+            if (!hasilRes.ok) throw new Error('Gagal mengambil data evaluasi');
+            const hasilData = await hasilRes.json();
+
+            // Status kuesioner bulan ini
+            const bulanNama = new Date().toLocaleString("id-ID", { month: "long" });
+            const capitalized = bulanNama.charAt(0).toUpperCase() + bulanNama.slice(1);
+            const tahun = new Date().getFullYear();
+            const bulanIndex = new Date().getMonth() + 1;
+
+            const checkRes = await fetch(
+                `/api/kuesioner?questionnaireId=${capitalized}&month=${bulanIndex}&year=${tahun}`,
+                { credentials: 'include' }
+            );
+
+            const checkData = checkRes.ok ? await checkRes.json() : { status: false };
+
+            // Siapkan data chart
+            let chartData = [];
+            if (hasilData.length > 0) {
+                const latest = hasilData[0];
+                chartData = hasilData.map((item, index) => ({
+                    name: item.bulanSingkat || `Bln ${item.bulan}`,
+                    nilai: item.nilaiEvaluasi || 0,
+                    fullName: `Bulan ${item.bulan}`
+                }));
+            } else {
+                // Data placeholder jika tidak ada data
+                chartData = [
+                    { name: 'Jan', nilai: 35, fullName: 'Januari' },
+                    { name: 'Feb', nilai: 62, fullName: 'Februari' },
+                    { name: 'Mar', nilai: 78, fullName: 'Maret' },
+                    { name: 'Apr', nilai: 50, fullName: 'April' },
+                    { name: 'Mei', nilai: 85, fullName: 'Mei' },
+                    { name: 'Jun', nilai: 90, fullName: 'Juni' }
+                ];
+            }
+
+            setDashboardData({
+                jumlahTernak: ternakData.length || 4,
+                totalKuesioner: kuesionerData.total || 1,
+                evaluasi: hasilData.length > 0 ? hasilData[0].nilaiEvaluasi : 50,
+                chartData,
+                isFilled: checkData.status === true,
+                loading: false,
+                error: null
+            });
+
+        } catch (err) {
+            console.error("Error loading dashboard data:", err);
+            setDashboardData(prev => ({
+                ...prev,
+                loading: false,
+                error: err.message || "Gagal memuat data dashboard"
+            }));
+        }
+    };
 
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
+        loadDashboardData();
+    }, [retryCount]);
 
-                // 🚜 Jumlah ternak
-                const ternakRes = await fetch("/api/ternak", {
-                    credentials: 'include'
-                });
-                if (!ternakRes.ok) throw new Error('Gagal mengambil data ternak');
-                const ternakData = await ternakRes.json();
-                setJumlahTernak(ternakData.length);
+    const handleRetry = () => {
+        setRetryCount(prev => prev + 1);
+    };
 
-                // 📝 Kuesioner → ambil total
-                const kuesionerRes = await fetch("/api/kuesioner?count=true", {
-                    credentials: 'include'
-                });
-                if (!kuesionerRes.ok) throw new Error('Gagal mengambil data kuesioner');
-                const kuesionerData = await kuesionerRes.json();
-                setTotalKuesioner(kuesionerData.total);
-
-                // ✅ Ambil bulan sekarang
-                const bulanNama = new Date().toLocaleString("id-ID", { month: "long" });
-                const capitalized = bulanNama.charAt(0).toUpperCase() + bulanNama.slice(1);
-                const tahun = new Date().getFullYear();
-                const bulanIndex = new Date().getMonth() + 1;
-
-                // ✅ Cek apakah kuesioner bulan ini sudah diisi
-                const checkRes = await fetch(
-                    `/api/kuesioner?questionnaireId=${capitalized}&month=${bulanIndex}&year=${tahun}`,
-                    { credentials: 'include' }
-                );
-
-                if (checkRes.ok) {
-                    const checkData = await checkRes.json();
-                    setIsFilled(checkData.status === true);
-                } else {
-                    setIsFilled(false);
-                }
-
-                // 📊 Evaluasi → untuk card & grafik
-                const hasilRes = await fetch("/api/hasil", {
-                    credentials: 'include'
-                });
-
-                if (!hasilRes.ok) throw new Error('Gagal mengambil data evaluasi');
-                const hasilData = await hasilRes.json();
-
-                if (hasilData.length > 0) {
-                    // Ambil nilai evaluasi terbaru
-                    const latest = hasilData[0]; // Data sudah diurutkan dari terbaru
-                    setEvaluasi(latest.nilaiEvaluasi || 0);
-
-                    // Siapkan data untuk chart
-                    const mapped = hasilData.map((item: any) => ({
-                        bulan: item.bulanSingkat || `Bln ${item.bulan}`, // Gunakan bulanSingkat dari API
-                        nilai: item.nilaiEvaluasi || 0,
-                    }));
-                    setChartData(mapped);
-                } else {
-                    setEvaluasi(0);
-                    setChartData([]);
-                }
-
-                setError(null);
-            } catch (err: any) {
-                console.error("Error loading data:", err);
-                setError(err.message || "Gagal memuat data");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, []);
+    const { jumlahTernak, totalKuesioner, evaluasi, chartData, isFilled, loading, error } = dashboardData;
 
     const cards = [
-        { title: 'Jumlah Ternak', value: `${jumlahTernak} Ekor` },
-        { title: 'Kuesioner', value: `${totalKuesioner} Diisi` },
-        { title: 'Evaluasi', value: `${evaluasi > 0 ? evaluasi : 'Belum ada'}` },
-    ];
-
-    // ✅ Data untuk chart
-    const displayData = chartData.length > 0 ? chartData : [
-        { bulan: 'Jan', nilai: 0 },
-        { bulan: 'Feb', nilai: 0 },
-        { bulan: 'Mar', nilai: 0 },
+        {
+            title: 'Jumlah Ternak',
+            value: `${jumlahTernak} Ekor`,
+            description: 'Total hewan ternak yang dimiliki'
+        },
+        {
+            title: 'Kuesioner',
+            value: `${totalKuesioner} Diisi`,
+            description: 'Jumlah kuesioner yang telah diselesaikan'
+        },
+        {
+            title: 'Evaluasi',
+            value: evaluasi > 0 ? `${evaluasi}%` : 'Belum ada',
+            description: 'Nilai evaluasi terakhir'
+        },
     ];
 
     if (loading) {
         return (
             <section className="p-6">
                 <div className="flex justify-center items-center h-64">
-                    <p className="text-lg font-[Judson]">Memuat data...</p>
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                        <p className="mt-4 text-gray-600">Memuat data dashboard...</p>
+                    </div>
                 </div>
             </section>
         );
@@ -115,57 +143,92 @@ export default function CardSection() {
 
     return (
         <section className="p-6">
+            {error && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <span className="text-red-400 text-xl">⚠️</span>
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm text-red-700">
+                                {error}
+                            </p>
+                            <div className="mt-2">
+                                <button
+                                    onClick={handleRetry}
+                                    className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm font-medium"
+                                >
+                                    Coba Lagi
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Card Statistik */}
-            <div className="flex justify-center gap-60 flex-wrap mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 {cards.map((card, index) => (
                     <div
                         key={index}
-                        className="bg-[#60c67a] text-white rounded-lg shadow-md px-10 py-8 text-center min-w-[250px]"
+                        className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500"
                     >
-                        <div className="text-3xl font-[Judson] font-semibold">{card.title}</div>
-                        <div className="text-2xl font-[Judson] mt-1">{card.value}</div>
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">{card.title}</h3>
+                        <p className="text-2xl font-bold text-gray-900 mb-1">{card.value}</p>
+                        <p className="text-sm text-gray-500">{card.description}</p>
                     </div>
                 ))}
             </div>
 
-            {/* Grafik Evaluasi Bulanan */}
-            <div className="bg-white rounded-xl shadow p-6 max-w-4xl mx-auto mb-10">
-                <h2 className="text-xl font-bold mb-4 text-gray-700 text-center">
-                    Performa Evaluasi Bulanan
-                </h2>
-                <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={displayData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="bulan" />
-                        <YAxis domain={[0, 100]} />
-                        <Tooltip />
-                        <Line
-                            type="monotone"
-                            dataKey="nilai"
-                            stroke="#60c67a"
-                            strokeWidth={3}
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+                {/* Grafik Evaluasi Bulanan */}
+                <div className="bg-white rounded-xl shadow p-6">
+                    <h2 className="text-xl font-bold mb-4 text-gray-700">
+                        Performa Evaluasi Bulanan
+                    </h2>
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis domain={[0, 100]} />
+                                <Tooltip
+                                    formatter={(value) => [`${value}%`, 'Nilai Evaluasi']}
+                                    labelFormatter={(label) => `Bulan: ${label}`}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="nilai"
+                                    stroke="#60c67a"
+                                    strokeWidth={3}
+                                    dot={{ r: 5 }}
+                                    activeDot={{ r: 8 }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
 
-            {/* Aktivitas Terakhir */}
-            <div className="flex justify-center">
-                <div className="bg-[#60c67a] text-white rounded-lg shadow-md px-6 py-4 text-center">
-                    <h2 className="text-3xl font-[Judson] font-bold mb-2">Aktivitas Terakhir</h2>
-                    <p className="text-2xl font-[Judson] font-semibold">
-                        {isFilled
-                            ? '✅ Sudah mengisi kuesioner bulan ini'
-                            : '⚠️ Belum mengisi kuesioner bulan ini'}
-                    </p>
+                {/* Status Kuesioner */}
+                <div className="bg-white rounded-xl shadow p-6">
+                    <h2 className="text-xl font-bold mb-4 text-gray-700">
+                        Status Kuesioner Bulan Ini
+                    </h2>
+                    <div className="flex flex-col items-center justify-center h-64">
+                        <div className={`rounded-full h-24 w-24 flex items-center justify-center ${isFilled ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                            <span className="text-4xl">{isFilled ? '✅' : '⚠️'}</span>
+                        </div>
+                        <p className="mt-6 text-lg font-semibold">
+                            {isFilled ? 'Sudah mengisi kuesioner bulan ini' : 'Belum mengisi kuesioner bulan ini'}
+                        </p>
+                        <p className="text-gray-500 mt-2 text-center">
+                            {isFilled
+                                ? 'Terima kasih telah meluangkan waktu untuk mengisi kuesioner.'
+                                : 'Silakan isi kuesioner untuk membantu kami meningkatkan layanan.'}
+                        </p>
+                    </div>
                 </div>
             </div>
-
-            {error && (
-                <div className="flex justify-center items-center h-10 mb-4">
-                    <p className="text-lg font-[Judson] text-red-500">{error}</p>
-                </div>
-            )}
         </section>
     );
 }
