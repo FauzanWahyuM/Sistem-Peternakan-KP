@@ -6,8 +6,24 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
+interface ChartDataItem {
+    name: string;
+    nilai: number;
+    fullName: string;
+}
+
+interface DashboardData {
+    jumlahTernak: number;
+    totalKuesioner: number;
+    evaluasi: number;
+    chartData: ChartDataItem[];
+    isFilled: boolean;
+    loading: boolean;
+    error: string | null;
+}
+
 export default function CardSection() {
-    const [dashboardData, setDashboardData] = useState({
+    const [dashboardData, setDashboardData] = useState<DashboardData>({
         jumlahTernak: 0,
         totalKuesioner: 0,
         evaluasi: 0,
@@ -28,63 +44,85 @@ export default function CardSection() {
             if (!ternakRes.ok) throw new Error('Gagal mengambil data ternak');
             const ternakData = await ternakRes.json();
 
-            // Data kuesioner
-            const kuesionerRes = await fetch("/api/kuesioner?count=true", {
-                credentials: 'include'
-            });
+            // Data kuesioner - hanya hitung total
+            let totalKuesioner = 0;
+            try {
+                const kuesionerRes = await fetch("/api/kuesioner?count=true", {
+                    credentials: 'include'
+                });
 
-            if (!kuesionerRes.ok) {
-                const errorData = await kuesionerRes.text();
-                console.error("Error response dari API kuesioner:", errorData);
-                throw new Error(`Server error: ${kuesionerRes.status}`);
+                if (kuesionerRes.ok) {
+                    const kuesionerData = await kuesionerRes.json();
+                    totalKuesioner = kuesionerData.total || 0;
+                } else {
+                    console.warn("Gagal mengambil data kuesioner count");
+                }
+            } catch (kuesionerError) {
+                console.warn("Error pada API kuesioner count:", kuesionerError);
             }
 
-            const kuesionerData = await kuesionerRes.json();
-
             // Data evaluasi
-            const hasilRes = await fetch("/api/hasil", { credentials: 'include' });
-            if (!hasilRes.ok) throw new Error('Gagal mengambil data evaluasi');
-            const hasilData = await hasilRes.json();
+            let evaluasiValue = 0;
+            let chartData: ChartDataItem[] = [];
+
+            try {
+                const hasilRes = await fetch("/api/hasil", { credentials: 'include' });
+                if (hasilRes.ok) {
+                    const hasilData = await hasilRes.json();
+
+                    if (hasilData && hasilData.length > 0) {
+                        // Ambil nilai evaluasi terbaru
+                        const latest = hasilData[0];
+                        evaluasiValue = latest.nilaiEvaluasi || 0;
+
+                        // Siapkan data chart
+                        chartData = hasilData.map((item: any) => ({
+                            name: item.bulanSingkat || `Bln ${item.bulan}`,
+                            nilai: item.nilaiEvaluasi || 0,
+                            fullName: `Bulan ${item.bulan}`
+                        }));
+                    }
+                } else {
+                    console.warn("Gagal mengambil data evaluasi");
+                }
+            } catch (evaluasiError) {
+                console.warn("Error pada API evaluasi:", evaluasiError);
+            }
 
             // Status kuesioner bulan ini
-            const bulanNama = new Date().toLocaleString("id-ID", { month: "long" });
-            const capitalized = bulanNama.charAt(0).toUpperCase() + bulanNama.slice(1);
-            const tahun = new Date().getFullYear();
-            const bulanIndex = new Date().getMonth() + 1;
+            let isFilled = false;
+            try {
+                const bulanNama = new Date().toLocaleString("id-ID", { month: "long" });
+                const capitalized = bulanNama.charAt(0).toUpperCase() + bulanNama.slice(1);
+                const tahun = new Date().getFullYear();
+                const bulanIndex = new Date().getMonth() + 1;
 
-            const checkRes = await fetch(
-                `/api/kuesioner?questionnaireId=${capitalized}&month=${bulanIndex}&year=${tahun}`,
-                { credentials: 'include' }
-            );
+                const checkRes = await fetch(
+                    `/api/kuesioner?questionnaireId=${capitalized}&month=${bulanIndex}&year=${tahun}`,
+                    { credentials: 'include' }
+                );
 
-            const checkData = checkRes.ok ? await checkRes.json() : { status: false };
-
-            // Siapkan data chart
-            let chartData = [];
-            if (hasilData.length > 0) {
-                const latest = hasilData[0];
-                chartData = hasilData.map((item, index) => ({
-                    name: item.bulanSingkat || `Bln ${item.bulan}`,
-                    nilai: item.nilaiEvaluasi || 0,
-                    fullName: `Bulan ${item.bulan}`
-                }));
-                // Ganti bagian else statement untuk chartData
-            } else {
-                // Jangan gunakan data placeholder, biarkan array kosong
-                chartData = [];
+                if (checkRes.ok) {
+                    const checkData = await checkRes.json();
+                    isFilled = checkData.status === true;
+                } else {
+                    console.warn("Gagal memeriksa status kuesioner bulan ini");
+                }
+            } catch (statusError) {
+                console.warn("Error memeriksa status kuesioner:", statusError);
             }
 
             setDashboardData({
-                jumlahTernak: ternakData.length || 4,
-                totalKuesioner: kuesionerData.total || 1,
-                evaluasi: hasilData.length > 0 ? hasilData[0].nilaiEvaluasi : 50,
+                jumlahTernak: ternakData.length || 0,
+                totalKuesioner,
+                evaluasi: evaluasiValue,
                 chartData,
-                isFilled: checkData.status === true,
+                isFilled,
                 loading: false,
                 error: null
             });
 
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error loading dashboard data:", err);
             setDashboardData(prev => ({
                 ...prev,
@@ -112,13 +150,17 @@ export default function CardSection() {
         },
         {
             title: 'Kuesioner',
-            value: `${totalKuesioner} Diisi`,
-            description: 'Jumlah kuesioner yang telah diselesaikan'
+            value: totalKuesioner > 0 ? `${totalKuesioner} Diisi` : 'Belum ada',
+            description: totalKuesioner > 0
+                ? 'Jumlah kuesioner yang telah diselesaikan'
+                : 'Belum ada kuesioner yang diisi'
         },
         {
             title: 'Evaluasi',
             value: evaluasi > 0 ? `${evaluasi}%` : 'Belum ada',
-            description: evaluasi > 0 ? 'Nilai evaluasi terakhir' : 'Belum ada evaluasi'
+            description: evaluasi > 0
+                ? 'Nilai evaluasi terakhir'
+                : 'Belum ada evaluasi'
         },
     ];
 
@@ -220,7 +262,7 @@ export default function CardSection() {
                     </h2>
                     <div className="flex flex-col items-center justify-center h-64">
                         <div className={`rounded-full h-24 w-24 flex items-center justify-center ${isFilled ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                            <span className="text-4xl">{isFilled ? '✅' : '⚠️'}</span>
+                            <span className="text-4xl">{isFilled ? '✅' : '⏰'}</span>
                         </div>
                         <p className="mt-6 text-lg font-semibold">
                             {isFilled ? 'Sudah mengisi kuesioner bulan ini' : 'Belum mengisi kuesioner bulan ini'}

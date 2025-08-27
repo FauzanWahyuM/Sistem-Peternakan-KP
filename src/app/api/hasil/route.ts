@@ -62,49 +62,40 @@ export async function GET(req: NextRequest) {
         // Dapatkan semua user IDs dari responses
         const userIds = responses.map(response => response.userId).filter(id => id);
 
-        // Pisahkan userIds menjadi ObjectId yang valid dan string
-        const validObjectIds = userIds.filter(id =>
-            mongoose.Types.ObjectId.isValid(id) && typeof id === 'string'
-        );
-        const stringUserIds = userIds.filter(id =>
-            !mongoose.Types.ObjectId.isValid(id) && typeof id === 'string'
-        );
-
-        // Temukan user data untuk ObjectId yang valid
-        const usersFromObjectIds = validObjectIds.length > 0
-            ? await User.find({ _id: { $in: validObjectIds } }).select('username nama').lean()
-            : [];
-
-        // Temukan user data untuk string userIds (username)
-        const usersFromStrings = stringUserIds.length > 0
-            ? await User.find({ username: { $in: stringUserIds } }).select('username nama').lean()
-            : [];
-
-        // Gabungkan hasil
-        const allUsers = [...usersFromObjectIds, ...usersFromStrings];
+        // Temukan semua user data sekaligus
+        const users = await User.find({
+            $or: [
+                { _id: { $in: userIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } },
+                { username: { $in: userIds.filter(id => !mongoose.Types.ObjectId.isValid(id) && typeof id === 'string') } }
+            ]
+        }).select('username nama _id').lean();
 
         // Buat mapping user by ID dan username
         const userMap = new Map();
-        allUsers.forEach(user => {
+        users.forEach(user => {
+            // Mapping by ObjectId string
             userMap.set(user._id.toString(), user);
-            userMap.set(user.username, user); // Juga mapping by username
+            // Mapping by username
+            userMap.set(user.username, user);
         });
 
         // Format data untuk frontend
         const formattedData = responses.map((item: any, index: number) => {
             let userName = 'Unknown User';
+            let userData = null;
 
             if (item.userId) {
-                // Coba cari by ObjectId terlebih dahulu
-                let userData = userMap.get(item.userId.toString());
-
-                // Jika tidak ditemukan, coba cari by username (jika userId adalah string)
-                if (!userData && typeof item.userId === 'string') {
+                // Coba cari user berdasarkan berbagai format
+                if (mongoose.Types.ObjectId.isValid(item.userId)) {
+                    // Jika userId adalah ObjectId yang valid
+                    userData = userMap.get(item.userId.toString());
+                } else if (typeof item.userId === 'string') {
+                    // Jika userId adalah string (mungkin username)
                     userData = userMap.get(item.userId);
                 }
 
                 if (userData) {
-                    userName = userData.username || userData.nama || `User ${item.userId}`;
+                    userName = userData.nama || userData.username || `User ${item.userId}`;
                 } else {
                     userName = `User ${item.userId}`;
                 }
