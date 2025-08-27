@@ -75,6 +75,21 @@ export default function LoginPage() {
         }
     };
 
+    const handleFacebookLogin = async () => {
+        setErrorMsg('');
+        setIsLoading(true);
+
+        try {
+            await signIn("facebook", {
+                callbackUrl: '/dashboard/peternak'
+            });
+        } catch (error) {
+            console.error('Facebook login error:', error);
+            setErrorMsg('Terjadi kesalahan saat login dengan Facebook');
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-green-100 via-white to-green-100 px-4">
             <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg border border-green-200">
@@ -143,7 +158,7 @@ export default function LoginPage() {
                         {/* Tombol Facebook */}
                         <button
                             type="button"
-                            onClick={() => router.push('/dashboard/peternak')}
+                            onClick={handleFacebookLogin}
                             className="w-12 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={isLoading}
                         >

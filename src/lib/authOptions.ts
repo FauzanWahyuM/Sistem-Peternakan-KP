@@ -1,11 +1,23 @@
 // lib/authOptions.ts
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, Profile } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import connectDB from "./dbConnect";
 import User from "../models/User";
 import bcrypt from "bcryptjs";
+
+// Interface untuk Facebook profile
+interface FacebookProfile extends Profile {
+    id: string;
+    name: string;
+    email?: string;
+    picture?: {
+        data: {
+            url: string;
+        };
+    };
+}
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -32,7 +44,8 @@ export const authOptions: NextAuthOptions = {
 
                 return {
                     id: user._id.toString(),
-                    name: user.username,
+                    username: user.username,
+                    nama: user.nama,
                     email: user.email,
                     role: user.role,
                 } as any;
@@ -64,7 +77,10 @@ export const authOptions: NextAuthOptions = {
                     await connectDB();
 
                     const existingUser = await User.findOne({
-                        email: profile?.email
+                        $or: [
+                            { email: profile?.email },
+                            { googleId: profile?.sub }
+                        ]
                     });
 
                     if (!existingUser) {
@@ -77,15 +93,16 @@ export const authOptions: NextAuthOptions = {
                             counter++;
                         }
 
-                        // Pastikan kelompok valid
                         const newUser = new User({
                             nama: profile?.name || 'User Google',
                             username: username,
                             email: profile?.email || '',
                             password: await bcrypt.hash(Math.random().toString(36) + Date.now(), 12),
-                            kelompok: 'Default', // Pastikan nilai ini valid
+                            kelompok: 'Default',
                             role: 'peternak',
-                            status: 'Aktif'
+                            status: 'Aktif',
+                            googleId: profile?.sub,
+                            provider: 'google'
                         });
 
                         await newUser.save();
@@ -96,26 +113,105 @@ export const authOptions: NextAuthOptions = {
                     return false;
                 }
             }
+
+            // Handle Facebook login
+            if (account?.provider === "facebook") {
+                try {
+                    await connectDB();
+
+                    const facebookProfile = profile as FacebookProfile;
+
+                    const existingUser = await User.findOne({
+                        $or: [
+                            { email: facebookProfile?.email },
+                            { facebookId: facebookProfile?.id }
+                        ]
+                    });
+
+                    if (!existingUser) {
+                        const usernameBase = facebookProfile?.email?.split('@')[0] || `fb_${facebookProfile?.id}`;
+                        let username = usernameBase;
+                        let counter = 1;
+
+                        while (await User.findOne({ username })) {
+                            username = `${usernameBase}${counter}`;
+                            counter++;
+                        }
+
+                        const newUser = new User({
+                            nama: facebookProfile?.name || 'User Facebook',
+                            username: username,
+                            email: facebookProfile?.email || '',
+                            password: await bcrypt.hash(Math.random().toString(36) + Date.now(), 12),
+                            kelompok: 'Default',
+                            role: 'peternak',
+                            status: 'Aktif',
+                            facebookId: facebookProfile?.id,
+                            provider: 'facebook'
+                        });
+
+                        await newUser.save();
+                    }
+                    return true;
+                } catch (error) {
+                    console.error("Error in Facebook signIn callback:", error);
+                    return false;
+                }
+            }
+
             return true;
         },
 
         async jwt({ token, user, account, profile }) {
+            // Handle credentials login
             if (user) {
                 token.role = (user as any).role;
-                token.dbId = (user as any).id; // Simpan ID database
+                token.dbId = (user as any).id;
+                token.username = (user as any).username;
+                token.nama = (user as any).nama;
             }
 
             // Untuk user Google, ambil data dari database
             if (account?.provider === "google" && profile?.email) {
                 try {
                     await connectDB();
-                    const dbUser = await User.findOne({ email: profile.email });
+                    const dbUser = await User.findOne({
+                        $or: [
+                            { email: profile.email },
+                            { googleId: profile.sub }
+                        ]
+                    });
                     if (dbUser) {
                         token.role = dbUser.role;
-                        token.dbId = dbUser._id.toString(); // Simpan ID database
+                        token.dbId = dbUser._id.toString();
+                        token.username = dbUser.username;
+                        token.nama = dbUser.nama;
                     }
                 } catch (error) {
-                    console.error("Error fetching user data:", error);
+                    console.error("Error fetching Google user data:", error);
+                }
+            }
+
+            // Untuk user Facebook, ambil data dari database
+            if (account?.provider === "facebook" && profile) {
+                try {
+                    await connectDB();
+                    const facebookProfile = profile as FacebookProfile;
+
+                    const dbUser = await User.findOne({
+                        $or: [
+                            { email: facebookProfile.email },
+                            { facebookId: facebookProfile.id }
+                        ]
+                    });
+                    if (dbUser) {
+                        token.role = dbUser.role;
+                        token.dbId = dbUser._id.toString();
+                        token.username = dbUser.username;
+                        token.nama = dbUser.nama;
+                    }
+                } catch (error) {
+                    console.error("Error fetching Facebook user data:", error);
                 }
             }
 
@@ -125,8 +221,9 @@ export const authOptions: NextAuthOptions = {
         async session({ session, token }) {
             if (session.user) {
                 (session.user as any).role = token.role;
-                // GUNAKAN token.dbId untuk ID database, bukan token.sub
                 (session.user as any).id = token.dbId || token.sub;
+                (session.user as any).username = token.username;
+                (session.user as any).nama = token.nama;
 
                 // Backup: Ambil dari database jika masih belum ada ID
                 if (!(session.user as any).id && session.user.email) {
@@ -136,6 +233,8 @@ export const authOptions: NextAuthOptions = {
                         if (dbUser) {
                             (session.user as any).role = dbUser.role;
                             (session.user as any).id = dbUser._id.toString();
+                            (session.user as any).username = dbUser.username;
+                            (session.user as any).nama = dbUser.nama;
                         }
                     } catch (error) {
                         console.error("Error fetching user data in session:", error);
@@ -146,7 +245,7 @@ export const authOptions: NextAuthOptions = {
         },
 
         async redirect({ url, baseUrl }) {
-            // Redirect ke dashboard/peternak setelah login Google
+            // Redirect ke dashboard/peternak setelah login
             if (url.includes('/api/auth/signin')) {
                 return `${baseUrl}/dashboard/peternak`;
             }
