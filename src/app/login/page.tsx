@@ -75,20 +75,20 @@ export default function LoginPage() {
         }
     };
 
-    const handleFacebookLogin = async () => {
-        setErrorMsg('');
-        setIsLoading(true);
+    // const handleFacebookLogin = async () => {
+    //     setErrorMsg('');
+    //     setIsLoading(true);
 
-        try {
-            await signIn("facebook", {
-                callbackUrl: '/dashboard/peternak'
-            });
-        } catch (error) {
-            console.error('Facebook login error:', error);
-            setErrorMsg('Terjadi kesalahan saat login dengan Facebook');
-            setIsLoading(false);
-        }
-    };
+    //     try {
+    //         await signIn("facebook", {
+    //             callbackUrl: '/dashboard/peternak'
+    //         });
+    //     } catch (error) {
+    //         console.error('Facebook login error:', error);
+    //         setErrorMsg('Terjadi kesalahan saat login dengan Facebook');
+    //         setIsLoading(false);
+    //     }
+    // };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-green-100 via-white to-green-100 px-4">
@@ -155,7 +155,7 @@ export default function LoginPage() {
                     </p>
 
                     <div className="flex justify-center space-x-4 mb-4">
-                        {/* Tombol Facebook */}
+                        {/* Tombol Facebook
                         <button
                             type="button"
                             onClick={handleFacebookLogin}
@@ -169,7 +169,7 @@ export default function LoginPage() {
                                 height={48}
                                 className="object-contain"
                             />
-                        </button>
+                        </button> */}
 
                         {/* Tombol Google G */}
                         <button
