@@ -1,51 +1,54 @@
 'use client';
 
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 const months = [
-    { id: 'januari', name: 'Januari' },
-    { id: 'februari', name: 'Februari' },
-    { id: 'maret', name: 'Maret' },
-    { id: 'april', name: 'April' },
-    { id: 'mei', name: 'Mei' },
-    { id: 'juni', name: 'Juni' },
-    { id: 'juli', name: 'Juli' },
-    { id: 'agustus', name: 'Agustus' },
-    { id: 'september', name: 'September' },
-    { id: 'oktober', name: 'Oktober' },
-    { id: 'november', name: 'November' },
-    { id: 'desember', name: 'Desember' },
+    { id: 'januari', name: 'Januari', number: 1 },
+    { id: 'februari', name: 'Februari', number: 2 },
+    { id: 'maret', name: 'Maret', number: 3 },
+    { id: 'april', name: 'April', number: 4 },
+    { id: 'mei', name: 'Mei', number: 5 },
+    { id: 'juni', name: 'Juni', number: 6 },
+    { id: 'juli', name: 'Juli', number: 7 },
+    { id: 'agustus', name: 'Agustus', number: 8 },
+    { id: 'september', name: 'September', number: 9 },
+    { id: 'oktober', name: 'Oktober', number: 10 },
+    { id: 'november', name: 'November', number: 11 },
+    { id: 'desember', name: 'Desember', number: 12 },
 ];
 
 export default function CardSection() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [status, setStatus] = useState<{ [key: string]: boolean }>({});
-    const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-    const [year, setYear] = useState(new Date().getFullYear());
+    const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
     // hitung jumlah hari di bulan
-    const getDaysInMonth = (month: number, year: number) => {
-        return new Date(year, month + 1, 0).getDate();
-    };
+    const getDaysInMonth = useCallback((month: number, year: number) => {
+        return new Date(year, month, 0).getDate();
+    }, []);
 
     useEffect(() => {
         const fetchStatus = async () => {
+            if (!session?.user?.id) return;
+
             try {
-                const userId = "123";
                 const newStatus: { [key: string]: boolean } = {};
 
-                // pakai entries supaya ada idx
-                for (const [idx, month] of months.entries()) {
+                for (const month of months) {
                     const res = await fetch(
-                        `/api/kuesioner?questionnaireId=${month.name}&userId=${userId}&month=${idx + 1}&year=${year}`
+                        `/api/kuesioner?questionnaireId=${month.name}&userId=${session.user.id}&month=${month.number}&year=${currentYear}`
                     );
-                    const data = res.ok ? await res.json() : null;
-                    // ✅ cek status dari API, bukan sekadar cek ada data
-                    newStatus[month.id] = data?.status === true;
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        newStatus[month.id] = data?.status === true;
+                    } else {
+                        newStatus[month.id] = false;
+                    }
                 }
 
                 setStatus(newStatus);
@@ -55,8 +58,15 @@ export default function CardSection() {
         };
 
         fetchStatus();
-    }, [year]); // ✅ tambahkan year sebagai dependency
+    }, [session, currentYear]);
 
+    const isMonthActive = useCallback((monthNumber: number) => {
+        const now = new Date();
+        return (
+            monthNumber === now.getMonth() + 1 &&
+            currentYear === now.getFullYear()
+        );
+    }, [currentYear]);
 
     const handleViewForm = (id: string) => {
         router.push(`/peternak/kuesioner/lihatform?id=${id}`);
@@ -69,9 +79,9 @@ export default function CardSection() {
     return (
         <div className="w-full px-4 py-6">
             <div className="space-y-4">
-                {months.map((month, idx) => {
-                    const isActive = idx === currentMonth; // hanya bulan sekarang yg aktif
-                    const totalDays = getDaysInMonth(idx, year);
+                {months.map((month) => {
+                    const isActive = isMonthActive(month.number);
+                    const totalDays = getDaysInMonth(month.number, currentYear);
                     const statusNow = status[month.id] || false;
 
                     return (
@@ -95,7 +105,7 @@ export default function CardSection() {
                                     )}
                                     <p className="text-gray-600">
                                         <span className="font-medium">Tanggal:</span>{" "}
-                                        1 {month.name} {year} - {totalDays} {month.name} {year}
+                                        1 {month.name} {currentYear} - {totalDays} {month.name} {currentYear}
                                     </p>
                                 </div>
                             </div>
@@ -105,8 +115,8 @@ export default function CardSection() {
                                     onClick={() => handleViewForm(month.id)}
                                     disabled={!isActive}
                                     className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-[Judson] font-semibold shadow-md transition-colors duration-300 ${isActive
-                                            ? "bg-[#60c67a] hover:bg-[#4fae65]"
-                                            : "bg-gray-400 cursor-not-allowed"
+                                        ? "bg-[#60c67a] hover:bg-[#4fae65]"
+                                        : "bg-gray-400 cursor-not-allowed"
                                         }`}
                                 >
                                     <Image src="/edit.svg" alt="edit" width={20} height={20} />
@@ -117,8 +127,8 @@ export default function CardSection() {
                                     onClick={() => handleFillForm(month.id)}
                                     disabled={!isActive}
                                     className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-[Judson] font-semibold shadow-md transition-colors duration-300 ${isActive
-                                            ? "bg-[#60c67a] hover:bg-[#4fae65]"
-                                            : "bg-gray-400 cursor-not-allowed"
+                                        ? "bg-[#60c67a] hover:bg-[#4fae65]"
+                                        : "bg-gray-400 cursor-not-allowed"
                                         }`}
                                 >
                                     <Image src="/edit.svg" alt="edit" width={20} height={20} />
