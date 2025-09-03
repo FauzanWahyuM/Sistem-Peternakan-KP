@@ -1,3 +1,4 @@
+// app/peternak/isiform/page.tsx
 "use client";
 
 import { useState } from 'react';
@@ -8,13 +9,16 @@ import { ChevronLeft } from 'lucide-react';
 import { questions } from '../pertanyaan/questions';
 import { Suspense } from 'react';
 import '../dashboard.css';
-import { useSession } from "next-auth/react"; // ⬅️ import
+import { useSession } from "next-auth/react";
+import { useKuesionerStatus } from '../../../hooks/useKuesionerStatus';
 
 function IsiFormContent() {
-    const { data: session, status } = useSession(); // ⬅️ ambil session
+    const { data: session, status } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
     const questionnaireId = searchParams.get('id') || '0';
+    const yearParam = searchParams.get('year');
+    const { updateStatus } = useKuesionerStatus();
 
     const [formData, setFormData] = useState<Record<string, string>>({});
 
@@ -35,7 +39,7 @@ function IsiFormContent() {
 
         const now = new Date();
         const month = now.getMonth() + 1;
-        const year = now.getFullYear();
+        const year = yearParam ? parseInt(yearParam) : now.getFullYear();
 
         try {
             const res = await fetch("/api/kuesioner", {
@@ -51,6 +55,8 @@ function IsiFormContent() {
             });
 
             if (res.ok) {
+                // OPTIMISTIC UPDATE: langsung update status tanpa delay
+                updateStatus(questionnaireId, true);
                 alert("Kuesioner berhasil disimpan!");
                 router.push('/peternak/kuesioner');
             } else {
@@ -61,7 +67,6 @@ function IsiFormContent() {
             alert("Terjadi error saat menyimpan jawaban");
         }
     };
-
 
     return (
         <div className="flex">

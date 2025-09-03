@@ -1,9 +1,10 @@
+// app/peternak/components/CardSection.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useKuesionerStatus } from '../../../hooks/useKuesionerStatus';
 
 const months = [
     { id: 'januari', name: 'Januari', number: 1 },
@@ -22,58 +23,28 @@ const months = [
 
 export default function CardSection() {
     const router = useRouter();
-    const { data: session } = useSession();
-    const [status, setStatus] = useState<{ [key: string]: boolean }>({});
-    const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+    const { status, updateStatus } = useKuesionerStatus();
+    const currentYear = new Date().getFullYear();
 
     // hitung jumlah hari di bulan
-    const getDaysInMonth = useCallback((month: number, year: number) => {
+    const getDaysInMonth = (month: number, year: number) => {
         return new Date(year, month, 0).getDate();
-    }, []);
+    };
 
-    useEffect(() => {
-        const fetchStatus = async () => {
-            if (!session?.user?.id) return;
-
-            try {
-                const newStatus: { [key: string]: boolean } = {};
-
-                for (const month of months) {
-                    const res = await fetch(
-                        `/api/kuesioner?questionnaireId=${month.name}&userId=${session.user.id}&month=${month.number}&year=${currentYear}`
-                    );
-
-                    if (res.ok) {
-                        const data = await res.json();
-                        newStatus[month.id] = data?.status === true;
-                    } else {
-                        newStatus[month.id] = false;
-                    }
-                }
-
-                setStatus(newStatus);
-            } catch (err) {
-                console.error("Gagal ambil status kuesioner:", err);
-            }
-        };
-
-        fetchStatus();
-    }, [session, currentYear]);
-
-    const isMonthActive = useCallback((monthNumber: number) => {
+    const isMonthActive = (monthNumber: number) => {
         const now = new Date();
         return (
             monthNumber === now.getMonth() + 1 &&
             currentYear === now.getFullYear()
         );
-    }, [currentYear]);
+    };
 
     const handleViewForm = (id: string) => {
         router.push(`/peternak/kuesioner/lihatform?id=${id}`);
     };
 
     const handleFillForm = (id: string) => {
-        router.push(`/peternak/kuesioner/isiform?id=${id}`);
+        router.push(`/peternak/kuesioner/isiform?id=${id}&year=${currentYear}`);
     };
 
     return (
