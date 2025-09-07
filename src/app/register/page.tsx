@@ -16,17 +16,59 @@ export default function RegisterPage() {
     });
     const [message, setMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [passwordError, setPasswordError] = useState('');
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({
             ...form,
             [e.target.name]: e.target.value,
         });
+
+        if (e.target.name === 'password') {
+            validatePassword(e.target.value);
+        }
+    };
+
+    const validatePassword = (password: string): boolean => {
+        const minLength = 8;
+        const hasUppercase = /[A-Z]/.test(password);
+        const hasLowercase = /[a-z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        const hasSymbol = /[^A-Za-z0-9]/.test(password);
+
+        if (password.length < minLength) {
+            setPasswordError('Password minimal 8 karakter.');
+            return false;
+        }
+        if (!hasUppercase) {
+            setPasswordError('Password harus mengandung huruf besar.');
+            return false;
+        }
+        if (!hasLowercase) {
+            setPasswordError('Password harus mengandung huruf kecil.');
+            return false;
+        }
+        if (!hasNumber) {
+            setPasswordError('Password harus mengandung angka.');
+            return false;
+        }
+        if (!hasSymbol) {
+            setPasswordError('Password harus mengandung simbol.');
+            return false;
+        }
+
+        setPasswordError('');
+        return true;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage('');
+
+        // Validasi password sebelum submit
+        if (!validatePassword(form.password)) {
+            return;
+        }
 
         try {
             const res = await fetch('/api/register', {
@@ -120,6 +162,9 @@ export default function RegisterPage() {
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
+                        {passwordError && (
+                            <p className="text-red-600 text-sm mt-1">{passwordError}</p>
+                        )}
                     </div>
                     <div>
                         <label className="text-sm text-gray-700 block mb-1">Kelompok Peternak</label>
