@@ -1,4 +1,4 @@
-// app/api/evaluasi/[kelompok]/[userId]/route.ts
+// app/api/evaluasi/[id]/route.ts
 import { NextResponse } from 'next/server';
 import dbConnect from '../../../../lib/dbConnect';
 import Evaluation from '../../../../models/Evaluasi';
@@ -12,7 +12,7 @@ export async function GET(
 
         const { id } = params;
 
-        // Ambil detail evaluasi untuk user tertentu
+        // Ambil detail evaluasi berdasarkan ID
         const evaluation = await Evaluation.findById(id).exec();
 
         if (!evaluation) {
