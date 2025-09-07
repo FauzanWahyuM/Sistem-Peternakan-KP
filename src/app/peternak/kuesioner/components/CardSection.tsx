@@ -40,8 +40,8 @@ export default function CardSection() {
             const submittedMonth = urlParams.get('submitted');
 
             if (submittedMonth) {
-                // Simulate API call delay for form submission
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Simulate API call delay for form submission - 10 DETIK
+                await new Promise(resolve => setTimeout(resolve, 10000));
 
                 // Update the status for the submitted month
                 updateStatus(submittedMonth, true);
@@ -50,8 +50,8 @@ export default function CardSection() {
                 const newUrl = window.location.pathname;
                 window.history.replaceState({}, '', newUrl);
             } else {
-                // Simulate initial data loading
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Simulate initial data loading - 10 DETIK
+                await new Promise(resolve => setTimeout(resolve, 10000));
             }
 
             setLoading(false);
