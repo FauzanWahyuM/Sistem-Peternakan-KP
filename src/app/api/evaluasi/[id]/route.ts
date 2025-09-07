@@ -3,24 +3,17 @@ import { NextResponse } from 'next/server';
 import dbConnect from '../../../../lib/dbConnect';
 import Evaluation from '../../../../models/Evaluasi';
 
-interface Params {
-    params: {
-        kelompok: string;
-        userId: string;
-    };
-}
-
-export async function GET(request: Request, { params }: Params) {
+export async function GET(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
     try {
         await dbConnect();
 
-        const { kelompok, userId } = params;
+        const { id } = params;
 
         // Ambil detail evaluasi untuk user tertentu
-        const evaluation = await Evaluation.findOne({
-            kelompok: kelompok,
-            userId: userId
-        }).exec();
+        const evaluation = await Evaluation.findById(id).exec();
 
         if (!evaluation) {
             return NextResponse.json(
@@ -30,6 +23,7 @@ export async function GET(request: Request, { params }: Params) {
         }
 
         return NextResponse.json({
+            _id: evaluation._id,
             nama: evaluation.nama,
             kelompok: evaluation.kelompok,
             nilai: evaluation.nilai,
@@ -37,7 +31,7 @@ export async function GET(request: Request, { params }: Params) {
             jawabanBenar: evaluation.jawabanBenar,
             persentase: Math.round((evaluation.nilai / evaluation.totalSoal) * 100),
             createdAt: evaluation.createdAt,
-            detailJawaban: [] // Anda bisa menambahkan field detail jawaban jika ada
+            updatedAt: evaluation.updatedAt
         });
     } catch (error) {
         console.error('Error fetching evaluation detail:', error);
