@@ -1,7 +1,7 @@
 // app/peternak/components/CardSection.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useKuesionerStatus } from '../../../hooks/useKuesionerStatus';
@@ -24,7 +24,52 @@ const months = [
 export default function CardSection() {
     const router = useRouter();
     const { status, updateStatus } = useKuesionerStatus();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
     const currentYear = new Date().getFullYear();
+
+    // Load data function dengan useCallback
+    const loadData = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Check if we're returning from a form submission
+            const urlParams = new URLSearchParams(window.location.search);
+            const submittedMonth = urlParams.get('submitted');
+
+            if (submittedMonth) {
+                // Simulate API call delay for form submission
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Update the status for the submitted month
+                updateStatus(submittedMonth, true);
+
+                // Clean up URL parameter
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            } else {
+                // Simulate initial data loading
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            setLoading(false);
+
+        } catch (err: any) {
+            console.error("Error loading data:", err);
+            setError(err.message || "Gagal memuat data kuesioner");
+            setLoading(false);
+        }
+    }, [updateStatus]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData, retryCount]);
+
+    const handleRetry = () => {
+        setRetryCount(prev => prev + 1);
+    };
 
     // hitung jumlah hari di bulan
     const getDaysInMonth = (month: number, year: number) => {
@@ -46,6 +91,46 @@ export default function CardSection() {
     const handleFillForm = (id: string) => {
         router.push(`/peternak/kuesioner/isiform?id=${id}&year=${currentYear}`);
     };
+
+    if (loading) {
+        return (
+            <div className="w-full px-4 py-6">
+                <div className="flex justify-center items-center h-64">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                        <p className="mt-4 text-gray-600">Memproses data...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="w-full px-4 py-6">
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <span className="text-red-400 text-xl">⚠️</span>
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm text-red-700">
+                                {error}
+                            </p>
+                            <div className="mt-2">
+                                <button
+                                    onClick={handleRetry}
+                                    className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm font-medium"
+                                >
+                                    Coba Lagi
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full px-4 py-6">
