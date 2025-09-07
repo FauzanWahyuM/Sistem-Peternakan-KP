@@ -8,6 +8,8 @@ export interface IUser extends Document {
     kelompok: string;
     role: string;
     status: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 // Definisikan Schema
@@ -33,7 +35,6 @@ const UserSchema = new Schema<IUser>(
     },
     { timestamps: true }
 );
-
 
 // Model dengan typing yang benar
 const User: Model<IUser> =

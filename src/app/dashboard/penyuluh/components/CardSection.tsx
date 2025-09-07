@@ -1,8 +1,14 @@
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { usePelatihanStorage } from '../hooks/usePelatihanStorage';
+import { useState, useEffect } from 'react';
 
 export default function CardSection() {
     const { statistics } = usePelatihanStorage();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     // Data untuk grafik evaluasi (dummy data - bisa diganti dengan data real)
     const evaluationData = [
@@ -32,8 +38,18 @@ export default function CardSection() {
                 {/* Pelatihan Card - Updated dengan data dari localStorage */}
                 <div className="bg-green-500 text-white p-6 rounded-lg shadow">
                     <h3 className="text-lg font-semibold mb-2">Total Pelatihan</h3>
-                    <p className="text-3xl font-bold">{statistics.total}</p>
-                    <p className="text-sm opacity-90">Bulan ini: {statistics.thisMonth}</p>
+                    {!isClient ? (
+                        // Skeleton loading untuk server render
+                        <>
+                            <div className="h-8 bg-green-400 rounded mb-1 animate-pulse"></div>
+                            <div className="h-4 bg-green-400 rounded w-1/2 animate-pulse"></div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-3xl font-bold">{statistics.total}</p>
+                            <p className="text-sm opacity-90">Bulan ini: {statistics.thisMonth}</p>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -75,33 +91,58 @@ export default function CardSection() {
 // Komponen terpisah untuk menampilkan pelatihan terbaru
 function PelatihanTerbaru() {
     const { pelatihan } = usePelatihanStorage();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     // Ambil 2 pelatihan terbaru berdasarkan tanggal
-    const pelatihanTerbaru = pelatihan
-        .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
-        .slice(0, 2);
+    const pelatihanTerbaru = isClient
+        ? [...pelatihan].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()).slice(0, 2)
+        : [];
 
     return (
         <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-xl font-bold mb-4 text-gray-800">Pelatihan Terbaru</h3>
             <div className="space-y-4">
-                {pelatihanTerbaru.length === 0 ? (
+                {!isClient ? (
+                    // Skeleton loading selama belum mounted
+                    <>
+                        <div className="bg-green-500 text-white p-4 rounded-lg animate-pulse">
+                            <div className="h-6 bg-green-400 rounded mb-2"></div>
+                            <div className="h-4 bg-green-400 rounded mb-3"></div>
+                            <div className="flex justify-between items-center">
+                                <div className="h-3 bg-green-400 rounded w-1/4"></div>
+                                <div className="h-8 bg-white rounded-full w-1/3"></div>
+                            </div>
+                        </div>
+                        <div className="bg-green-500 text-white p-4 rounded-lg animate-pulse">
+                            <div className="h-6 bg-green-400 rounded mb-2"></div>
+                            <div className="h-4 bg-green-400 rounded mb-3"></div>
+                            <div className="flex justify-between items-center">
+                                <div className="h-3 bg-green-400 rounded w-1/4"></div>
+                                <div className="h-8 bg-white rounded-full w-1/3"></div>
+                            </div>
+                        </div>
+                    </>
+                ) : pelatihanTerbaru.length === 0 ? (
                     <div className="text-center text-gray-500 py-8">
                         Belum ada pelatihan
                     </div>
                 ) : (
-                    pelatihanTerbaru.map((pelatihan, index) => (
-                        <div key={pelatihan.id} className="bg-green-500 text-white p-4 rounded-lg">
-                            <h4 className="text-lg font-semibold mb-2">{pelatihan.judul}</h4>
+                    pelatihanTerbaru.map((pelatihanItem) => (
+                        <div key={pelatihanItem.id} className="bg-green-500 text-white p-4 rounded-lg">
+                            <h4 className="text-lg font-semibold mb-2">{pelatihanItem.judul}</h4>
                             <p className="text-sm mb-3 opacity-90">
-                                {pelatihan.deskripsi.length > 100
-                                    ? `${pelatihan.deskripsi.substring(0, 100)}...`
-                                    : pelatihan.deskripsi
+                                {pelatihanItem.deskripsi.length > 100
+                                    ? `${pelatihanItem.deskripsi.substring(0, 100)}...`
+                                    : pelatihanItem.deskripsi
                                 }
                             </p>
                             <div className="flex justify-between items-center">
                                 <span className="text-xs opacity-75">
-                                    {new Date(pelatihan.tanggal).toLocaleDateString('id-ID')}
+                                    {new Date(pelatihanItem.tanggal).toLocaleDateString('id-ID')}
                                 </span>
                                 <button className="bg-white text-green-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors">
                                     Selengkapnya
