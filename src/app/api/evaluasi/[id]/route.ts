@@ -3,17 +3,16 @@ import { NextResponse } from 'next/server';
 import dbConnect from '../../../../lib/dbConnect';
 import Evaluation from '../../../../models/Evaluasi';
 
-interface Context {
-    params: {
-        id: string;
-    };
-}
-
-export async function GET(request: Request, context: Context) {
+export async function GET(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         await dbConnect();
 
-        const { id } = context.params;
+        // Tunggu params menjadi resolved
+        const resolvedParams = await params;
+        const { id } = resolvedParams;
 
         // Ambil detail evaluasi berdasarkan ID
         const evaluation = await Evaluation.findById(id).exec();
