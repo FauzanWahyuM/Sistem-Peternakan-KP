@@ -4,14 +4,13 @@ import User, { IUser } from '../../../../models/User';
 
 export async function GET(
     _request: NextRequest,
-    { params }: { params: { id: string } }
+    context: any   // ✅ biarkan fleksibel
 ) {
     try {
         await dbConnect();
 
-        const { id } = params;
+        const { id } = context.params; // ✅ akses params dari context
 
-        // Ambil semua user yang memiliki kelompok yang sesuai
         const users: IUser[] = await User.find({ kelompok: id })
             .select('nama username email role status createdAt')
             .sort({ createdAt: 1 })
@@ -24,9 +23,8 @@ export async function GET(
             );
         }
 
-        // Format data untuk response
         const responseData = {
-            id: id,
+            id,
             nama: `Kelompok ${id}`,
             anggota: users.map((user: IUser) => ({
                 nama: user.nama,
