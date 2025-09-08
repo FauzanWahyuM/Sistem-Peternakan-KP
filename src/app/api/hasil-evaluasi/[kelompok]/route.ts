@@ -4,9 +4,15 @@ import connectDB from "../../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../../models/Kuesioner";
 import User from "../../../../models/User";
 
+
+// Interface untuk params
+interface RouteParams {
+    params: { kelompok: string };
+}
+
 export async function GET(
-    req: NextRequest,
-    { params }: { params: { kelompok: string } }
+    _req: NextRequest,
+    { params }: RouteParams
 ) {
     await connectDB();
 
