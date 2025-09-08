@@ -4,20 +4,14 @@ import connectDB from "../../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../../models/Kuesioner";
 import User from "../../../../models/User";
 
-
-// Interface untuk params
-interface RouteParams {
-    params: { kelompok: string };
-}
-
 export async function GET(
     _req: NextRequest,
-    { params }: RouteParams
+    { params }: { params: Promise<{ kelompok: string }> }
 ) {
     await connectDB();
 
     try {
-        const { kelompok } = params;
+        const { kelompok } = await params;
 
         // Decode URL parameter
         const decodedKelompok = decodeURIComponent(kelompok);
