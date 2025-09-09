@@ -71,10 +71,11 @@ export async function GET(
 
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         await connectDB();
+        const params = await context.params;
         const { id } = params;
         const body = await req.json();
 
