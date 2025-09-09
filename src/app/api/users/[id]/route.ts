@@ -5,13 +5,14 @@ import User from "../../../../models/User";
 import mongoose from "mongoose";
 
 export async function GET(
-    req: NextRequest,
-    { params }: { params: { id: string } }
+    _req: NextRequest,
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         await connectDB();
+        const params = await context.params;
         const { id } = params;
-
+        
         console.log('🔍 Mencari user dengan ID:', id);
 
         // Validasi ID
