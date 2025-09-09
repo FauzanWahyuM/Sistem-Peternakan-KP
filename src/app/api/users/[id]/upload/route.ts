@@ -7,10 +7,11 @@ import path from "path";
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         await connectDB();
+        const params = await context.params;
         const { id } = params;
 
         // Validasi ID
