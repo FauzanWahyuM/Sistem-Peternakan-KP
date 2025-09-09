@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, ChangeEvent, FormEvent } from 'react';
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ApiClient } from '../../../../lib/api-client';
 
@@ -29,6 +29,8 @@ const TambahUser: React.FC = () => {
     });
     const [passwordError, setPasswordError] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [showModal, setShowModal] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -83,6 +85,8 @@ const TambahUser: React.FC = () => {
         e.preventDefault();
 
         if (!validatePassword(formData.password)) {
+            setModalMessage('Password tidak memenuhi kriteria keamanan. Silakan periksa kembali.');
+            setShowModal(true);
             return;
         }
 
@@ -101,16 +105,26 @@ const TambahUser: React.FC = () => {
             const res = await ApiClient.createUser(userData);
 
             if (res.error) {
-                alert(res.error || 'Terjadi kesalahan saat menyimpan data.');
+                setModalMessage(res.error || 'Terjadi kesalahan saat menyimpan data.');
+                setShowModal(true);
             } else {
-                alert('User berhasil ditambahkan!');
-                router.push('/admin/user');
+                setModalMessage('User berhasil ditambahkan!');
+                setShowModal(true);
             }
         } catch (error: any) {
             console.error('Gagal menyimpan ke database:', error);
-            alert('Terjadi kesalahan saat menyimpan data.');
+            setModalMessage('Terjadi kesalahan saat menyimpan data.');
+            setShowModal(true);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        // Jika pesan sukses, redirect ke halaman user
+        if (modalMessage === 'User berhasil ditambahkan!') {
+            router.push('/admin/user');
         }
     };
 
@@ -258,6 +272,32 @@ const TambahUser: React.FC = () => {
                     </div>
                 </form>
             </div>
+
+            {/* Modal untuk notifikasi */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800">Notifikasi</h3>
+                            <button
+                                onClick={closeModal}
+                                className="text-gray-800 hover:text-gray-700"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <p className="mb-4 text-gray-800">{modalMessage}</p>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={closeModal}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-semibold"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

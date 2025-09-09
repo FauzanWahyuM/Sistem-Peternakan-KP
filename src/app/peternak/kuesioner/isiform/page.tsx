@@ -21,6 +21,8 @@ function IsiFormContent() {
     const { updateStatus } = useKuesionerStatus();
 
     const [formData, setFormData] = useState<Record<string, string>>({});
+    const [showModal, setShowModal] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
 
     const handleChange = (id: string, value: string) => {
         setFormData(prev => ({ ...prev, [id]: value }));
@@ -29,11 +31,13 @@ function IsiFormContent() {
     const handleSubmit = async () => {
         if (status === "loading") return;
         if (!session?.user?.id) {
-            alert("Anda harus login untuk mengisi kuesioner");
+            setModalMessage("Anda harus login untuk mengisi kuesioner");
+            setShowModal(true);
             return;
         }
         if (Object.keys(formData).length < questions.length) {
-            alert("Mohon isi semua pertanyaan!");
+            setModalMessage("Mohon isi semua pertanyaan!");
+            setShowModal(true);
             return;
         }
 
@@ -57,14 +61,24 @@ function IsiFormContent() {
             if (res.ok) {
                 // OPTIMISTIC UPDATE: langsung update status tanpa delay
                 updateStatus(questionnaireId, true);
-                alert("Kuesioner berhasil disimpan!");
-                router.push('/peternak/kuesioner');
+                setModalMessage("Kuesioner berhasil disimpan!");
+                setShowModal(true);
             } else {
-                alert("Gagal menyimpan jawaban");
+                setModalMessage("Gagal menyimpan jawaban");
+                setShowModal(true);
             }
         } catch (err) {
             console.error(err);
-            alert("Terjadi error saat menyimpan jawaban");
+            setModalMessage("Terjadi error saat menyimpan jawaban");
+            setShowModal(true);
+        }
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        // Jika pesan sukses, redirect ke halaman kuesioner
+        if (modalMessage === "Kuesioner berhasil disimpan!") {
+            router.push('/peternak/kuesioner');
         }
     };
 
@@ -120,6 +134,23 @@ function IsiFormContent() {
                         Kirim
                     </button>
                 </div>
+
+                {/* Modal untuk notifikasi */}
+                {showModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                            <div className="text-center">
+                                <h3 className="text-lg font-semibold mb-4 text-gray-800">{modalMessage}</h3>
+                                <button
+                                    onClick={closeModal}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md font-semibold"
+                                >
+                                    OK
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

@@ -8,6 +8,7 @@ export interface IUser extends Document {
     kelompok: string;
     role: string;
     status: string;
+    profileImage?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -32,6 +33,7 @@ const UserSchema = new Schema<IUser>(
             default: "Aktif",
             required: true,
         },
+        profileImage: { type: String },
     },
     { timestamps: true }
 );

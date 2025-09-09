@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, ChangeEvent, FormEvent, useCallback } from 'react';
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ApiClient } from '../../../../lib/api-client';
 
@@ -31,6 +31,8 @@ const EditUser: React.FC = () => {
         status: '',
     });
     const [loading, setLoading] = useState<boolean>(true);
+    const [showModal, setShowModal] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
 
     // ✅ useCallback agar fetchUser tidak berubah tiap render
     const fetchUser = useCallback(async () => {
@@ -59,13 +61,19 @@ const EditUser: React.FC = () => {
                     status: user.status || '',
                 });
             } else {
-                alert('User tidak ditemukan');
-                router.push('/admin/user');
+                setModalMessage('User tidak ditemukan');
+                setShowModal(true);
+                setTimeout(() => {
+                    router.push('/admin/user');
+                }, 2000);
             }
         } catch (error) {
             console.error('Gagal mengambil data pengguna:', error);
-            alert('Terjadi kesalahan saat mengambil data pengguna.');
-            router.push('/admin/user');
+            setModalMessage('Terjadi kesalahan saat mengambil data pengguna.');
+            setShowModal(true);
+            setTimeout(() => {
+                router.push('/admin/user');
+            }, 2000);
         } finally {
             setLoading(false);
         }
@@ -97,13 +105,22 @@ const EditUser: React.FC = () => {
             if (!userData.password) {
                 delete userData.password;
             }
-            
+
             await ApiClient.updateUser(userId, userData);
-            alert('User berhasil diperbarui!');
-            router.push('/admin/user');
+            setModalMessage('User berhasil diperbarui!');
+            setShowModal(true);
         } catch (error) {
             console.error('Gagal menyimpan ke database:', error);
-            alert('Terjadi kesalahan saat menyimpan data.');
+            setModalMessage('Terjadi kesalahan saat menyimpan data.');
+            setShowModal(true);
+        }
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        // Jika pesan sukses, redirect ke halaman user
+        if (modalMessage === 'User berhasil diperbarui!') {
+            router.push('/admin/user');
         }
     };
 
@@ -250,6 +267,32 @@ const EditUser: React.FC = () => {
                     </div>
                 </form>
             </div>
+
+            {/* Modal untuk notifikasi */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800">Notifikasi</h3>
+                            <button
+                                onClick={closeModal}
+                                className="text-gray-800 hover:text-gray-700"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <p className="mb-4 text-gray-800">{modalMessage}</p>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={closeModal}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-semibold"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

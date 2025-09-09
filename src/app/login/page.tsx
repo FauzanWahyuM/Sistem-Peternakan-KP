@@ -35,7 +35,14 @@ export default function LoginPage() {
             }
 
             // Ambil session terbaru
+            // Di tempat setelah login berhasil
             const session = await getSession();
+            if (session?.user) {
+                // Simpan userId dan userData
+                const userId = (session.user as any)._id; // atau ambil dari response login
+                sessionStorage.setItem('userId', userId);
+                localStorage.setItem('userData', JSON.stringify(session.user));
+            }
             const role = (session?.user as any)?.role?.toLowerCase();
 
             // redirect ke dashboard sesuai role

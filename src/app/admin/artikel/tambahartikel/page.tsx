@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, ChangeEvent, FormEvent, useRef } from 'react';
-import { ArrowLeft, UploadCloud } from 'lucide-react';
+import { ArrowLeft, UploadCloud, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -13,6 +13,8 @@ const TambahArtikel: React.FC = () => {
     const [gambarFileName, setGambarFileName] = useState('');
     const [tanggal, setTanggal] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const handleGambarChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -23,14 +25,16 @@ const TambahArtikel: React.FC = () => {
             reader.onloadend = () => setGambar(reader.result as string);
             reader.readAsDataURL(file);
         } else {
-            alert('Ukuran gambar harus kurang dari 5MB!');
+            setModalMessage('Ukuran gambar harus kurang dari 5MB!');
+            setShowModal(true);
         }
     };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!judul || !deskripsi || !gambar || !tanggal) {
-            alert('Semua kolom harus diisi!');
+            setModalMessage('Semua kolom harus diisi!');
+            setShowModal(true);
             return;
         }
 
@@ -49,13 +53,22 @@ const TambahArtikel: React.FC = () => {
 
             if (!res.ok) throw new Error('Gagal menambahkan artikel');
 
-            alert('Artikel berhasil ditambahkan!');
-            router.push('/admin/artikel');
+            setModalMessage('Artikel berhasil ditambahkan!');
+            setShowModal(true);
         } catch (error) {
             console.error('Gagal menyimpan artikel:', error);
-            alert('Terjadi kesalahan saat menyimpan data.');
+            setModalMessage('Terjadi kesalahan saat menyimpan data.');
+            setShowModal(true);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        // Jika pesan sukses, redirect ke halaman artikel
+        if (modalMessage === 'Artikel berhasil ditambahkan!') {
+            router.push('/admin/artikel');
         }
     };
 
@@ -161,6 +174,32 @@ const TambahArtikel: React.FC = () => {
                     </div>
                 </form>
             </div>
+
+            {/* Modal untuk notifikasi */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800">Notifikasi</h3>
+                            <button
+                                onClick={closeModal}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <p className="mb-4 text-gray-800">{modalMessage}</p>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={closeModal}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-semibold"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

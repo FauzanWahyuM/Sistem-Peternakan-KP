@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react';
-import { ArrowLeft, UploadCloud } from 'lucide-react';
+import { ArrowLeft, UploadCloud, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
@@ -26,6 +26,7 @@ const EditArtikel: React.FC = () => {
     });
     const [loading, setLoading] = useState(true);
     const [gambarFileName, setGambarFileName] = useState('');
+    const [showNotification, setShowNotification] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Ambil data artikel dari API
@@ -84,8 +85,11 @@ const EditArtikel: React.FC = () => {
             });
 
             if (res.ok) {
-                alert('Artikel berhasil diperbarui!');
-                router.push('/admin/artikel');
+                setShowNotification(true);
+                setTimeout(() => {
+                    setShowNotification(false);
+                    router.push('/admin/artikel');
+                }, 2000);
             } else {
                 alert('Gagal memperbarui artikel.');
             }
@@ -99,6 +103,24 @@ const EditArtikel: React.FC = () => {
 
     return (
         <div className="p-8 bg-gray-100 min-h-screen">
+            {/* Modal Notifikasi */}
+            {showNotification && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full mx-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800">Sukses</h3>
+                            <button
+                                onClick={() => setShowNotification(false)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <p className="text-gray-800">Artikel berhasil diperbarui</p>
+                    </div>
+                </div>
+            )}
+
             <button
                 onClick={() => router.back()}
                 className="mb-6 text-green-700 flex items-center gap-2"
