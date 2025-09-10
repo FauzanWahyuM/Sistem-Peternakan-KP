@@ -48,6 +48,9 @@ export const authOptions: NextAuthOptions = {
                     nama: user.nama,
                     email: user.email,
                     role: user.role,
+                    kelompok: user.kelompok, // Tambahkan ini
+                    status: user.status, // Tambahkan ini
+                    createdAt: user.createdAt, // Tambahkan ini
                 } as any;
             },
         }),
@@ -169,6 +172,9 @@ export const authOptions: NextAuthOptions = {
                 token.dbId = (user as any).id;
                 token.username = (user as any).username;
                 token.nama = (user as any).nama;
+                token.kelompok = (user as any).kelompok; // Tambahkan ini
+                token.status = (user as any).status; // Tambahkan ini
+                token.createdAt = (user as any).createdAt; // Tambahkan ini
             }
 
             // Untuk user Google, ambil data dari database
@@ -186,6 +192,9 @@ export const authOptions: NextAuthOptions = {
                         token.dbId = dbUser._id.toString();
                         token.username = dbUser.username;
                         token.nama = dbUser.nama;
+                        token.kelompok = dbUser.kelompok; // Tambahkan ini
+                        token.status = dbUser.status; // Tambahkan ini
+                        token.createdAt = dbUser.createdAt; // Tambahkan ini
                     }
                 } catch (error) {
                     console.error("Error fetching Google user data:", error);
@@ -209,6 +218,9 @@ export const authOptions: NextAuthOptions = {
                         token.dbId = dbUser._id.toString();
                         token.username = dbUser.username;
                         token.nama = dbUser.nama;
+                        token.kelompok = dbUser.kelompok; // Tambahkan ini
+                        token.status = dbUser.status; // Tambahkan ini
+                        token.createdAt = dbUser.createdAt; // Tambahkan ini
                     }
                 } catch (error) {
                     console.error("Error fetching Facebook user data:", error);
@@ -224,6 +236,9 @@ export const authOptions: NextAuthOptions = {
                 (session.user as any).id = token.dbId || token.sub;
                 (session.user as any).username = token.username;
                 (session.user as any).nama = token.nama;
+                (session.user as any).kelompok = token.kelompok; // Tambahkan ini
+                (session.user as any).status = token.status; // Tambahkan ini
+                (session.user as any).createdAt = token.createdAt; // Tambahkan ini
 
                 // Backup: Ambil dari database jika masih belum ada ID
                 if (!(session.user as any).id && session.user.email) {
@@ -235,6 +250,9 @@ export const authOptions: NextAuthOptions = {
                             (session.user as any).id = dbUser._id.toString();
                             (session.user as any).username = dbUser.username;
                             (session.user as any).nama = dbUser.nama;
+                            (session.user as any).kelompok = dbUser.kelompok; // Tambahkan ini
+                            (session.user as any).status = dbUser.status; // Tambahkan ini
+                            (session.user as any).createdAt = dbUser.createdAt; // Tambahkan ini
                         }
                     } catch (error) {
                         console.error("Error fetching user data in session:", error);

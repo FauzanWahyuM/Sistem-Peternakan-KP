@@ -42,6 +42,7 @@ const ProfilePage: React.FC = () => {
     // app/profile/page.tsx - fetchUserData
     // app/profile/page.tsx - Perbaiki fetchUserData
     // app/profile/page.tsx - GANTI fetchUserData
+    // app/profile/page.tsx - Perbaiki fetchUserData
     const fetchUserData = useCallback(async () => {
         try {
             setDataLoading(true);
@@ -68,23 +69,34 @@ const ProfilePage: React.FC = () => {
 
             // 2. Jika tidak ada cached data, coba ambil dari API
             console.log('🌐 Fetching from API...');
-            const response = await fetch('/api/auth/me');
+            const response = await fetch('/api/auth/me', {
+                credentials: 'include' // Penting untuk mengirim cookie session
+            });
 
             if (response.ok) {
                 const data = await response.json();
                 console.log('✅ API response:', data);
-                setUserData(data.user);
-                setEditData({
-                    nama: data.user.nama || '',
-                    email: data.user.email || '',
-                    kelompok: data.user.kelompok || ''
-                });
-                if (data.user.profileImage) {
-                    setProfileImage(data.user.profileImage);
+
+                if (data.user) {
+                    setUserData(data.user);
+                    setEditData({
+                        nama: data.user.nama || '',
+                        email: data.user.email || '',
+                        kelompok: data.user.kelompok || ''
+                    });
+                    if (data.user.profileImage) {
+                        setProfileImage(data.user.profileImage);
+                    }
+                    localStorage.setItem('userData', JSON.stringify(data.user));
+                } else {
+                    console.error('❌ No user data in response');
+                    setModalMessage('Data pengguna tidak ditemukan dalam respons');
+                    setShowModal(true);
                 }
-                localStorage.setItem('userData', JSON.stringify(data.user));
             } else {
-                console.error('❌ API failed, show error');
+                console.error('❌ API failed, status:', response.status);
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error details:', errorData);
                 setModalMessage('Gagal memuat data profil. Silakan login kembali.');
                 setShowModal(true);
             }
@@ -114,7 +126,8 @@ const ProfilePage: React.FC = () => {
         try {
             console.log('Memperbarui data user:', editData);
 
-            const response = await fetch(`/api/user/${userId}`, {
+            // Ganti endpoint dari /api/user/${userId} menjadi /api/auth/profile
+            const response = await fetch(`/api/auth/profile`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -130,11 +143,22 @@ const ProfilePage: React.FC = () => {
                     sessionStorage.removeItem('token');
                     localStorage.removeItem('userId');
                     localStorage.removeItem('token');
+                    localStorage.removeItem('userData'); // Juga clear cache user data
                     setModalMessage('Sesi telah berakhir, silakan login kembali');
                     setShowModal(true);
                     return;
                 }
-                throw new Error(`Gagal memperbarui data: ${response.status}`);
+
+                // Coba dapatkan pesan error dari response
+                let errorMessage = `Gagal memperbarui data: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    // Jika response bukan JSON, gunakan status text
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -144,7 +168,10 @@ const ProfilePage: React.FC = () => {
                 throw new Error('Data user tidak ditemukan dalam response');
             }
 
+            // Update state dan cache
             setUserData(data.user);
+            localStorage.setItem('userData', JSON.stringify(data.user));
+
             setModalMessage('Profil berhasil diperbarui');
             setShowModal(true);
             setIsEditing(false);
@@ -187,7 +214,8 @@ const ProfilePage: React.FC = () => {
 
             console.log('Upload gambar profil untuk user:', userId);
 
-            const response = await fetch(`/api/user/${userId}/upload`, {
+            // Ganti endpoint upload juga
+            const response = await fetch(`/api/auth/profile/upload`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -202,11 +230,20 @@ const ProfilePage: React.FC = () => {
                     sessionStorage.removeItem('token');
                     localStorage.removeItem('userId');
                     localStorage.removeItem('token');
+                    localStorage.removeItem('userData');
                     setModalMessage('Sesi telah berakhir, silakan login kembali');
                     setShowModal(true);
                     return;
                 }
-                throw new Error(`Gagal upload gambar: ${response.status}`);
+
+                let errorMessage = `Gagal upload gambar: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -223,6 +260,7 @@ const ProfilePage: React.FC = () => {
             if (userData) {
                 const updatedUserData = { ...userData, profileImage: data.imageUrl };
                 setUserData(updatedUserData);
+                localStorage.setItem('userData', JSON.stringify(updatedUserData));
             }
 
             setModalMessage('Foto profil berhasil diubah');
@@ -293,16 +331,19 @@ const ProfilePage: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-4xl mx-auto px-4 py-8">
-                {/* Header */}
+                {/* Header minimalis */}
                 <div className="flex items-center mb-8">
                     <button
                         onClick={() => router.back()}
-                        className="flex items-center text-green-600 hover:text-green-800 transition-colors"
+                        className="group flex items-center gap-2 text-gray-600 hover:text-green-700 transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-green-50"
                     >
-                        <ArrowLeft size={20} className="mr-2" />
-                        Kembali
+                        <ArrowLeft size={20} className="transition-transform group-hover:-translate-x-1" />
+                        {/* <span className="font-medium">Kembali</span> */}
                     </button>
-                    <h1 className="text-2xl font-bold text-gray-800 ml-4">Profil Pengguna</h1>
+                    <div className="ml-6 border-l border-gray-200 pl-6">
+                        <h1 className="text-2xl font-bold text-gray-800">Profil Pengguna</h1>
+                        <p className="text-gray-500 text-sm mt-1">Kelola informasi akun Anda</p>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">

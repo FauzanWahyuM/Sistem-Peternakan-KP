@@ -19,13 +19,14 @@ export async function GET(req: NextRequest) {
         await connectDB();
 
         // Cari user berdasarkan email dari session
-        const user = await User.findOne({ email: session.user.email });
+        const user = await User.findOne({ email: session.user.email }).select('-password'); // Exclude password
 
         if (!user) {
             console.log('❌ User not found');
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
+        // Pastikan semua field yang diperlukan ada
         const userData = {
             _id: user._id.toString(),
             nama: user.nama || 'Tidak tersedia',
