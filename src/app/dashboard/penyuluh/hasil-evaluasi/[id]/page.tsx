@@ -405,14 +405,19 @@ export default function DetailHasilEvaluasiPage() {
                                             fill="transparent"
                                             strokeDasharray={2 * Math.PI * 40}
                                             strokeDashoffset={
-                                                2 * Math.PI * 40 * (1 - (kelompokData.jumlahResponden / kelompokData.jumlahAnggota))
+                                                kelompokData.jumlahAnggota > 0
+                                                    ? 2 * Math.PI * 40 * (1 - (kelompokData.jumlahResponden / kelompokData.jumlahAnggota))
+                                                    : 0
                                             }
                                             transform="rotate(-90 50 50)"
                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                                         <span className="text-2xl font-bold text-gray-900">
-                                            {Math.round((kelompokData.jumlahResponden / kelompokData.jumlahAnggota) * 100)}%
+                                            {kelompokData.jumlahAnggota > 0
+                                                ? Math.round((kelompokData.jumlahResponden / kelompokData.jumlahAnggota) * 100)
+                                                : 0
+                                            }%
                                         </span>
                                         <span className="text-xs text-gray-500">Telah Mengisi</span>
                                     </div>

@@ -249,7 +249,7 @@ export default function UnifiedSidebar({ userType }: SidebarProps) {
               alt="Foto Profil"
               width={38}
               height={38}
-              className="w-12 h-12 rounded-full object-cover border-2 border-white cursor-pointer"
+              className="w-10 h-10 rounded-full object-cover border-2 cursor-pointer"
               onClick={handleProfileClick}
               onError={() => setProfileImageError(true)}
               unoptimized

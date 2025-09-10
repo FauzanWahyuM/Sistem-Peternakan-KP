@@ -37,6 +37,24 @@ const ProfilePage: React.FC = () => {
 
     const loading = authLoading || dataLoading;
 
+    // Fungsi untuk mendapatkan URL gambar profil yang valid
+    const getProfileImageUrl = (profileImage?: string) => {
+        if (!profileImage) return '/Vector.svg';
+
+        // Jika sudah URL lengkap atau path default
+        if (profileImage.startsWith('http') || profileImage.startsWith('/')) {
+            return profileImage;
+        }
+
+        // Validasi bahwa profileImage adalah ObjectId yang valid
+        if (profileImage.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(profileImage)) {
+            return '/Vector.svg';
+        }
+
+        // Gunakan endpoint API untuk mengambil gambar dari GridFS
+        return `/api/auth/profile/image/${profileImage}`;
+    };
+
     const fetchUserData = useCallback(async () => {
         try {
             setDataLoading(true);
@@ -112,23 +130,6 @@ const ProfilePage: React.FC = () => {
             fetchUserData();
         }
     }, [authLoading, fetchUserData]);
-
-    const getProfileImageUrl = (profileImage?: string) => {
-        if (!profileImage) return '/Vector.svg';
-
-        // Jika sudah URL lengkap atau path default
-        if (profileImage.startsWith('http') || profileImage.startsWith('/')) {
-            return profileImage;
-        }
-
-        // Validasi bahwa profileImage adalah ObjectId yang valid
-        if (profileImage.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(profileImage)) {
-            return '/Vector.svg';
-        }
-
-        // Gunakan endpoint API untuk mengambil gambar dari GridFS dengan cache busting
-        return `/api/auth/profile/image/${profileImage}?t=${Date.now()}`;
-    };
 
     const handleSave = async () => {
         if (!userId || !token) {
@@ -282,15 +283,6 @@ const ProfilePage: React.FC = () => {
                 window.dispatchEvent(new Event('userDataUpdated'));
             }
 
-            // Clear browser cache untuk gambar
-            if (typeof window !== 'undefined' && 'caches' in window) {
-                caches.keys().then((names) => {
-                    names.forEach((name) => {
-                        caches.delete(name);
-                    });
-                });
-            }
-
             setModalMessage('Foto profil berhasil diubah');
             setShowModal(true);
         } catch (error: any) {
@@ -372,7 +364,7 @@ const ProfilePage: React.FC = () => {
                                     alt="Profile"
                                     width={128}
                                     height={128}
-                                    className="w-32 h-32 rounded-full border-4 border-white object-cover shadow-lg"
+                                    className="w-32 h-32 rounded-full object-cover shadow-lg"
                                     onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         if (target.src !== '/Vector.svg') {
@@ -383,7 +375,7 @@ const ProfilePage: React.FC = () => {
                                 />
                                 <label htmlFor="profile-upload" className="absolute bottom-2 right-2 bg-green-600 p-2 rounded-full cursor-pointer hover:bg-green-700 transition-colors">
                                     {uploadingImage ? (
-                                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                        <div className="animate-spin rounded-full h-4 w-4"></div>
                                     ) : (
                                         <Camera size={16} className="text-white" />
                                     )}

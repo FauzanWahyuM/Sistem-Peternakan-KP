@@ -4,14 +4,18 @@ import User, { IUser } from '../../../../models/User';
 
 export async function GET(
     _request: NextRequest,
-    context: any   // ✅ biarkan fleksibel
+    context: any
 ) {
     try {
         await dbConnect();
 
-        const { id } = context.params; // ✅ akses params dari context
+        const { id } = context.params;
 
-        const users: IUser[] = await User.find({ kelompok: id })
+        // Hanya ambil user dengan role peternak
+        const users: IUser[] = await User.find({
+            kelompok: id,
+            role: 'peternak'
+        })
             .select('nama username email role status createdAt')
             .sort({ createdAt: 1 })
             .exec();

@@ -7,8 +7,8 @@ export async function GET() {
     try {
         await dbConnect();
 
-        // Ambil semua user dari database
-        const users = await User.find({}).select('nama kelompok status');
+        // Ambil semua user dengan role peternak dari database
+        const users = await User.find({ role: 'peternak' }).select('nama kelompok status');
 
         // Kelompokkan data berdasarkan kelompok
         const kelompokMap = new Map();

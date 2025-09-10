@@ -37,12 +37,12 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        // Ambil user berdasarkan role yang diizinkan
+        // Ambil user dengan role peternak saja
         const allUsers = await User.find({ role: 'peternak' })
             .select('username nama _id kelompok')
             .lean();
 
-        console.log("Total users found:", allUsers.length);
+        console.log("Total peternak users found:", allUsers.length);
 
         // 2. Ambil responses yang sesuai filter
         const responses = await QuestionnaireResponse.find(query)
@@ -86,13 +86,13 @@ export async function GET(req: NextRequest) {
                 console.log(`User ${user.nama} has response with score: ${nilaiEvaluasi}`);
             }
 
-            // PERBAIKAN DI SINI: Prioritaskan nama, jika tidak ada baru pakai username
+            // Prioritaskan nama, jika tidak ada baru pakai username
             const userDisplayName = user.nama || user.username || `User ${userIdStr}`;
 
             const evaluationData = {
                 _id: userResponse?._id || userIdStr,
                 id: index + 1,
-                nama: userDisplayName, // <- Hanya menggunakan nama yang sudah diformat
+                nama: userDisplayName,
                 bulan: userResponse?.bulan || null,
                 tahun: userResponse?.tahun || null,
                 bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : '-',

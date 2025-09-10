@@ -5,12 +5,13 @@ import connectDB from "../../../../../../lib/dbConnect";
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { fileId: string } }
+    { params }: { params: Promise<{ fileId: string }> }
 ) {
     try {
         await connectDB();
 
-        const { fileId } = params;
+        const resolvedParams = await params;
+        const { fileId } = resolvedParams;
         console.log('Requested file ID:', fileId);
 
         // Validasi ObjectId
