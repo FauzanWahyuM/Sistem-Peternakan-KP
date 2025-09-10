@@ -19,7 +19,7 @@ interface KelompokEvaluasiDetail {
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { kelompok: string } }
+    { params }: { params: Promise<{ kelompok: string }> }
 ) {
     await connectDB();
     try {
@@ -28,13 +28,15 @@ export async function GET(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const resolvedParams = await params;
+        const kelompokId = resolvedParams.kelompok;
+
         // Cek role user
         const currentUser = await User.findById(session.user.id);
         if (!currentUser) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        const kelompokId = params.kelompok;
         const { searchParams } = new URL(req.url);
         const bulan = searchParams.get("bulan");
         const tahun = searchParams.get("tahun");
