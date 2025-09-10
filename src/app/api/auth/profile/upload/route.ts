@@ -4,17 +4,17 @@ import connectDB from "../../../../../lib/dbConnect";
 import User from "../../../../../models/User";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../../../lib/authOptions";
-import { writeFile } from "fs/promises";
-import path from "path";
+import { uploadFile, deleteFile } from "../../../../../lib/gridfs";
 
 export async function POST(request: NextRequest) {
     try {
+        // Connect database terlebih dahulu
+        await connectDB();
+
         const session = await getServerSession(authOptions);
         if (!session || !session.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        await connectDB();
 
         // Cari user by email dari session
         const user = await User.findOne({ email: session.user.email });
@@ -29,24 +29,42 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "No file provided" }, { status: 400 });
         }
 
-        // Convert file to buffer
+        // Validasi bahwa file adalah gambar
+        if (!file.type.startsWith('image/')) {
+            return NextResponse.json({ error: "File must be an image" }, { status: 400 });
+        }
+
+        // Validasi ukuran file (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            return NextResponse.json({ error: "File size must be less than 5MB" }, { status: 400 });
+        }
+
+        // Convert File to buffer
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Generate unique filename
-        const timestamp = Date.now();
-        const extension = path.extname(file.name);
-        const filename = `profile-${user._id}-${timestamp}${extension}`;
+        // Hapus file lama jika ada
+        if (user.profileImage) {
+            try {
+                await deleteFile(user.profileImage);
+            } catch (error) {
+                console.error("Error deleting old profile image:", error);
+                // Lanjutkan meskipun gagal menghapus file lama
+            }
+        }
 
-        // Save file to public/uploads directory
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-        const filepath = path.join(uploadDir, filename);
+        // Upload ke GridFS menggunakan interface yang sesuai
+        const fileId = await uploadFile({
+            originalname: file.name,
+            mimetype: file.type,
+            buffer: buffer,
+            size: buffer.length,
+            fieldname: 'profileImage',
+            encoding: '7bit'
+        });
 
-        // Simpan file (dalam development, untuk production sebaiknya gunakan cloud storage)
-        await writeFile(filepath, buffer);
-
-        // Update user profile image
-        user.profileImage = `/uploads/${filename}`;
+        // Update user profile image reference
+        user.profileImage = fileId;
         await user.save();
 
         const updatedUser = {
@@ -64,7 +82,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             user: updatedUser,
-            imageUrl: user.profileImage
+            imageUrl: `/api/auth/profile/image/${fileId}?t=${Date.now()}` // Tambahkan timestamp untuk cache busting
         });
 
     } catch (error: any) {

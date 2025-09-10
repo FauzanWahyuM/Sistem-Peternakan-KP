@@ -37,12 +37,6 @@ const ProfilePage: React.FC = () => {
 
     const loading = authLoading || dataLoading;
 
-    // ✅ useCallback agar fetchUserData tidak berubah tiap render
-    // app/profile/page.tsx - perbaiki fetchUserData
-    // app/profile/page.tsx - fetchUserData
-    // app/profile/page.tsx - Perbaiki fetchUserData
-    // app/profile/page.tsx - GANTI fetchUserData
-    // app/profile/page.tsx - Perbaiki fetchUserData
     const fetchUserData = useCallback(async () => {
         try {
             setDataLoading(true);
@@ -61,7 +55,7 @@ const ProfilePage: React.FC = () => {
                     kelompok: userData.kelompok || ''
                 });
                 if (userData.profileImage) {
-                    setProfileImage(userData.profileImage);
+                    setProfileImage(getProfileImageUrl(userData.profileImage));
                 }
                 setDataLoading(false);
                 return;
@@ -85,9 +79,12 @@ const ProfilePage: React.FC = () => {
                         kelompok: data.user.kelompok || ''
                     });
                     if (data.user.profileImage) {
-                        setProfileImage(data.user.profileImage);
+                        setProfileImage(getProfileImageUrl(data.user.profileImage));
                     }
                     localStorage.setItem('userData', JSON.stringify(data.user));
+
+                    // Dispatch event untuk memberi tahu komponen lain tentang pembaruan data
+                    window.dispatchEvent(new Event('userDataUpdated'));
                 } else {
                     console.error('❌ No user data in response');
                     setModalMessage('Data pengguna tidak ditemukan dalam respons');
@@ -116,6 +113,23 @@ const ProfilePage: React.FC = () => {
         }
     }, [authLoading, fetchUserData]);
 
+    const getProfileImageUrl = (profileImage?: string) => {
+        if (!profileImage) return '/Vector.svg';
+
+        // Jika sudah URL lengkap atau path default
+        if (profileImage.startsWith('http') || profileImage.startsWith('/')) {
+            return profileImage;
+        }
+
+        // Validasi bahwa profileImage adalah ObjectId yang valid
+        if (profileImage.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(profileImage)) {
+            return '/Vector.svg';
+        }
+
+        // Gunakan endpoint API untuk mengambil gambar dari GridFS dengan cache busting
+        return `/api/auth/profile/image/${profileImage}?t=${Date.now()}`;
+    };
+
     const handleSave = async () => {
         if (!userId || !token) {
             setModalMessage('Silakan login kembali');
@@ -126,7 +140,6 @@ const ProfilePage: React.FC = () => {
         try {
             console.log('Memperbarui data user:', editData);
 
-            // Ganti endpoint dari /api/user/${userId} menjadi /api/auth/profile
             const response = await fetch(`/api/auth/profile`, {
                 method: 'PUT',
                 headers: {
@@ -143,19 +156,17 @@ const ProfilePage: React.FC = () => {
                     sessionStorage.removeItem('token');
                     localStorage.removeItem('userId');
                     localStorage.removeItem('token');
-                    localStorage.removeItem('userData'); // Juga clear cache user data
+                    localStorage.removeItem('userData');
                     setModalMessage('Sesi telah berakhir, silakan login kembali');
                     setShowModal(true);
                     return;
                 }
 
-                // Coba dapatkan pesan error dari response
                 let errorMessage = `Gagal memperbarui data: ${response.status}`;
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || errorMessage;
                 } catch (e) {
-                    // Jika response bukan JSON, gunakan status text
                     errorMessage = response.statusText || errorMessage;
                 }
                 throw new Error(errorMessage);
@@ -171,6 +182,9 @@ const ProfilePage: React.FC = () => {
             // Update state dan cache
             setUserData(data.user);
             localStorage.setItem('userData', JSON.stringify(data.user));
+
+            // Dispatch event untuk memberi tahu komponen lain tentang pembaruan data
+            window.dispatchEvent(new Event('userDataUpdated'));
 
             setModalMessage('Profil berhasil diperbarui');
             setShowModal(true);
@@ -214,7 +228,6 @@ const ProfilePage: React.FC = () => {
 
             console.log('Upload gambar profil untuk user:', userId);
 
-            // Ganti endpoint upload juga
             const response = await fetch(`/api/auth/profile/upload`, {
                 method: 'POST',
                 headers: {
@@ -225,7 +238,6 @@ const ProfilePage: React.FC = () => {
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    // Token tidak valid, redirect ke login
                     sessionStorage.removeItem('userId');
                     sessionStorage.removeItem('token');
                     localStorage.removeItem('userId');
@@ -249,18 +261,34 @@ const ProfilePage: React.FC = () => {
             const data = await response.json();
             console.log('Response upload:', data);
 
-            if (!data.imageUrl) {
-                throw new Error('URL gambar tidak ditemukan dalam response');
+            if (!data.user || !data.user.profileImage) {
+                throw new Error('Data user tidak ditemukan dalam response');
             }
 
-            // Update gambar profil
-            setProfileImage(data.imageUrl);
+            // Update gambar profil dengan URL yang benar
+            const imageUrl = getProfileImageUrl(data.user.profileImage);
+            setProfileImage(imageUrl);
 
             // Update user data dengan gambar baru
             if (userData) {
-                const updatedUserData = { ...userData, profileImage: data.imageUrl };
+                const updatedUserData = {
+                    ...userData,
+                    profileImage: data.user.profileImage
+                };
                 setUserData(updatedUserData);
                 localStorage.setItem('userData', JSON.stringify(updatedUserData));
+
+                // Dispatch event untuk memberi tahu komponen lain tentang pembaruan data
+                window.dispatchEvent(new Event('userDataUpdated'));
+            }
+
+            // Clear browser cache untuk gambar
+            if (typeof window !== 'undefined' && 'caches' in window) {
+                caches.keys().then((names) => {
+                    names.forEach((name) => {
+                        caches.delete(name);
+                    });
+                });
             }
 
             setModalMessage('Foto profil berhasil diubah');
@@ -274,10 +302,8 @@ const ProfilePage: React.FC = () => {
         }
     };
 
-    // app/profile/page.tsx (tambahkan di useEffect)
     useEffect(() => {
         if (!authLoading && !userId) {
-            // Coba sync dengan NextAuth
             const syncAuthData = async () => {
                 try {
                     const response = await fetch('/api/auth/sync');
@@ -286,7 +312,6 @@ const ProfilePage: React.FC = () => {
                         if (data.userId) {
                             sessionStorage.setItem('userId', data.userId);
                             sessionStorage.setItem('token', 'next-auth-sync-token');
-                            // Reload component
                             window.location.reload();
                         }
                     }
@@ -320,14 +345,6 @@ const ProfilePage: React.FC = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-4xl mx-auto px-4 py-8">
@@ -338,7 +355,6 @@ const ProfilePage: React.FC = () => {
                         className="group flex items-center gap-2 text-gray-600 hover:text-green-700 transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-green-50"
                     >
                         <ArrowLeft size={20} className="transition-transform group-hover:-translate-x-1" />
-                        {/* <span className="font-medium">Kembali</span> */}
                     </button>
                     <div className="ml-6 border-l border-gray-200 pl-6">
                         <h1 className="text-2xl font-bold text-gray-800">Profil Pengguna</h1>
@@ -358,9 +374,12 @@ const ProfilePage: React.FC = () => {
                                     height={128}
                                     className="w-32 h-32 rounded-full border-4 border-white object-cover shadow-lg"
                                     onError={(e) => {
-                                        // Fallback jika gambar tidak ditemukan
-                                        e.currentTarget.src = '/Vector.svg';
+                                        const target = e.target as HTMLImageElement;
+                                        if (target.src !== '/Vector.svg') {
+                                            target.src = '/Vector.svg';
+                                        }
                                     }}
+                                    priority
                                 />
                                 <label htmlFor="profile-upload" className="absolute bottom-2 right-2 bg-green-600 p-2 rounded-full cursor-pointer hover:bg-green-700 transition-colors">
                                     {uploadingImage ? (
