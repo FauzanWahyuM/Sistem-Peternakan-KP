@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
-import { ChevronLeft, Edit, Trash2, AlertTriangle, X } from 'lucide-react';
+import { ChevronLeft, Edit, Trash2, AlertTriangle, X, Filter } from 'lucide-react';
 
 function LihatTernakContent() {
     const router = useRouter();
@@ -25,13 +25,22 @@ function LihatTernakContent() {
         jenisKelamin: '',
         statusTernak: '',
         umurTernak: '',
-        kondisiKesehatan: ''
+        kondisiKesehatan: '',
+        tipeTernak: 'semua' // Filter baru: semua, pribadi, kelompok
     });
+
+    // State untuk toggle filter dropdown
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     // Filter options
     const jenisHewanOptions = ['Sapi', 'Kambing', 'Domba', 'Ayam', 'Bebek'];
     const jenisKelaminOptions = ['Jantan', 'Betina'];
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
+    const tipeTernakOptions = [
+        { value: 'semua', label: 'Semua Tipe' },
+        { value: 'pribadi', label: 'Pribadi' },
+        { value: 'kelompok', label: 'Kelompok' }
+    ];
 
     // Load data
     useEffect(() => {
@@ -39,7 +48,11 @@ function LihatTernakContent() {
             try {
                 setLoading(true);
 
-                const response = await fetch('/api/ternak', { cache: "no-store" });
+                // TODO: ganti dengan userId dari login session
+                const userId = '1234567890';
+
+                // Ambil semua data ternak user (baik pribadi maupun kelompok)
+                const response = await fetch(`/api/ternak?userId=${userId}`, { cache: "no-store" });
                 if (!response.ok) {
                     throw new Error('Failed to fetch data');
                 }
@@ -59,6 +72,20 @@ function LihatTernakContent() {
 
         loadData();
     }, []);
+
+    // Di ternak/lihat/page.tsx - tambahkan useEffect untuk membaca parameter URL
+    useEffect(() => {
+        const jenis = searchParams?.get('jenis') || '';
+        const tipe = searchParams?.get('tipe') || '';
+
+        if (jenis || tipe) {
+            setFilters(prev => ({
+                ...prev,
+                jenisHewan: jenis,
+                tipeTernak: tipe === 'pribadi' ? 'pribadi' : tipe === 'kelompok' ? 'kelompok' : 'semua'
+            }));
+        }
+    }, [searchParams]);
 
     // Apply filters
     useEffect(() => {
@@ -80,6 +107,10 @@ function LihatTernakContent() {
         }
         if (filters.kondisiKesehatan) {
             filtered = filtered.filter(item => item.kondisiKesehatan === filters.kondisiKesehatan);
+        }
+        // Filter berdasarkan tipe ternak
+        if (filters.tipeTernak !== 'semua') {
+            filtered = filtered.filter(item => item.tipe === filters.tipeTernak);
         }
 
         setFilteredData(filtered);
@@ -157,7 +188,8 @@ function LihatTernakContent() {
             jenisKelamin: '',
             statusTernak: '',
             umurTernak: '',
-            kondisiKesehatan: ''
+            kondisiKesehatan: '',
+            tipeTernak: 'semua'
         });
     };
 
@@ -181,7 +213,7 @@ function LihatTernakContent() {
                 <div className="max-w-6xl mx-auto">
                     {/* Header */}
                     <div className="flex items-center mb-8">
-                        <button 
+                        <button
                             onClick={handleBack}
                             className="mr-4 p-2 rounded-full bg-green-500 text-white hover:bg-green-600"
                         >
@@ -190,139 +222,180 @@ function LihatTernakContent() {
                         <h1 className="text-3xl font-bold font-[Judson] text-center flex-1">Data Ternak</h1>
                     </div>
 
+                    {/* Search and Filter Section */}
+                    <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
+                        <div className="flex flex-col md:flex-row gap-4">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    value={filters.umurTernak}
+                                    onChange={(e) => handleFilterChange('umurTernak', e.target.value)}
+                                    placeholder="Cari berdasarkan umur..."
+                                    className="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson]"
+                                />
+                            </div>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 font-[Judson]"
+                                >
+                                    <Filter size={20} />
+                                    Filter
+                                </button>
+
+                                {isFilterOpen && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                                        <div className="p-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2 font-[Judson]">Tipe Ternak</label>
+                                            <select
+                                                value={filters.tipeTernak}
+                                                onChange={(e) => handleFilterChange('tipeTernak', e.target.value)}
+                                                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson]"
+                                            >
+                                                {tipeTernakOptions.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Filters */}
                     <div className="flex justify-center">
                         <div className="bg-white rounded-lg shadow p-6 mb-6 mx-auto">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4 justify-center">
-                            {/* Jenis Hewan Filter */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Jenis Hewan
-                                </label>
-                                <div className="relative">
-                                    <select
-                                        value={filters.jenisHewan}
-                                        onChange={(e) => handleFilterChange('jenisHewan', e.target.value)}
-                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
-                                    >
-                                        <option value="">Semua Jenis</option>
-                                        {jenisHewanOptions.map((option) => (
-                                            <option key={option} value={option}>{option}</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
+                                {/* Jenis Hewan Filter */}
+                                <div>
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Jenis Hewan
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.jenisHewan}
+                                            onChange={(e) => handleFilterChange('jenisHewan', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        >
+                                            <option value="">Semua Jenis</option>
+                                            {jenisHewanOptions.map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Jenis Kelamin Filter */}
+                                <div>
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Jenis Kelamin
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.jenisKelamin}
+                                            onChange={(e) => handleFilterChange('jenisKelamin', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        >
+                                            <option value="">Semua Kelamin</option>
+                                            {jenisKelaminOptions.map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Status Ternak Filter */}
+                                <div>
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Status Ternak
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.statusTernak}
+                                            onChange={(e) => handleFilterChange('statusTernak', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        >
+                                            <option value="">Semua Status</option>
+                                            {getStatusOptions().map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Umur Filter - Search Bar */}
+                                <div>
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Umur
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={filters.umurTernak}
+                                            onChange={(e) => handleFilterChange('umurTernak', e.target.value)}
+                                            placeholder="Cari berdasarkan umur..."
+                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        />
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Kondisi Kesehatan Filter */}
+                                <div>
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Kondisi Kesehatan
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.kondisiKesehatan}
+                                            onChange={(e) => handleFilterChange('kondisiKesehatan', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        >
+                                            <option value="">Semua Kondisi</option>
+                                            {kondisiKesehatanOptions.map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Jenis Kelamin Filter */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Jenis Kelamin
-                                </label>
-                                <div className="relative">
-                                    <select
-                                        value={filters.jenisKelamin}
-                                        onChange={(e) => handleFilterChange('jenisKelamin', e.target.value)}
-                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
-                                    >
-                                        <option value="">Semua Kelamin</option>
-                                        {jenisKelaminOptions.map((option) => (
-                                            <option key={option} value={option}>{option}</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
-                                </div>
+                            {/* Clear Filters Button */}
+                            <div className="flex justify-center">
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-[Judson]"
+                                >
+                                    Reset Filter
+                                </button>
                             </div>
-
-                            {/* Status Ternak Filter */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Status Ternak
-                                </label>
-                                <div className="relative">
-                                    <select
-                                        value={filters.statusTernak}
-                                        onChange={(e) => handleFilterChange('statusTernak', e.target.value)}
-                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
-                                    >
-                                        <option value="">Semua Status</option>
-                                        {getStatusOptions().map((option) => (
-                                            <option key={option} value={option}>{option}</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Umur Filter - Search Bar */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Umur
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={filters.umurTernak}
-                                        onChange={(e) => handleFilterChange('umurTernak', e.target.value)}
-                                        placeholder="Cari berdasarkan umur..."
-                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                    />
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Kondisi Kesehatan Filter */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Kondisi Kesehatan
-                                </label>
-                                <div className="relative">
-                                    <select
-                                        value={filters.kondisiKesehatan}
-                                        onChange={(e) => handleFilterChange('kondisiKesehatan', e.target.value)}
-                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
-                                    >
-                                        <option value="">Semua Kondisi</option>
-                                        {kondisiKesehatanOptions.map((option) => (
-                                            <option key={option} value={option}>{option}</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Clear Filters Button */}
-                        <div className="flex justify-center">
-                            <button
-                                onClick={clearAllFilters}
-                                className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-[Judson]"
-                            >
-                                Reset Filter
-                            </button>
                         </div>
                     </div>
-                </div>
 
                     {/* Data Table */}
                     <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -332,6 +405,9 @@ function LihatTernakContent() {
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             ID
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                            Tipe
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             Jenis
@@ -359,6 +435,14 @@ function LihatTernakContent() {
                                             <tr key={ternak._id} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
                                                     {String(index + 1).padStart(2, '0')}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson]">
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${ternak.tipe === 'pribadi'
+                                                            ? 'bg-blue-100 text-blue-800'
+                                                            : 'bg-green-100 text-green-800'
+                                                        }`}>
+                                                        {ternak.tipe === 'pribadi' ? 'Pribadi' : 'Kelompok'}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
                                                     {ternak.jenisHewan}
@@ -397,8 +481,8 @@ function LihatTernakContent() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-4 text-center text-sm font-[Judson] text-gray-500">
-                                                {ternakList.length === 0 
+                                            <td colSpan={8} className="px-6 py-4 text-center text-sm font-[Judson] text-gray-500">
+                                                {ternakList.length === 0
                                                     ? 'Belum ada data ternak. Silakan tambah data ternak terlebih dahulu.'
                                                     : 'Tidak ada data yang sesuai dengan filter yang dipilih.'
                                                 }
@@ -475,7 +559,7 @@ function LihatTernakContent() {
                             </div>
                         </div>
                     )}
-                    
+
                 </div>
             </main>
         </div>

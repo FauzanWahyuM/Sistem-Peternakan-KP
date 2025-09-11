@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft, CheckCircle, XCircle } from 'lucide-react';
@@ -8,6 +8,9 @@ import { ChevronLeft, CheckCircle, XCircle } from 'lucide-react';
 export default function TambahTernakPage() {
     const router = useRouter();
     const [formData, setFormData] = useState({
+        tipe: 'pribadi',
+        kelompokId: '',
+        kelompokNama: '',
         jenisHewan: '',
         jenisKelamin: '',
         umurTernak: '',
@@ -15,13 +18,80 @@ export default function TambahTernakPage() {
         kondisiKesehatan: ''
     });
 
+    const [kelompokOptions, setKelompokOptions] = useState([]);
     const [isSuccessOpen, setIsSuccessOpen] = useState(false);
     const [isErrorOpen, setIsErrorOpen] = useState(false);
     const [message, setMessage] = useState('');
+    const [userData, setUserData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [previousKelompokData, setPreviousKelompokData] = useState({
+        kelompokId: '',
+        kelompokNama: ''
+    });
+    const [error, setError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false); // Tambah state untuk submit
 
     const jenisHewanOptions = ['Sapi', 'Kambing', 'Domba', 'Ayam', 'Bebek'];
     const jenisKelaminOptions = ['Jantan', 'Betina'];
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
+    const tipeOptions = ['pribadi', 'kelompok'];
+
+    useEffect(() => {
+        const loadUserData = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/auth/me');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setUserData(data.user);
+
+                    if (data.user.kelompok && data.user.kelompok !== 'Tidak tersedia') {
+                        loadKelompokOptions(data.user.kelompok);
+                    } else {
+                        setIsLoading(false);
+                    }
+                } else {
+                    console.error('Failed to fetch user data');
+                    setIsLoading(false);
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                setIsLoading(false);
+            }
+        };
+
+        loadUserData();
+    }, []);
+
+    const loadKelompokOptions = async (userKelompok: string) => {
+        try {
+            if (userKelompok && userKelompok !== 'Tidak tersedia') {
+                const kelompokData = {
+                    id: userKelompok,
+                    nama: `Kelompok ${userKelompok}`
+                };
+
+                setKelompokOptions([kelompokData]);
+
+                setFormData(prev => ({
+                    ...prev,
+                    kelompokId: userKelompok,
+                    kelompokNama: `Kelompok ${userKelompok}`
+                }));
+
+                setPreviousKelompokData({
+                    kelompokId: userKelompok,
+                    kelompokNama: `Kelompok ${userKelompok}`
+                });
+            }
+
+            setIsLoading(false);
+        } catch (error) {
+            console.error('Error loading kelompok options:', error);
+            setIsLoading(false);
+        }
+    };
 
     const getStatusTernakOptions = () => {
         const { jenisHewan, jenisKelamin } = formData;
@@ -54,47 +124,96 @@ export default function TambahTernakPage() {
         return statusOptions[jenisHewan]?.[jenisKelamin] || [];
     };
 
-    const handleInputChange = (field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value,
-            ...(field === 'jenisHewan' || field === 'jenisKelamin' ? { statusTernak: '' } : {})
-        }));
+    const handleInputChange = (field: string, value: string) => {
+        setFormData(prev => {
+            let newData = { ...prev };
+
+            if (field === 'tipe') {
+                if (value === 'pribadi') {
+                    setPreviousKelompokData({
+                        kelompokId: prev.kelompokId,
+                        kelompokNama: prev.kelompokNama
+                    });
+
+                    newData = {
+                        ...prev,
+                        tipe: value,
+                        kelompokId: '',
+                        kelompokNama: ''
+                    };
+                } else if (value === 'kelompok') {
+                    newData = {
+                        ...prev,
+                        tipe: value,
+                        kelompokId: previousKelompokData.kelompokId,
+                        kelompokNama: previousKelompokData.kelompokNama
+                    };
+                }
+            } else {
+                newData = {
+                    ...prev,
+                    [field]: value,
+                    ...(field === 'jenisHewan' || field === 'jenisKelamin' ? { statusTernak: '' } : {})
+                };
+            }
+
+            return newData;
+        });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+        setIsSubmitting(true);
 
         try {
-            // 👉 nanti bisa diganti dengan id user login
-            const userId = 'user-id-placeholder';
+            if (!userData) {
+                throw new Error('User data not available');
+            }
 
-            const newTernak = {
-                userId,
-                ...formData
+            // Validasi data
+            if (!formData.jenisHewan || !formData.jenisKelamin || !formData.umurTernak ||
+                !formData.statusTernak || !formData.kondisiKesehatan) {
+                throw new Error('Harap isi semua field yang wajib diisi');
+            }
+
+            const dataToSend = {
+                ...formData,
+                userId: userData._id
+                // kelompokId dan kelompokNama akan dihandle oleh API
             };
+
+            console.log('Data to send:', dataToSend);
 
             const response = await fetch('/api/ternak', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(newTernak),
+                body: JSON.stringify(dataToSend),
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to save data');
-            }
-
             const result = await response.json();
-            console.log('Data ternak saved to MongoDB:', result);
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Gagal menambah data ternak');
+            }
 
             setMessage('Data ternak berhasil disimpan!');
             setIsSuccessOpen(true);
-        } catch (error) {
+
+            setTimeout(() => {
+                router.push('/peternak/ternak');
+                router.refresh();
+            }, 2000);
+
+        } catch (error: any) {
             console.error('Error saving ternak data:', error);
             setMessage('Gagal menyimpan data ternak: ' + error.message);
+            setError(error.message);
             setIsErrorOpen(true);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -115,13 +234,30 @@ export default function TambahTernakPage() {
         setIsErrorOpen(false);
     };
 
+    if (isLoading && !isSuccessOpen && !isErrorOpen) {
+        return (
+            <div className="flex min-h-screen">
+                <Sidebar userType="peternak" />
+                <main className="flex-1 bg-gray-100 p-6 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                        <p className="mt-4 text-gray-700">Memuat data...</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen">
-            <Sidebar userType="peternak" />
+            <div className="sticky top-0 h-screen">
+                <Sidebar userType="peternak" />
+            </div>
+
             <main className="flex-1 bg-gray-100 p-6">
                 <div className="max-w-2xl mx-auto">
                     <div className="flex items-center mb-8">
-                        <button 
+                        <button
                             onClick={handleBack}
                             className="mr-4 p-2 rounded-full bg-green-500 text-white hover:bg-green-600"
                         >
@@ -130,7 +266,64 @@ export default function TambahTernakPage() {
                         <h1 className="text-3xl font-bold font-[Judson] text-gray-800 text-center flex-1">Tambah Ternak</h1>
                     </div>
 
+                    {error && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                            {error}
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Pilihan Tipe */}
+                        <div>
+                            <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
+                                Tipe Ternak
+                            </label>
+                            <div className="grid grid-cols-2 gap-4">
+                                {tipeOptions.map((option) => (
+                                    <div
+                                        key={option}
+                                        className={`p-4 border rounded-lg cursor-pointer text-center font-[Judson] ${formData.tipe === option
+                                            ? 'bg-green-100 border-green-500 text-green-700'
+                                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                            }`}
+                                        onClick={() => handleInputChange('tipe', option)}
+                                    >
+                                        {option === 'pribadi' ? 'Pribadi' : 'Kelompok'}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Pilihan Kelompok (hanya muncul jika tipe kelompok) */}
+                        {formData.tipe === 'kelompok' && (
+                            <div>
+                                <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
+                                    Kelompok
+                                </label>
+                                {kelompokOptions.length > 0 ? (
+                                    <>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={formData.kelompokNama}
+                                                className="w-full p-4 border border-gray-300 rounded-lg bg-gray-100 font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                readOnly
+                                            />
+                                            {/* Hidden input untuk menyimpan kelompokId */}
+                                            <input
+                                                type="hidden"
+                                                value={formData.kelompokId}
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="p-4 border border-gray-300 rounded-lg bg-gray-50 text-center">
+                                        <p className="text-gray-500">Anda belum tergabung dalam kelompok</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Jenis Hewan
@@ -142,7 +335,7 @@ export default function TambahTernakPage() {
                                     className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
                                     required
                                 >
-                                    <option value="">Masukkan Jenis Hewan</option>
+                                    <option value="">Pilih Jenis Hewan</option>
                                     {jenisHewanOptions.map((option) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
@@ -166,7 +359,7 @@ export default function TambahTernakPage() {
                                     className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
                                     required
                                 >
-                                    <option value="">Masukkan Jenis Kelamin</option>
+                                    <option value="">Pilih Jenis Kelamin</option>
                                     {jenisKelaminOptions.map((option) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
@@ -205,7 +398,7 @@ export default function TambahTernakPage() {
                                     required
                                     disabled={!formData.jenisHewan || !formData.jenisKelamin}
                                 >
-                                    <option value="">Masukkan Status Ternak</option>
+                                    <option value="">Pilih Status Ternak</option>
                                     {getStatusTernakOptions().map((option) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
@@ -229,7 +422,7 @@ export default function TambahTernakPage() {
                                     className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
                                     required
                                 >
-                                    <option value="">Masukkan Kondisi Kesehatan</option>
+                                    <option value="">Pilih Kondisi Kesehatan</option>
                                     {kondisiKesehatanOptions.map((option) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
@@ -245,9 +438,10 @@ export default function TambahTernakPage() {
                         <div className="flex gap-4 pt-6">
                             <button
                                 type="submit"
-                                className="flex-1 bg-green-500 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium font-[Judson] text-lg"
+                                disabled={isLoading}
+                                className="flex-1 bg-green-500 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium font-[Judson] text-lg disabled:opacity-50"
                             >
-                                Simpan
+                                {isLoading ? 'Menyimpan...' : 'Simpan'}
                             </button>
                             <button
                                 type="button"

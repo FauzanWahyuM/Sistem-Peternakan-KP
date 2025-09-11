@@ -1,25 +1,80 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ITernak extends Document {
-    jenisHewan: "Sapi" | "Kambing" | "Domba" | "Ayam" | "Bebek";
-    jenisKelamin: "Jantan" | "Betina";
-    umurTernak: string; // kalau mau angka bisa diganti Number
+    userId: string;
+    kelompokId?: string;
+    kelompokNama?: string;
+    jenisHewan: string;
+    jenisKelamin: string;
+    umurTernak: string;
     statusTernak: string;
-    kondisiKesehatan: "Sehat" | "Sakit";
+    kondisiKesehatan: string;
+    tipe: 'pribadi' | 'kelompok';
+    createdAt: Date;
+    updatedAt: Date;
 }
 
-const TernakSchema = new Schema<ITernak>(
-    {
-        jenisHewan: { type: String, enum: ["Sapi", "Kambing", "Domba", "Ayam", "Bebek"], required: true },
-        jenisKelamin: { type: String, enum: ["Jantan", "Betina"], required: true },
-        umurTernak: { type: String, required: true }, // bisa diganti Number kalau umur harus angka
-        statusTernak: { type: String, required: true },
-        kondisiKesehatan: { type: String, enum: ["Sehat", "Sakit"], required: true },
+const TernakSchema: Schema = new Schema({
+    userId: {
+        type: String,
+        required: true
     },
-    { timestamps: true }
-);
+    kelompokId: {
+        type: String,
+        required: false
+    },
+    kelompokNama: {
+        type: String,
+        required: false
+    },
+    jenisHewan: {
+        type: String,
+        required: true,
+        enum: ['Sapi', 'Kambing', 'Domba', 'Ayam', 'Bebek']
+    },
+    jenisKelamin: {
+        type: String,
+        required: true,
+        enum: ['Jantan', 'Betina']
+    },
+    umurTernak: {
+        type: String,
+        required: true
+    },
+    statusTernak: {
+        type: String,
+        required: true
+    },
+    kondisiKesehatan: {
+        type: String,
+        required: true,
+        enum: ['Sehat', 'Sakit']
+    },
+    tipe: {
+        type: String,
+        required: true,
+        enum: ['pribadi', 'kelompok'],
+        default: 'pribadi'
+    }
+}, {
+    timestamps: true
+});
 
-const Ternak: Model<ITernak> =
-    mongoose.models.Ternak || mongoose.model<ITernak>("Ternak", TernakSchema);
+// Validasi untuk ternak kelompok
+TernakSchema.path('kelompokId').validate(function (value) {
+    if (this.tipe === 'kelompok') {
+        return value != null && value !== '';
+    }
+    return true;
+}, 'Kelompok ID diperlukan untuk ternak kelompok');
+
+TernakSchema.path('kelompokNama').validate(function (value) {
+    if (this.tipe === 'kelompok') {
+        return value != null && value !== '';
+    }
+    return true;
+}, 'Kelompok Nama diperlukan untuk ternak kelompok');
+
+const Ternak: Model<ITernak> = mongoose.models.Ternak || mongoose.model<ITernak>('Ternak', TernakSchema);
 
 export default Ternak;
