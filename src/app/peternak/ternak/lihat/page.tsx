@@ -5,13 +5,69 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft, Edit, Trash2, AlertTriangle, X, Filter } from 'lucide-react';
 
+// Interface untuk data ternak
+interface Ternak {
+    _id: string;
+    tipe: string;
+    jenisHewan: string;
+    jenisKelamin: string;
+    umurTernak: string;
+    statusTernak: string;
+    kondisiKesehatan: string;
+}
+
+// Ganti implementasi yang hardcoded
+// Ganti implementasi yang hardcoded
+const getUserIdFromSession = async (): Promise<string> => {
+    try {
+        console.log('🔍 Fetching user data from /api/auth/me...');
+
+        // ✅ Tambahkan credentials: 'include' dan headers
+        const response = await fetch('/api/auth/me', {
+            credentials: 'include', // ✅ Penting untuk mengirim cookies
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            cache: 'no-store' // ✅ Hindari caching
+        });
+
+        console.log('📋 Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+            console.error('❌ Failed to fetch user data:', response.status, response.statusText);
+            throw new Error(`Failed to fetch user data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('✅ API response received:', data);
+
+        // ✅ Perbaiki: Response memiliki structure { user: { _id: ... } }
+        if (!data.user || !data.user._id) {
+            console.error('❌ No user ID found in response structure');
+            console.error('❌ Response structure:', data);
+            throw new Error('No user ID found in response');
+        }
+
+        console.log('✅ User ID found:', data.user._id);
+        return data.user._id;
+
+    } catch (error) {
+        console.error('❌ Error in getUserIdFromSession:', error);
+
+        // ✅ Juga coba dari storage
+        const storedId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+
+        return storedId;
+    }
+};
+
 function LihatTernakContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [ternakList, setTernakList] = useState([]);
-    const [filteredData, setFilteredData] = useState([]);
+    const [ternakList, setTernakList] = useState<Ternak[]>([]);
+    const [filteredData, setFilteredData] = useState<Ternak[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
 
     // ✅ State modal
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,27 +99,57 @@ function LihatTernakContent() {
     ];
 
     // Load data
+    // Load data
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
+                console.log('🔄 Loading data...');
 
-                // TODO: ganti dengan userId dari login session
-                const userId = '1234567890';
+                // ✅ Ambil userId dari session
+                const userId = await getUserIdFromSession();
+                console.log('📋 User ID:', userId);
 
-                // Ambil semua data ternak user (baik pribadi maupun kelompok)
-                const response = await fetch(`/api/ternak?userId=${userId}`, { cache: "no-store" });
+                if (!userId) {
+                    throw new Error('User ID not available');
+                }
+
+                // ✅ Ambil parameter dari URL
+                const jenis = searchParams?.get('jenis') || '';
+                const tipe = searchParams?.get('tipe') || '';
+                console.log('📋 URL Params - jenis:', jenis, 'tipe:', tipe);
+
+                // ✅ Kirim request dengan parameter yang benar
+                const url = `/api/ternak?userId=${userId}&stats=false&tipe=${tipe}&jenis=${jenis}`;
+                console.log('🌐 API URL:', url);
+
+                const response = await fetch(url, { cache: "no-store" });
+
+                console.log('📋 Response status:', response.status, response.statusText);
+
                 if (!response.ok) {
-                    throw new Error('Failed to fetch data');
+                    const errorText = await response.text();
+                    console.error('❌ Response error:', errorText);
+                    throw new Error(`Failed to fetch data: ${response.status} - ${errorText}`);
                 }
 
                 const result = await response.json();
+                console.log('✅ Data received:', result);
+                console.log('✅ Data type:', typeof result);
+                console.log('✅ Data length:', Array.isArray(result) ? result.length : 'Not an array');
+
+                // ✅ Pastikan result adalah array
+                if (!Array.isArray(result)) {
+                    console.error('❌ Expected array but got:', result);
+                    throw new Error('Invalid data format from API');
+                }
+
                 setTernakList(result);
                 setFilteredData(result);
-
                 setError(null);
+
             } catch (err) {
-                console.error('Error loading data:', err);
+                console.error('❌ Error loading data:', err);
                 setError('Gagal memuat data ternak');
             } finally {
                 setLoading(false);
@@ -71,7 +157,7 @@ function LihatTernakContent() {
         };
 
         loadData();
-    }, []);
+    }, [searchParams]);
 
     // Di ternak/lihat/page.tsx - tambahkan useEffect untuk membaca parameter URL
     useEffect(() => {
@@ -122,7 +208,7 @@ function LihatTernakContent() {
             const uniqueStatuses = [...new Set(ternakList.map(item => item.statusTernak))];
             return uniqueStatuses.filter(status => status);
         }
-        const statusOptions = {
+        const statusOptions: Record<string, Record<string, string[]>> = {
             'Sapi': { 'Jantan': ['Pejantan', 'Sapi Potong', 'Sapi Kerja', 'Bibit', 'Penggemukan'], 'Betina': ['Indukan', 'Sapi Perah', 'Sapi Potong', 'Bibit', 'Dara'] },
             'Kambing': { 'Jantan': ['Pejantan', 'Kambing Potong', 'Bibit', 'Penggemukan', 'Kambing Kerja'], 'Betina': ['Indukan', 'Kambing Perah', 'Kambing Potong', 'Bibit', 'Dara'] },
             'Domba': { 'Jantan': ['Pejantan', 'Domba Potong', 'Bibit', 'Penggemukan', 'Domba Wol'], 'Betina': ['Indukan', 'Domba Potong', 'Bibit', 'Dara', 'Domba Wol'] },
@@ -132,7 +218,7 @@ function LihatTernakContent() {
         return statusOptions[jenisHewan]?.[jenisKelamin] || [];
     };
 
-    const handleFilterChange = (filterName, value) => {
+    const handleFilterChange = (filterName: string, value: string) => {
         setFilters(prev => ({
             ...prev,
             [filterName]: value,
@@ -144,12 +230,12 @@ function LihatTernakContent() {
         router.push('/peternak/ternak');
     };
 
-    const handleEdit = (id) => {
+    const handleEdit = (id: string) => {
         router.push(`/peternak/ternak/edit?id=${id}`);
     };
 
     // ✅ Ubah delete -> pakai modal
-    const handleDelete = (id) => {
+    const handleDelete = (id: string) => {
         setSelectedId(id);
         setModalType('delete');
         setModalMessage('Apakah Anda yakin ingin menghapus data ternak ini?');
@@ -438,8 +524,8 @@ function LihatTernakContent() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson]">
                                                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${ternak.tipe === 'pribadi'
-                                                            ? 'bg-blue-100 text-blue-800'
-                                                            : 'bg-green-100 text-green-800'
+                                                        ? 'bg-blue-100 text-blue-800'
+                                                        : 'bg-green-100 text-green-800'
                                                         }`}>
                                                         {ternak.tipe === 'pribadi' ? 'Pribadi' : 'Kelompok'}
                                                     </span>

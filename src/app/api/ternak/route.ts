@@ -158,7 +158,12 @@ export async function GET(req: NextRequest) {
             }
         } else if (userId) {
             // Default: semua data user (baik pribadi maupun kelompok)
-            filter = { userId };
+            filter = {
+                $or: [
+                    { userId, tipe: "pribadi" },
+                    { userId, tipe: "kelompok" }
+                ]
+            };
         }
 
         // Filter tambahan berdasarkan jenis hewan jika ada
