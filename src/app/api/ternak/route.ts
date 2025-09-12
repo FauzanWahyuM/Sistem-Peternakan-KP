@@ -114,54 +114,13 @@ export async function GET(req: NextRequest) {
 
         // Default: ambil data berdasarkan filter
         // Default: ambil data berdasarkan filter
+        // Default: ambil data berdasarkan filter
         let filter: any = {};
 
-        // PERBAIKAN: Handle semua kasus filter tipe dengan benar
-        if (tipe === "pribadi") {
-            filter = { userId, tipe: "pribadi" };
-            console.log('Filter pribadi:', filter);
-
-        } else if (tipe === "kelompok") {
-            if (!userId) {
-                return new Response(JSON.stringify([]), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
-
-            // Ambil data kelompok user
-            let userData: IUser | null = null;
-            try {
-                if (mongoose.models.User) {
-                    userData = await mongoose.models.User.findById(userId)
-                        .select('kelompok')
-                        .lean()
-                        .exec() as IUser;
-                } else {
-                    const userSchema = new mongoose.Schema({ kelompok: String });
-                    const UserModel = mongoose.model('User', userSchema);
-                    userData = await UserModel.findById(userId)
-                        .select('kelompok')
-                        .lean()
-                        .exec() as IUser;
-                }
-            } catch (err) {
-                console.error("Error fetch user:", err);
-                userData = null;
-            }
-
-            if (userData?.kelompok && userData.kelompok !== "Tidak tersedia") {
-                filter = { kelompokId: userData.kelompok, tipe: "kelompok" };
-                console.log('Filter kelompok:', filter);
-            } else {
-                return new Response(JSON.stringify([]), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
-
-        } else if (userId) {
-            // Jika tipe "semua" atau tidak ada tipe, ambil semua data user
+        // PERBAIKAN: Jangan gunakan tipe dari URL parameter untuk filter API
+        // Biarkan frontend yang handle filtering berdasarkan pilihan user
+        if (userId) {
+            // Ambil semua data user (baik pribadi maupun kelompok)
             let userData: IUser | null = null;
             try {
                 if (mongoose.models.User) {
@@ -196,12 +155,11 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // Filter tambahan berdasarkan jenis hewan
+        // Filter tambahan berdasarkan jenis hewan dari URL
         if (jenis && jenis.toLowerCase() !== "semua" && jenis.toLowerCase() !== "all") {
             filter.jenisHewan = { $regex: new RegExp(jenis, 'i') }; // Case insensitive
             console.log('Added jenis filter:', filter.jenisHewan);
         }
-
 
         console.log('Find Filter:', filter);
         const ternak = await Ternak.find(filter).exec();

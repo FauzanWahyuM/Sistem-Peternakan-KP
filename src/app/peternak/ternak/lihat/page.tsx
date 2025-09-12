@@ -70,16 +70,6 @@ function LihatTernakContent() {
     const [modalMessage, setModalMessage] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    // Filter states - PERBAIKI: Gunakan nilai default yang sesuai
-    const [filters, setFilters] = useState({
-        jenisHewan: searchParams?.get('jenis') || '',
-        jenisKelamin: '',
-        statusTernak: '',
-        umurTernak: '',
-        kondisiKesehatan: '',
-        tipeTernak: searchParams?.get('tipe') || 'semua' // Gunakan tipe dari URL jika ada
-    });
-
     // State untuk toggle filter dropdown
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -92,6 +82,30 @@ function LihatTernakContent() {
         { value: 'pribadi', label: 'Pribadi' },
         { value: 'kelompok', label: 'Kelompok' }
     ];
+
+    // PERBAIKAN: Inisialisasi filter dengan nilai dari URL jika ada
+    const [filters, setFilters] = useState({
+        jenisHewan: '',
+        jenisKelamin: '',
+        statusTernak: '',
+        umurTernak: '',
+        kondisiKesehatan: '',
+        tipeTernak: 'semua'
+    });
+
+    // PERBAIKAN: Gunakan useEffect untuk membaca parameter URL saat pertama kali load
+    useEffect(() => {
+        const jenisFromUrl = searchParams?.get('jenis');
+        const tipeFromUrl = searchParams?.get('tipe');
+
+        if (jenisFromUrl || tipeFromUrl) {
+            setFilters(prev => ({
+                ...prev,
+                jenisHewan: jenisFromUrl || '',
+                tipeTernak: tipeFromUrl || 'semua'
+            }));
+        }
+    }, [searchParams]);
 
     // Load data
     useEffect(() => {
@@ -108,12 +122,8 @@ function LihatTernakContent() {
                     throw new Error('User ID not available');
                 }
 
-                const jenis = searchParams?.get('jenis') || '';
-                const tipe = searchParams?.get('tipe') || '';
-                console.log('📋 URL Params - jenis:', jenis, 'tipe:', tipe);
-
-                // PERBAIKAN: Gunakan tipe dari URL untuk filter API
-                const url = `/api/ternak?userId=${userId}&stats=false${tipe ? `&tipe=${tipe}` : ''}${jenis ? `&jenis=${jenis}` : ''}`;
+                // PERBAIKAN PENTING: Jangan gunakan parameter apapun dari URL
+                const url = `/api/ternak?userId=${userId}&stats=false`;
                 console.log('🌐 API URL:', url);
 
                 const response = await fetch(url, { cache: "no-store" });
@@ -146,15 +156,6 @@ function LihatTernakContent() {
                 console.log('✅ Processed data:', ternakData.length, 'items');
 
                 setTernakList(ternakData);
-                setFilteredData(ternakData);
-
-                // PERBAIKAN: Set filter berdasarkan URL parameters
-                setFilters(prev => ({
-                    ...prev,
-                    tipeTernak: tipe || 'semua',
-                    jenisHewan: jenis || ''
-                }));
-
                 setError(null);
 
             } catch (err) {
@@ -166,12 +167,12 @@ function LihatTernakContent() {
         };
 
         loadData();
-    }, [searchParams]);
+    }, []); // Hapus searchParams dari dependency
 
-    // Apply filters - PERBAIKAN: Filter yang lebih akurat
+    // Apply filters - PERBAIKAN: Filter di client-side
     useEffect(() => {
-        console.log('🔄 Applying filters...', filters);
-        console.log('📋 Ternak list:', ternakList);
+        console.log('🔄 Applying filters client-side...', filters);
+        console.log('📋 Ternak list count:', ternakList.length);
 
         let filtered = [...ternakList];
         console.log('📋 Initial filtered count:', filtered.length);
@@ -216,19 +217,18 @@ function LihatTernakContent() {
             console.log('✅ After kondisiKesehatan filter:', filtered.length);
         }
 
-        // Filter berdasarkan tipe ternak - PERBAIKAN PENTING
+        // Filter berdasarkan tipe ternak
         if (filters.tipeTernak !== 'semua') {
             filtered = filtered.filter(item =>
                 item.tipe && item.tipe.toLowerCase() === filters.tipeTernak.toLowerCase()
             );
             console.log('✅ After tipeTernak filter:', filtered.length);
-            console.log('✅ Filtered items after tipe filter:', filtered);
         }
 
         console.log('✅ Final filtered count:', filtered.length);
         setFilteredData(filtered);
 
-    }, [filters, ternakList]);
+    }, [filters, ternakList]); // Tergantung pada ternakList (semua data) dan filters
 
     const getStatusOptions = () => {
         const { jenisHewan, jenisKelamin } = filters;
@@ -297,6 +297,7 @@ function LihatTernakContent() {
     };
 
     const clearAllFilters = () => {
+        // PERBAIKAN: Reset ke nilai default
         setFilters({
             jenisHewan: '',
             jenisKelamin: '',
@@ -379,10 +380,10 @@ function LihatTernakContent() {
 
                     {/* Filters */}
                     <div className="flex justify-center">
-                        <div className="bg-white rounded-lg shadow p-6 mb-6 mx-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4 justify-center">
+                        <div className="bg-white rounded-lg p-6 mb-6 shadow-sm w-full max-w-6xl">
+                            <div className="flex flex-col md:flex-row gap-4">
                                 {/* Jenis Hewan Filter */}
-                                <div>
+                                <div className="relative flex-1">
                                     <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
                                         Jenis Hewan
                                     </label>
@@ -390,7 +391,7 @@ function LihatTernakContent() {
                                         <select
                                             value={filters.jenisHewan}
                                             onChange={(e) => handleFilterChange('jenisHewan', e.target.value)}
-                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                            className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700 appearance-none cursor-pointer"
                                         >
                                             <option value="">Semua Jenis</option>
                                             {jenisHewanOptions.map((option) => (
@@ -406,7 +407,7 @@ function LihatTernakContent() {
                                 </div>
 
                                 {/* Jenis Kelamin Filter */}
-                                <div>
+                                <div className="relative flex-1">
                                     <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
                                         Jenis Kelamin
                                     </label>
@@ -414,7 +415,7 @@ function LihatTernakContent() {
                                         <select
                                             value={filters.jenisKelamin}
                                             onChange={(e) => handleFilterChange('jenisKelamin', e.target.value)}
-                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                            className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700 appearance-none cursor-pointer"
                                         >
                                             <option value="">Semua Kelamin</option>
                                             {jenisKelaminOptions.map((option) => (
@@ -430,7 +431,7 @@ function LihatTernakContent() {
                                 </div>
 
                                 {/* Status Ternak Filter */}
-                                <div>
+                                <div className="relative flex-1">
                                     <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
                                         Status Ternak
                                     </label>
@@ -438,7 +439,7 @@ function LihatTernakContent() {
                                         <select
                                             value={filters.statusTernak}
                                             onChange={(e) => handleFilterChange('statusTernak', e.target.value)}
-                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                            className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700 appearance-none cursor-pointer"
                                         >
                                             <option value="">Semua Status</option>
                                             {getStatusOptions().map((option) => (
@@ -453,29 +454,8 @@ function LihatTernakContent() {
                                     </div>
                                 </div>
 
-                                {/* Umur Filter - Search Bar */}
-                                <div>
-                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                        Umur
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={filters.umurTernak}
-                                            onChange={(e) => handleFilterChange('umurTernak', e.target.value)}
-                                            placeholder="Cari berdasarkan umur..."
-                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                        />
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 {/* Kondisi Kesehatan Filter */}
-                                <div>
+                                <div className="relative flex-1">
                                     <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
                                         Kondisi Kesehatan
                                     </label>
@@ -483,7 +463,7 @@ function LihatTernakContent() {
                                         <select
                                             value={filters.kondisiKesehatan}
                                             onChange={(e) => handleFilterChange('kondisiKesehatan', e.target.value)}
-                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                            className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700 appearance-none cursor-pointer"
                                         >
                                             <option value="">Semua Kondisi</option>
                                             {kondisiKesehatanOptions.map((option) => (
@@ -500,7 +480,7 @@ function LihatTernakContent() {
                             </div>
 
                             {/* Clear Filters Button */}
-                            <div className="flex justify-center">
+                            <div className="flex justify-center mt-4">
                                 <button
                                     onClick={clearAllFilters}
                                     className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-[Judson]"

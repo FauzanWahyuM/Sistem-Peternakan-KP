@@ -131,11 +131,12 @@ export default function CardSection() {
         };
 
         loadTernakData();
-    }, [router]); // Tambah router sebagai dependency untuk refresh data
+    }, [router]);
 
+    // Fungsi untuk menangani klik Lihat Data dengan parameter
     const handleLihatData = (jenis: string, tipe: string) => {
-        // PERBAIKAN: Pastikan parameter tipe dikirim dengan benar
-        router.push(`/peternak/ternak/lihat?jenis=${jenis}&tipe=${tipe}`);
+        // Kirim parameter jenis dan tipe ke URL untuk filter otomatis
+        router.push(`/peternak/ternak/lihat?jenis=${encodeURIComponent(jenis)}&tipe=${encodeURIComponent(tipe)}`);
     };
 
     const handleTambahData = () => {
