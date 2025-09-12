@@ -116,9 +116,11 @@ export async function GET(req: NextRequest) {
         let filter: any = {};
 
         if (tipe === "pribadi") {
+            // Semua data pribadi milik user
             filter = { userId, tipe: "pribadi" };
+
         } else if (tipe === "kelompok") {
-            // Ambil data kelompok user
+            // Data pribadi + kelompok user
             if (!userId) {
                 return new Response(JSON.stringify([]), {
                     status: 200,
@@ -126,50 +128,58 @@ export async function GET(req: NextRequest) {
                 });
             }
 
-            // Gunakan approach yang lebih aman untuk mongoose model
+            // Ambil data kelompok user
             let userData: IUser | null = null;
-
             try {
                 if (mongoose.models.User) {
-                    userData = await mongoose.models.User.findById(userId).select('kelompok').lean().exec() as IUser;
+                    userData = await mongoose.models.User.findById(userId)
+                        .select('kelompok')
+                        .lean()
+                        .exec() as IUser;
                 } else {
-                    const userSchema = new mongoose.Schema({
-                        kelompok: String
-                    });
+                    const userSchema = new mongoose.Schema({ kelompok: String });
                     const UserModel = mongoose.model('User', userSchema);
-                    userData = await UserModel.findById(userId).select('kelompok').lean().exec() as IUser;
+                    userData = await UserModel.findById(userId)
+                        .select('kelompok')
+                        .lean()
+                        .exec() as IUser;
                 }
-            } catch (userError) {
-                console.error('Error fetching user data:', userError);
+            } catch (err) {
+                console.error("Error fetch user:", err);
                 userData = null;
             }
 
-            if (userData && userData.kelompok && userData.kelompok !== 'Tidak tersedia') {
-                filter = {
-                    kelompokId: userData.kelompok,
-                    tipe: "kelompok"
-                };
+            if (userData?.kelompok && userData.kelompok !== "Tidak tersedia") {
+                if (jenis && jenis.toLowerCase() !== "semua" && jenis.toLowerCase() !== "all") {
+                    filter = {
+                        $or: [
+                            { userId, tipe: "pribadi", jenisHewan: jenis },
+                            { kelompokId: userData.kelompok, tipe: "kelompok", jenisHewan: jenis }
+                        ]
+                    };
+                } else {
+                    filter = {
+                        $or: [
+                            { userId, tipe: "pribadi" },
+                            { kelompokId: userData.kelompok, tipe: "kelompok" }
+                        ]
+                    };
+                }
             } else {
-                // User tidak punya kelompok, return empty
-                return new Response(JSON.stringify([]), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                // kalau user tidak punya kelompok, fallback ke pribadi
+                filter = { userId, tipe: "pribadi" };
             }
+
         } else if (userId) {
-            // Default: semua data user (baik pribadi maupun kelompok)
-            filter = {
-                $or: [
-                    { userId, tipe: "pribadi" },
-                    { userId, tipe: "kelompok" }
-                ]
-            };
+            // Kalau tidak ada param tipe, default: pribadi saja
+            filter = { userId, tipe: "pribadi" };
         }
 
-        // Filter tambahan berdasarkan jenis hewan jika ada
-        if (jenis) {
+        // Filter tambahan berdasarkan jenis hewan
+        if (jenis && jenis.toLowerCase() !== "semua" && jenis.toLowerCase() !== "all") {
             filter.jenisHewan = jenis;
         }
+
 
         console.log('Find Filter:', filter);
         const ternak = await Ternak.find(filter).exec();
