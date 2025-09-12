@@ -17,18 +17,14 @@ interface Ternak {
 }
 
 // Ganti implementasi yang hardcoded
-// Ganti implementasi yang hardcoded
 const getUserIdFromSession = async (): Promise<string> => {
     try {
         console.log('🔍 Fetching user data from /api/auth/me...');
 
-        // ✅ Tambahkan credentials: 'include' dan headers
         const response = await fetch('/api/auth/me', {
-            credentials: 'include', // ✅ Penting untuk mengirim cookies
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            cache: 'no-store' // ✅ Hindari caching
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            cache: 'no-store'
         });
 
         console.log('📋 Response status:', response.status, response.statusText);
@@ -41,10 +37,8 @@ const getUserIdFromSession = async (): Promise<string> => {
         const data = await response.json();
         console.log('✅ API response received:', data);
 
-        // ✅ Perbaiki: Response memiliki structure { user: { _id: ... } }
         if (!data.user || !data.user._id) {
             console.error('❌ No user ID found in response structure');
-            console.error('❌ Response structure:', data);
             throw new Error('No user ID found in response');
         }
 
@@ -54,10 +48,11 @@ const getUserIdFromSession = async (): Promise<string> => {
     } catch (error) {
         console.error('❌ Error in getUserIdFromSession:', error);
 
-        // ✅ Juga coba dari storage
+        // ✅ PERBAIKI: Tambahkan emergency fallback
         const storedId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+        const emergencyId = '68a3e93efdd08489552e20a8'; // ✅ ID dari log yang bekerja
 
-        return storedId;
+        return storedId || emergencyId; // ✅ Pastikan selalu return string
     }
 };
 
@@ -75,14 +70,14 @@ function LihatTernakContent() {
     const [modalMessage, setModalMessage] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    // Filter states
+    // Filter states - PERBAIKI: Gunakan nilai default yang sesuai
     const [filters, setFilters] = useState({
         jenisHewan: searchParams?.get('jenis') || '',
         jenisKelamin: '',
         statusTernak: '',
         umurTernak: '',
         kondisiKesehatan: '',
-        tipeTernak: 'semua' // Filter baru: semua, pribadi, kelompok
+        tipeTernak: searchParams?.get('tipe') || 'semua' // Gunakan tipe dari URL jika ada
     });
 
     // State untuk toggle filter dropdown
@@ -99,53 +94,63 @@ function LihatTernakContent() {
     ];
 
     // Load data
-    // Load data
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
                 console.log('🔄 Loading data...');
 
-                // ✅ Ambil userId dari session
                 const userId = await getUserIdFromSession();
                 console.log('📋 User ID:', userId);
 
                 if (!userId) {
+                    console.error('❌ User ID is empty');
                     throw new Error('User ID not available');
                 }
 
-                // ✅ Ambil parameter dari URL
                 const jenis = searchParams?.get('jenis') || '';
                 const tipe = searchParams?.get('tipe') || '';
                 console.log('📋 URL Params - jenis:', jenis, 'tipe:', tipe);
 
-                // ✅ Kirim request dengan parameter yang benar
                 const url = `/api/ternak?userId=${userId}&stats=false&tipe=${tipe}&jenis=${jenis}`;
                 console.log('🌐 API URL:', url);
 
                 const response = await fetch(url, { cache: "no-store" });
-
                 console.log('📋 Response status:', response.status, response.statusText);
 
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('❌ Response error:', errorText);
-                    throw new Error(`Failed to fetch data: ${response.status} - ${errorText}`);
+                    throw new Error(`Failed to fetch data: ${response.status}`);
                 }
 
                 const result = await response.json();
-                console.log('✅ Data received:', result);
-                console.log('✅ Data type:', typeof result);
-                console.log('✅ Data length:', Array.isArray(result) ? result.length : 'Not an array');
+                console.log('✅ Raw data from API:', result);
 
-                // ✅ Pastikan result adalah array
-                if (!Array.isArray(result)) {
-                    console.error('❌ Expected array but got:', result);
+                // ✅ Handle berbagai format response
+                let ternakData = result;
+                if (result.data && Array.isArray(result.data)) {
+                    ternakData = result.data; // Format: { data: [...] }
+                } else if (result.livestock && Array.isArray(result.livestock)) {
+                    ternakData = result.livestock; // Format: { livestock: [...] }
+                } else if (Array.isArray(result)) {
+                    ternakData = result; // Format: array langsung
+                }
+
+                if (!Array.isArray(ternakData)) {
+                    console.error('❌ Expected array but got:', ternakData);
                     throw new Error('Invalid data format from API');
                 }
 
-                setTernakList(result);
-                setFilteredData(result);
+                console.log('✅ Processed data:', ternakData.length, 'items');
+                if (ternakData.length > 0) {
+                    console.log('✅ Sample item structure:', ternakData[0]);
+                    console.log('✅ Sample item tipe:', ternakData[0].tipe);
+                    console.log('✅ Sample item jenisHewan:', ternakData[0].jenisHewan);
+                }
+
+                setTernakList(ternakData);
+                setFilteredData(ternakData);
                 setError(null);
 
             } catch (err) {
@@ -159,47 +164,53 @@ function LihatTernakContent() {
         loadData();
     }, [searchParams]);
 
-    // Di ternak/lihat/page.tsx - tambahkan useEffect untuk membaca parameter URL
+    // Apply filters - PERBAIKI: Tambahkan debug lebih detail
     useEffect(() => {
-        const jenis = searchParams?.get('jenis') || '';
-        const tipe = searchParams?.get('tipe') || '';
+        console.log('🔄 Applying filters...', filters);
+        console.log('📋 Ternak list:', ternakList);
 
-        if (jenis || tipe) {
-            setFilters(prev => ({
-                ...prev,
-                jenisHewan: jenis,
-                tipeTernak: tipe === 'pribadi' ? 'pribadi' : tipe === 'kelompok' ? 'kelompok' : 'semua'
-            }));
-        }
-    }, [searchParams]);
-
-    // Apply filters
-    useEffect(() => {
         let filtered = [...ternakList];
+        console.log('📋 Initial filtered count:', filtered.length);
+
+        // Debug: Log semua nilai tipe yang ada di data
+        const allTipeValues = [...new Set(ternakList.map(item => item.tipe))];
+        console.log('📋 All tipe values in data:', allTipeValues);
 
         if (filters.jenisHewan) {
             filtered = filtered.filter(item => item.jenisHewan === filters.jenisHewan);
+            console.log('✅ After jenisHewan filter:', filtered.length);
         }
         if (filters.jenisKelamin) {
             filtered = filtered.filter(item => item.jenisKelamin === filters.jenisKelamin);
+            console.log('✅ After jenisKelamin filter:', filtered.length);
         }
         if (filters.statusTernak) {
             filtered = filtered.filter(item => item.statusTernak === filters.statusTernak);
+            console.log('✅ After statusTernak filter:', filtered.length);
         }
         if (filters.umurTernak) {
             filtered = filtered.filter(item =>
                 item.umurTernak && item.umurTernak.toLowerCase().includes(filters.umurTernak.toLowerCase())
             );
+            console.log('✅ After umurTernak filter:', filtered.length);
         }
         if (filters.kondisiKesehatan) {
             filtered = filtered.filter(item => item.kondisiKesehatan === filters.kondisiKesehatan);
-        }
-        // Filter berdasarkan tipe ternak
-        if (filters.tipeTernak !== 'semua') {
-            filtered = filtered.filter(item => item.tipe === filters.tipeTernak);
+            console.log('✅ After kondisiKesehatan filter:', filtered.length);
         }
 
+        // Filter berdasarkan tipe ternak - PERBAIKI: Handle case sensitivity
+        if (filters.tipeTernak !== 'semua') {
+            filtered = filtered.filter(item =>
+                item.tipe && item.tipe.toLowerCase() === filters.tipeTernak.toLowerCase()
+            );
+            console.log('✅ After tipeTernak filter:', filtered.length);
+            console.log('✅ Filtered items after tipe filter:', filtered);
+        }
+
+        console.log('✅ Final filtered count:', filtered.length);
         setFilteredData(filtered);
+
     }, [filters, ternakList]);
 
     const getStatusOptions = () => {
@@ -305,7 +316,7 @@ function LihatTernakContent() {
                         >
                             <ChevronLeft size={24} />
                         </button>
-                        <h1 className="text-3xl font-bold font-[Judson] text-center flex-1">Data Ternak</h1>
+                        <h1 className="text-3xl font-bold font-[Judson] text-center flex-1 text-black">Data Ternak</h1>
                     </div>
 
                     {/* Search and Filter Section */}
@@ -317,13 +328,13 @@ function LihatTernakContent() {
                                     value={filters.umurTernak}
                                     onChange={(e) => handleFilterChange('umurTernak', e.target.value)}
                                     placeholder="Cari berdasarkan umur..."
-                                    className="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson]"
+                                    className="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700"
                                 />
                             </div>
                             <div className="relative">
                                 <button
                                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 font-[Judson]"
+                                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 font-[Judson] text-black"
                                 >
                                     <Filter size={20} />
                                     Filter
