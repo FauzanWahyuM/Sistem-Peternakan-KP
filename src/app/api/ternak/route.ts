@@ -113,14 +113,15 @@ export async function GET(req: NextRequest) {
         }
 
         // Default: ambil data berdasarkan filter
+        // Default: ambil data berdasarkan filter
         let filter: any = {};
 
+        // PERBAIKAN: Handle semua kasus filter tipe dengan benar
         if (tipe === "pribadi") {
-            // Semua data pribadi milik user
             filter = { userId, tipe: "pribadi" };
+            console.log('Filter pribadi:', filter);
 
         } else if (tipe === "kelompok") {
-            // Data pribadi + kelompok user
             if (!userId) {
                 return new Response(JSON.stringify([]), {
                     status: 200,
@@ -150,34 +151,55 @@ export async function GET(req: NextRequest) {
             }
 
             if (userData?.kelompok && userData.kelompok !== "Tidak tersedia") {
-                if (jenis && jenis.toLowerCase() !== "semua" && jenis.toLowerCase() !== "all") {
-                    filter = {
-                        $or: [
-                            { userId, tipe: "pribadi", jenisHewan: jenis },
-                            { kelompokId: userData.kelompok, tipe: "kelompok", jenisHewan: jenis }
-                        ]
-                    };
-                } else {
-                    filter = {
-                        $or: [
-                            { userId, tipe: "pribadi" },
-                            { kelompokId: userData.kelompok, tipe: "kelompok" }
-                        ]
-                    };
-                }
+                filter = { kelompokId: userData.kelompok, tipe: "kelompok" };
+                console.log('Filter kelompok:', filter);
             } else {
-                // kalau user tidak punya kelompok, fallback ke pribadi
-                filter = { userId, tipe: "pribadi" };
+                return new Response(JSON.stringify([]), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
             }
 
         } else if (userId) {
-            // Kalau tidak ada param tipe, default: pribadi saja
-            filter = { userId, tipe: "pribadi" };
+            // Jika tipe "semua" atau tidak ada tipe, ambil semua data user
+            let userData: IUser | null = null;
+            try {
+                if (mongoose.models.User) {
+                    userData = await mongoose.models.User.findById(userId)
+                        .select('kelompok')
+                        .lean()
+                        .exec() as IUser;
+                } else {
+                    const userSchema = new mongoose.Schema({ kelompok: String });
+                    const UserModel = mongoose.model('User', userSchema);
+                    userData = await UserModel.findById(userId)
+                        .select('kelompok')
+                        .lean()
+                        .exec() as IUser;
+                }
+            } catch (err) {
+                console.error("Error fetch user:", err);
+                userData = null;
+            }
+
+            if (userData?.kelompok && userData.kelompok !== "Tidak tersedia") {
+                filter = {
+                    $or: [
+                        { userId, tipe: "pribadi" },
+                        { kelompokId: userData.kelompok, tipe: "kelompok" }
+                    ]
+                };
+                console.log('Filter semua (dengan kelompok):', filter);
+            } else {
+                filter = { userId, tipe: "pribadi" };
+                console.log('Filter semua (hanya pribadi):', filter);
+            }
         }
 
         // Filter tambahan berdasarkan jenis hewan
         if (jenis && jenis.toLowerCase() !== "semua" && jenis.toLowerCase() !== "all") {
-            filter.jenisHewan = jenis;
+            filter.jenisHewan = { $regex: new RegExp(jenis, 'i') }; // Case insensitive
+            console.log('Added jenis filter:', filter.jenisHewan);
         }
 
 

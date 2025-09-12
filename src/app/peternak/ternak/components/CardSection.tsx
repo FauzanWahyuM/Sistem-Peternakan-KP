@@ -134,6 +134,7 @@ export default function CardSection() {
     }, [router]); // Tambah router sebagai dependency untuk refresh data
 
     const handleLihatData = (jenis: string, tipe: string) => {
+        // PERBAIKAN: Pastikan parameter tipe dikirim dengan benar
         router.push(`/peternak/ternak/lihat?jenis=${jenis}&tipe=${tipe}`);
     };
 

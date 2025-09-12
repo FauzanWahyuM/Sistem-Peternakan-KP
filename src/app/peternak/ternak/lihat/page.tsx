@@ -112,7 +112,8 @@ function LihatTernakContent() {
                 const tipe = searchParams?.get('tipe') || '';
                 console.log('📋 URL Params - jenis:', jenis, 'tipe:', tipe);
 
-                const url = `/api/ternak?userId=${userId}&stats=false&tipe=${tipe}&jenis=${jenis}`;
+                // PERBAIKAN: Gunakan tipe dari URL untuk filter API
+                const url = `/api/ternak?userId=${userId}&stats=false${tipe ? `&tipe=${tipe}` : ''}${jenis ? `&jenis=${jenis}` : ''}`;
                 console.log('🌐 API URL:', url);
 
                 const response = await fetch(url, { cache: "no-store" });
@@ -130,11 +131,11 @@ function LihatTernakContent() {
                 // ✅ Handle berbagai format response
                 let ternakData = result;
                 if (result.data && Array.isArray(result.data)) {
-                    ternakData = result.data; // Format: { data: [...] }
+                    ternakData = result.data;
                 } else if (result.livestock && Array.isArray(result.livestock)) {
-                    ternakData = result.livestock; // Format: { livestock: [...] }
+                    ternakData = result.livestock;
                 } else if (Array.isArray(result)) {
-                    ternakData = result; // Format: array langsung
+                    ternakData = result;
                 }
 
                 if (!Array.isArray(ternakData)) {
@@ -143,14 +144,17 @@ function LihatTernakContent() {
                 }
 
                 console.log('✅ Processed data:', ternakData.length, 'items');
-                if (ternakData.length > 0) {
-                    console.log('✅ Sample item structure:', ternakData[0]);
-                    console.log('✅ Sample item tipe:', ternakData[0].tipe);
-                    console.log('✅ Sample item jenisHewan:', ternakData[0].jenisHewan);
-                }
 
                 setTernakList(ternakData);
                 setFilteredData(ternakData);
+
+                // PERBAIKAN: Set filter berdasarkan URL parameters
+                setFilters(prev => ({
+                    ...prev,
+                    tipeTernak: tipe || 'semua',
+                    jenisHewan: jenis || ''
+                }));
+
                 setError(null);
 
             } catch (err) {
@@ -164,7 +168,7 @@ function LihatTernakContent() {
         loadData();
     }, [searchParams]);
 
-    // Apply filters - PERBAIKI: Tambahkan debug lebih detail
+    // Apply filters - PERBAIKAN: Filter yang lebih akurat
     useEffect(() => {
         console.log('🔄 Applying filters...', filters);
         console.log('📋 Ternak list:', ternakList);
@@ -172,34 +176,47 @@ function LihatTernakContent() {
         let filtered = [...ternakList];
         console.log('📋 Initial filtered count:', filtered.length);
 
-        // Debug: Log semua nilai tipe yang ada di data
-        const allTipeValues = [...new Set(ternakList.map(item => item.tipe))];
-        console.log('📋 All tipe values in data:', allTipeValues);
-
+        // Filter berdasarkan jenis hewan
         if (filters.jenisHewan) {
-            filtered = filtered.filter(item => item.jenisHewan === filters.jenisHewan);
+            filtered = filtered.filter(item =>
+                item.jenisHewan && item.jenisHewan.toLowerCase() === filters.jenisHewan.toLowerCase()
+            );
             console.log('✅ After jenisHewan filter:', filtered.length);
         }
+
+        // Filter berdasarkan jenis kelamin
         if (filters.jenisKelamin) {
-            filtered = filtered.filter(item => item.jenisKelamin === filters.jenisKelamin);
+            filtered = filtered.filter(item =>
+                item.jenisKelamin && item.jenisKelamin.toLowerCase() === filters.jenisKelamin.toLowerCase()
+            );
             console.log('✅ After jenisKelamin filter:', filtered.length);
         }
+
+        // Filter berdasarkan status ternak
         if (filters.statusTernak) {
-            filtered = filtered.filter(item => item.statusTernak === filters.statusTernak);
+            filtered = filtered.filter(item =>
+                item.statusTernak && item.statusTernak.toLowerCase() === filters.statusTernak.toLowerCase()
+            );
             console.log('✅ After statusTernak filter:', filtered.length);
         }
+
+        // Filter berdasarkan umur (search)
         if (filters.umurTernak) {
             filtered = filtered.filter(item =>
                 item.umurTernak && item.umurTernak.toLowerCase().includes(filters.umurTernak.toLowerCase())
             );
             console.log('✅ After umurTernak filter:', filtered.length);
         }
+
+        // Filter berdasarkan kondisi kesehatan
         if (filters.kondisiKesehatan) {
-            filtered = filtered.filter(item => item.kondisiKesehatan === filters.kondisiKesehatan);
+            filtered = filtered.filter(item =>
+                item.kondisiKesehatan && item.kondisiKesehatan.toLowerCase() === filters.kondisiKesehatan.toLowerCase()
+            );
             console.log('✅ After kondisiKesehatan filter:', filtered.length);
         }
 
-        // Filter berdasarkan tipe ternak - PERBAIKI: Handle case sensitivity
+        // Filter berdasarkan tipe ternak - PERBAIKAN PENTING
         if (filters.tipeTernak !== 'semua') {
             filtered = filtered.filter(item =>
                 item.tipe && item.tipe.toLowerCase() === filters.tipeTernak.toLowerCase()
@@ -347,11 +364,11 @@ function LihatTernakContent() {
                                             <select
                                                 value={filters.tipeTernak}
                                                 onChange={(e) => handleFilterChange('tipeTernak', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson]"
+                                                className="w-full p-2 border border-gray-300 text-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson]"
                                             >
-                                                {tipeTernakOptions.map((option) => (
-                                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                                ))}
+                                                <option value="semua">Semua Tipe</option>
+                                                <option value="pribadi">Pribadi</option>
+                                                <option value="kelompok">Kelompok</option>
                                             </select>
                                         </div>
                                     </div>
