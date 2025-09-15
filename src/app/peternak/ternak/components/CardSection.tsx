@@ -274,29 +274,6 @@ export default function CardSection() {
                     ))}
                 </div>
             </div>
-
-            {/* Total Keseluruhan */}
-            <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-lg p-6 text-white shadow-lg">
-                <h2 className="text-2xl font-bold mb-4 font-[Judson] text-center">Total Keseluruhan Ternak</h2>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    {['Sapi', 'Kambing', 'Domba', 'Ayam', 'Bebek'].map((jenis, i) => {
-                        const totalPribadi = ternakPribadi.find(t => t.jenis === jenis)?.jumlah || 0;
-                        const totalKelompok = ternakKelompok.find(t => t.jenis === jenis)?.jumlah || 0;
-                        const total = totalPribadi + totalKelompok;
-
-                        return (
-                            <div key={i} className="text-center bg-white bg-opacity-20 rounded-lg p-3">
-                                <h3 className="text-lg font-semibold mb-1 font-[Judson]">{jenis}</h3>
-                                <p className="text-2xl font-bold mb-1 font-[Judson]">{total}</p>
-                                <div className="text-xs opacity-80 font-[Judson]">
-                                    <div>Pribadi: {totalPribadi}</div>
-                                    <div>Kelompok: {totalKelompok}</div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
         </div>
     );
 }
