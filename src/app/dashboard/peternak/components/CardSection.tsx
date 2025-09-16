@@ -12,8 +12,25 @@ interface ChartDataItem {
     fullName: string;
 }
 
+interface TernakData {
+    _id: string;
+    userId: string;
+    jenisHewan: string;
+    jenisKelamin: string;
+    umurTernak: string;
+    statusTernak: string;
+    kondisiKesehatan: string;
+    tipe: string; // 'pribadi' atau 'kelompok'
+    kelompokId?: string;
+    kelompokNama?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 interface DashboardData {
-    jumlahTernak: number;
+    jumlahTernakPribadi: number;
+    jumlahTernakKelompok: number;
+    totalTernak: number;
     totalKuesioner: number;
     evaluasi: number;
     chartData: ChartDataItem[];
@@ -24,7 +41,9 @@ interface DashboardData {
 
 export default function CardSection() {
     const [dashboardData, setDashboardData] = useState<DashboardData>({
-        jumlahTernak: 0,
+        jumlahTernakPribadi: 0,
+        jumlahTernakKelompok: 0,
+        totalTernak: 0,
         totalKuesioner: 0,
         evaluasi: 0,
         chartData: [],
@@ -34,6 +53,21 @@ export default function CardSection() {
     });
 
     const [retryCount, setRetryCount] = useState(0);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Deteksi ukuran layar dengan lebih akurat
+    useEffect(() => {
+        const checkIsMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+
+        checkIsMobile();
+        window.addEventListener('resize', checkIsMobile);
+
+        return () => {
+            window.removeEventListener('resize', checkIsMobile);
+        };
+    }, []);
 
     const loadDashboardData = async () => {
         try {
@@ -42,7 +76,26 @@ export default function CardSection() {
             // Data ternak
             const ternakRes = await fetch("/api/ternak", { credentials: 'include' });
             if (!ternakRes.ok) throw new Error('Gagal mengambil data ternak');
-            const ternakData = await ternakRes.json();
+            const ternakData: TernakData[] = await ternakRes.json();
+
+            // Filter data ternak yang memiliki tipe dan hanya ternak pribadi milik user yang login
+            const filteredTernakData = ternakData.filter(ternak =>
+                ternak.tipe && (ternak.tipe === 'pribadi' || ternak.tipe === 'kelompok')
+            );
+
+            // Hitung ternak pribadi dan kelompok
+            let jumlahTernakPribadi = 0;
+            let jumlahTernakKelompok = 0;
+
+            filteredTernakData.forEach((ternak) => {
+                if (ternak.tipe === 'pribadi') {
+                    jumlahTernakPribadi += 1; // Setiap dokumen = 1 ekor ternak
+                } else if (ternak.tipe === 'kelompok') {
+                    jumlahTernakKelompok += 1; // Setiap dokumen = 1 ekor ternak
+                }
+            });
+
+            const totalTernak = jumlahTernakPribadi + jumlahTernakKelompok;
 
             // Data kuesioner - hanya hitung total
             let totalKuesioner = 0;
@@ -113,7 +166,9 @@ export default function CardSection() {
             }
 
             setDashboardData({
-                jumlahTernak: ternakData.length || 0,
+                jumlahTernakPribadi,
+                jumlahTernakKelompok,
+                totalTernak,
                 totalKuesioner,
                 evaluasi: evaluasiValue,
                 chartData,
@@ -140,13 +195,33 @@ export default function CardSection() {
         setRetryCount(prev => prev + 1);
     };
 
-    const { jumlahTernak, totalKuesioner, evaluasi, chartData, isFilled, loading, error } = dashboardData;
+    const {
+        jumlahTernakPribadi,
+        jumlahTernakKelompok,
+        totalTernak,
+        totalKuesioner,
+        evaluasi,
+        chartData,
+        isFilled,
+        loading,
+        error
+    } = dashboardData;
 
     const cards = [
         {
-            title: 'Jumlah Ternak',
-            value: `${jumlahTernak} Ekor`,
-            description: 'Total hewan ternak yang dimiliki'
+            title: 'Total Ternak',
+            value: `${totalTernak} Ekor`,
+            description: 'Total semua hewan ternak'
+        },
+        {
+            title: 'Ternak Pribadi',
+            value: `${jumlahTernakPribadi} Ekor`,
+            description: 'Hewan ternak milik pribadi'
+        },
+        {
+            title: 'Ternak Kelompok',
+            value: `${jumlahTernakKelompok} Ekor`,
+            description: 'Hewan ternak milik kelompok'
         },
         {
             title: 'Kuesioner',
@@ -166,11 +241,11 @@ export default function CardSection() {
 
     if (loading) {
         return (
-            <section className="p-6">
+            <section className="p-3 sm:p-4 md:p-6">
                 <div className="flex justify-center items-center h-64">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-                        <p className="mt-4 text-gray-600">Memuat data dashboard...</p>
+                        <p className="mt-4 text-gray-600 text-sm sm:text-base">Memuat data dashboard...</p>
                     </div>
                 </div>
             </section>
@@ -178,21 +253,21 @@ export default function CardSection() {
     }
 
     return (
-        <section className="p-6">
+        <section className="p-3 sm:p-4 md:p-6 overflow-x-hidden">
             {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 sm:mb-6 rounded">
                     <div className="flex">
                         <div className="flex-shrink-0">
-                            <span className="text-red-400 text-xl">⚠️</span>
+                            <span className="text-red-400 text-lg sm:text-xl">⚠️</span>
                         </div>
                         <div className="ml-3">
-                            <p className="text-sm text-red-700">
+                            <p className="text-xs sm:text-sm text-red-700">
                                 {error}
                             </p>
                             <div className="mt-2">
                                 <button
                                     onClick={handleRetry}
-                                    className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm font-medium"
+                                    className="bg-red-100 text-red-700 px-2 py-1 sm:px-3 sm:py-1 rounded-md text-xs sm:text-sm font-medium"
                                 >
                                     Coba Lagi
                                 </button>
@@ -202,33 +277,40 @@ export default function CardSection() {
                 </div>
             )}
 
-            {/* Card Statistik */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            {/* Card Statistik - Perbaikan tata letak untuk mobile */}
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8 w-full">
                 {cards.map((card, index) => (
                     <div
                         key={index}
-                        className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500"
+                        className="bg-white rounded-lg sm:rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-6 border-l-4 border-green-500 w-full"
                     >
-                        <h3 className="text-lg font-semibold text-gray-700 mb-2">{card.title}</h3>
-                        <p className="text-2xl font-bold text-gray-900 mb-1">{card.value}</p>
-                        <p className="text-sm text-gray-500">{card.description}</p>
+                        <h3 className="text-xs xs:text-sm sm:text-base md:text-lg font-semibold text-gray-700 mb-1 sm:mb-2">{card.title}</h3>
+                        <p className="text-base xs:text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-1">{card.value}</p>
+                        <p className="text-[10px] xs:text-xs sm:text-sm text-gray-500 leading-tight sm:leading-normal">{card.description}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 md:mb-8 w-full">
                 {/* Grafik Evaluasi Bulanan */}
-                <div className="bg-white rounded-xl shadow p-6">
-                    <h2 className="text-xl font-bold mb-4 text-gray-700">
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-sm sm:shadow p-3 sm:p-4 md:p-6 w-full">
+                    <h2 className="text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 text-gray-700">
                         Performa Evaluasi Bulanan
                     </h2>
-                    <div className="h-80">
+                    <div className="h-48 xs:h-56 sm:h-64 md:h-80 w-full">
                         {chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis domain={[0, 100]} />
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fontSize: isMobile ? 8 : 10 }}
+                                    />
+                                    <YAxis
+                                        domain={[0, 100]}
+                                        tick={{ fontSize: isMobile ? 8 : 10 }}
+                                        width={isMobile ? 25 : 30}
+                                    />
                                     <Tooltip
                                         formatter={(value) => [`${value}%`, 'Nilai Evaluasi']}
                                         labelFormatter={(label) => `Bulan: ${label}`}
@@ -237,18 +319,18 @@ export default function CardSection() {
                                         type="monotone"
                                         dataKey="nilai"
                                         stroke="#60c67a"
-                                        strokeWidth={3}
-                                        dot={{ r: 5 }}
-                                        activeDot={{ r: 8 }}
+                                        strokeWidth={2}
+                                        dot={{ r: isMobile ? 2 : 3 }}
+                                        activeDot={{ r: isMobile ? 4 : 5 }}
                                     />
                                 </LineChart>
                             </ResponsiveContainer>
                         ) : (
                             <div className="flex items-center justify-center h-full">
                                 <div className="text-center text-gray-500">
-                                    <div className="text-4xl mb-2">📊</div>
-                                    <p className="text-lg font-semibold">Belum ada data evaluasi</p>
-                                    <p className="text-sm">Isi kuesioner untuk melihat grafik evaluasi</p>
+                                    <div className="text-2xl sm:text-3xl md:text-4xl mb-1 sm:mb-2">📊</div>
+                                    <p className="text-sm sm:text-base md:text-lg font-semibold">Belum ada data evaluasi</p>
+                                    <p className="text-xs sm:text-sm">Isi kuesioner untuk melihat grafik evaluasi</p>
                                 </div>
                             </div>
                         )}
@@ -256,18 +338,18 @@ export default function CardSection() {
                 </div>
 
                 {/* Status Kuesioner */}
-                <div className="bg-white rounded-xl shadow p-6">
-                    <h2 className="text-xl font-bold mb-4 text-gray-700">
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-sm sm:shadow p-3 sm:p-4 md:p-6 w-full">
+                    <h2 className="text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 text-gray-700">
                         Status Kuesioner Bulan Ini
                     </h2>
-                    <div className="flex flex-col items-center justify-center h-64">
-                        <div className={`rounded-full h-24 w-24 flex items-center justify-center ${isFilled ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                            <span className="text-4xl">{isFilled ? '✅' : '⏰'}</span>
+                    <div className="flex flex-col items-center justify-center h-40 xs:h-48 sm:h-56 md:h-64">
+                        <div className={`rounded-full h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 flex items-center justify-center ${isFilled ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                            <span className="text-2xl sm:text-3xl md:text-4xl">{isFilled ? '✅' : '⏰'}</span>
                         </div>
-                        <p className="mt-6 text-lg font-semibold">
+                        <p className="mt-3 sm:mt-4 md:mt-6 text-sm sm:text-base md:text-lg font-semibold text-center px-2">
                             {isFilled ? 'Sudah mengisi kuesioner bulan ini' : 'Belum mengisi kuesioner bulan ini'}
                         </p>
-                        <p className="text-gray-500 mt-2 text-center">
+                        <p className="text-gray-500 mt-1 sm:mt-2 text-center text-xs sm:text-sm px-2">
                             {isFilled
                                 ? 'Terima kasih telah meluangkan waktu untuk mengisi kuesioner.'
                                 : 'Silakan isi kuesioner untuk membantu kami meningkatkan layanan.'}
