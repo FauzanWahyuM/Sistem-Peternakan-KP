@@ -1,3 +1,4 @@
+// app/dashboard/penyuluh/data-kelompok/[id]/page.tsx
 'use client';
 
 import Sidebar from '../../components/UnifiedSidebar';
@@ -20,6 +21,7 @@ interface KelompokData {
     anggota: Anggota[];
     status: string;
     totalAnggota: number;
+    tanggalDibuat: string;
 }
 
 export default function AnggotaKelompokPage() {
@@ -257,8 +259,8 @@ export default function AnggotaKelompokPage() {
                                     <tr>
                                         <td className="py-4 px-4 font-medium text-gray-700 bg-gray-50">Tanggal Dibuat</td>
                                         <td className="py-4 px-4 text-gray-800">
-                                            {kelompokData.anggota.length > 0
-                                                ? formatDate(kelompokData.anggota[0].joinDate)
+                                            {kelompokData.tanggalDibuat
+                                                ? formatDate(kelompokData.tanggalDibuat)
                                                 : 'Tidak tersedia'
                                             }
                                         </td>

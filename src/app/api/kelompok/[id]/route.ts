@@ -1,6 +1,18 @@
+// app/api/kelompok/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '../../../../lib/dbConnect';
-import User, { IUser } from '../../../../models/User';
+import Kelompok from '../../../../models/Kelompok';
+import User from '../../../../models/User';
+import type { FilterQuery } from 'mongoose';
+
+// Helper function untuk safe operations
+const safeFind = async (model: any, filter: FilterQuery<any>, projection?: any, options?: any) => {
+    return model.find(filter, projection, options).lean().exec();
+};
+
+const safeFindOne = async (model: any, filter: FilterQuery<any>, projection?: any, options?: any) => {
+    return model.findOne(filter, projection, options).lean().exec();
+};
 
 export async function GET(
     _request: NextRequest,
@@ -11,26 +23,26 @@ export async function GET(
 
         const { id } = context.params;
 
-        // Hanya ambil user dengan role peternak
-        const users: IUser[] = await User.find({
-            kelompok: id,
-            role: 'peternak'
-        })
-            .select('nama username email role status createdAt')
-            .sort({ createdAt: 1 })
-            .exec();
+        // Cari kelompok berdasarkan kelompokid
+        const kelompok = await safeFindOne(Kelompok, { kelompokid: id });
 
-        if (users.length === 0) {
+        if (!kelompok) {
             return NextResponse.json(
-                { error: 'Kelompok tidak ditemukan atau tidak memiliki anggota' },
+                { error: 'Kelompok tidak ditemukan' },
                 { status: 404 }
             );
         }
 
+        // Ambil semua user dengan role peternak yang termasuk dalam kelompok ini
+        const users = await safeFind(User, {
+            kelompok: id,
+            role: 'peternak'
+        }, 'nama username email role status createdAt', { sort: { createdAt: 1 } });
+
         const responseData = {
-            id,
-            nama: `Kelompok ${id}`,
-            anggota: users.map((user: IUser) => ({
+            id: kelompok.kelompokid,
+            nama: kelompok.nama || `Kelompok ${kelompok.kelompokid}`,
+            anggota: users.map((user: any) => ({
                 nama: user.nama,
                 username: user.username,
                 email: user.email,
@@ -38,10 +50,12 @@ export async function GET(
                 status: user.status,
                 joinDate: user.createdAt,
             })),
-            status: users.some((user) => user.status === 'Aktif') ? 'Aktif' : 'Non-Aktif',
+            status: kelompok.status || 'Non-Aktif',
             totalAnggota: users.length,
-            totalAktif: users.filter((user) => user.status === 'Aktif').length,
-            totalNonAktif: users.filter((user) => user.status === 'Non-Aktif').length,
+            totalAktif: users.filter((user: any) => user.status === 'Aktif').length,
+            totalNonAktif: users.filter((user: any) => user.status === 'Non-Aktif').length,
+            // TAMBAHKAN INI: tanggal dibuat kelompok
+            tanggalDibuat: kelompok.tanggalDibuat || kelompok.createdAt || new Date()
         };
 
         return NextResponse.json(responseData);

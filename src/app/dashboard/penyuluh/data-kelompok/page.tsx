@@ -3,6 +3,7 @@
 import Sidebar from '../components/UnifiedSidebar';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Kelompok {
     _id?: string;
@@ -18,11 +19,9 @@ export default function DataKelompokPage() {
     const [filteredData, setFilteredData] = useState<Kelompok[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Filter state hanya untuk kelompok
     const [kelompokFilter, setKelompokFilter] = useState('');
 
-    // Fetch data dari MongoDB Atlas
+    // Fetch data kelompok dari MongoDB Atlas
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -117,11 +116,11 @@ export default function DataKelompokPage() {
         const baseClass = "bg-white bg-opacity-20 rounded-full text-sm font-medium text-black whitespace-nowrap";
         switch (status) {
             case 'non-aktif':
-                return `${baseClass} px-4 py-1 min-w-[85px] text-center`; // Lebih lebar untuk "Non-Aktif"
+                return `${baseClass} px-4 py-1 min-w-[85px] text-center`;
             case 'pending':
-                return `${baseClass} px-3 py-1`; // Sedang untuk "Pending"
+                return `${baseClass} px-3 py-1`;
             default:
-                return `${baseClass} px-3 py-1`; // Default untuk "Aktif" dan lainnya
+                return `${baseClass} px-3 py-1`;
         }
     };
 
@@ -217,14 +216,20 @@ export default function DataKelompokPage() {
                             </div>
                         </div>
 
-                        {/* Clear Filter Button */}
-                        <div className="flex justify-center">
+                        {/* Clear Filter Button dan Tambah Kelompok Button */}
+                        <div className="flex justify-center gap-4">
                             <button
                                 onClick={clearFilter}
                                 className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
                             >
                                 Reset Filter
                             </button>
+                            <Link
+                                href="/dashboard/penyuluh/data-kelompok/tambah-kelompok"
+                                className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                            >
+                                Tambah Kelompok
+                            </Link>
                         </div>
                     </div>
                 </div>

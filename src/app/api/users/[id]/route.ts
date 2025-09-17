@@ -1,4 +1,3 @@
-// src/app/api/user/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "../../../../lib/dbConnect";
 import User from "../../../../models/User";
@@ -12,7 +11,7 @@ export async function GET(
         await connectDB();
         const params = await context.params;
         const { id } = params;
-        
+
         console.log('🔍 Mencari user dengan ID:', id);
 
         // Validasi ID
@@ -45,23 +44,31 @@ export async function GET(
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
+        // Siapkan data user
+        const userData: any = {
+            _id: user._id.toString(),
+            nama: user.nama,
+            username: user.username,
+            email: user.email,
+            kelompok: user.kelompok,
+            role: user.role,
+            status: user.status,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            profileImage: user.profileImage
+        };
+
+        // Tambahkan field khusus untuk peternak
+        if (user.role?.toLowerCase() === 'peternak') {
+            userData.tempatLahir = user.tempatLahir || null;
+            userData.tanggalLahir = user.tanggalLahir || null;
+            userData.umur = user.umur || null;
+        }
+
         console.log('✅ User ditemukan:', user.username);
-        return NextResponse.json({
-            user: {
-                _id: user._id.toString(),
-                nama: user.nama,
-                username: user.username,
-                email: user.email,
-                kelompok: user.kelompok,
-                role: user.role,
-                status: user.status,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-                profileImage: user.profileImage
-            }
-        });
+        return NextResponse.json({ user: userData });
     } catch (error: any) {
-        console.error("❌ Error in GET /api/user/[id]:", error);
+        console.error("❌ Error in GET /api/users/[id]:", error);
         return NextResponse.json(
             { error: error.message || "Internal server error" },
             { status: 500 }
@@ -81,6 +88,19 @@ export async function PUT(
 
         console.log('🔄 Memperbarui user dengan ID:', id);
 
+        // Hitung ulang umur jika tanggalLahir diupdate dan role peternak
+        if (body.role?.toLowerCase() === 'peternak' && body.tanggalLahir) {
+            const today = new Date();
+            const birthDate = new Date(body.tanggalLahir);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            body.umur = age;
+        }
+
         const user = await User.findByIdAndUpdate(
             id,
             body,
@@ -91,23 +111,33 @@ export async function PUT(
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
+        // Siapkan response
+        const userData: any = {
+            _id: user._id.toString(),
+            nama: user.nama,
+            username: user.username,
+            email: user.email,
+            kelompok: user.kelompok,
+            role: user.role,
+            status: user.status,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            profileImage: user.profileImage
+        };
+
+        // Tambahkan field khusus untuk peternak
+        if (user.role?.toLowerCase() === 'peternak') {
+            userData.tempatLahir = user.tempatLahir || null;
+            userData.tanggalLahir = user.tanggalLahir || null;
+            userData.umur = user.umur || null;
+        }
+
         return NextResponse.json({
             message: "User updated successfully",
-            user: {
-                _id: user._id.toString(),
-                nama: user.nama,
-                username: user.username,
-                email: user.email,
-                kelompok: user.kelompok,
-                role: user.role,
-                status: user.status,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-                profileImage: user.profileImage
-            }
+            user: userData
         });
     } catch (error: any) {
-        console.error("❌ Error in PUT /api/user/[id]:", error);
+        console.error("❌ Error in PUT /api/users/[id]:", error);
         return NextResponse.json(
             { error: error.message || "Internal server error" },
             { status: 500 }

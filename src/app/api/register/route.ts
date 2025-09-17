@@ -8,7 +8,20 @@ export async function POST(req: Request) {
         const body = await req.json();
         console.log("📩 Incoming body:", body);
 
-        const { nama, username, email, password, kelompok, role, status } = body;
+        // Tambahkan field baru di sini
+        const {
+            nama,
+            username,
+            email,
+            password,
+            kelompokId, // untuk peternak
+            wilayahBinaan, // untuk penyuluh
+            tempatLahir,
+            tanggalLahir,
+            umur,
+            role,
+            status
+        } = body;
 
         await connectDB();
         console.log("✅ Database connected");
@@ -29,8 +42,11 @@ export async function POST(req: Request) {
         const hashedPassword = await bcrypt.hash(password, 10);
         console.log("🔑 Password hashed");
 
-        // simpan user baru
-        const newUser = await User.create({
+        // Tentukan kelompok berdasarkan role
+        const kelompok = role === 'peternak' ? kelompokId : wilayahBinaan;
+
+        // Buat objek user dengan field yang sesuai
+        const userData: any = {
             nama,
             username,
             email,
@@ -38,22 +54,42 @@ export async function POST(req: Request) {
             kelompok,
             role,
             status,
-        });
+        };
+
+        // Tambahkan field khusus peternak
+        if (role === 'peternak') {
+            userData.tempatLahir = tempatLahir;
+            userData.tanggalLahir = tanggalLahir;
+            userData.umur = umur;
+        }
+
+        // simpan user baru
+        const newUser = await User.create(userData);
 
         console.log("✅ New user created:", newUser._id.toString());
+
+        // Siapkan response data
+        const responseData: any = {
+            id: newUser._id,
+            nama: newUser.nama,
+            username: newUser.username,
+            email: newUser.email,
+            kelompok: newUser.kelompok,
+            role: newUser.role,
+            status: newUser.status,
+        };
+
+        // Tambahkan field khusus peternak dalam response
+        if (role === 'peternak') {
+            responseData.tempatLahir = newUser.tempatLahir;
+            responseData.tanggalLahir = newUser.tanggalLahir;
+            responseData.umur = newUser.umur;
+        }
 
         return NextResponse.json(
             {
                 message: "Register success",
-                user: {
-                    id: newUser._id,
-                    nama: newUser.nama,
-                    username: newUser.username,
-                    email: newUser.email,
-                    kelompok: newUser.kelompok,
-                    role: newUser.role,
-                    status: newUser.status,
-                },
+                user: responseData,
             },
             { status: 201 }
         );

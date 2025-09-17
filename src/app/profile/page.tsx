@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Camera, Save, Edit2, User, Shield, X } from 'lucide-react';
+import { ArrowLeft, Camera, Save, Edit2, User, Shield, X, MapPin, Calendar, Cake } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '../hooks/useAuth';
 
@@ -17,6 +17,16 @@ interface UserData {
     createdAt: string;
     updatedAt: string;
     profileImage?: string;
+    tempatLahir?: string;
+    tanggalLahir?: string;
+    umur?: number;
+}
+
+// Tambahkan interface untuk data kelompok
+interface KelompokData {
+    _id: string;
+    nama: string;
+    // tambahkan field lain jika diperlukan
 }
 
 const ProfilePage: React.FC = () => {
@@ -29,13 +39,31 @@ const ProfilePage: React.FC = () => {
         nama: '',
         email: '',
         kelompok: '',
+        tempatLahir: '',
+        tanggalLahir: '',
     });
     const [profileImage, setProfileImage] = useState('/Vector.svg');
     const [uploadingImage, setUploadingImage] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
+    const [kelompokList, setKelompokList] = useState<KelompokData[]>([]);
+    const [kelompokLoading, setKelompokLoading] = useState(false);
 
     const loading = authLoading || dataLoading;
+
+    // Fungsi untuk menghitung umur berdasarkan tanggal lahir
+    const calculateAge = (birthDate: string): number => {
+        const today = new Date();
+        const birth = new Date(birthDate);
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+
+        return age;
+    };
 
     // Fungsi untuk mendapatkan URL gambar profil yang valid
     const getProfileImageUrl = (profileImage?: string) => {
@@ -55,6 +83,31 @@ const ProfilePage: React.FC = () => {
         return `/api/auth/profile/image/${profileImage}`;
     };
 
+    // Fungsi untuk mengambil daftar kelompok dari API
+    const fetchKelompokList = useCallback(async () => {
+        if (!token) return;
+
+        try {
+            setKelompokLoading(true);
+            const response = await fetch('/api/kelompok', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setKelompokList(data.kelompok || []);
+            } else {
+                console.error('Gagal mengambil daftar kelompok');
+            }
+        } catch (error) {
+            console.error('Error mengambil daftar kelompok:', error);
+        } finally {
+            setKelompokLoading(false);
+        }
+    }, [token]);
+
     const fetchUserData = useCallback(async () => {
         try {
             setDataLoading(true);
@@ -70,7 +123,9 @@ const ProfilePage: React.FC = () => {
                 setEditData({
                     nama: userData.nama || '',
                     email: userData.email || '',
-                    kelompok: userData.kelompok || ''
+                    kelompok: userData.kelompok || '',
+                    tempatLahir: userData.tempatLahir || '',
+                    tanggalLahir: userData.tanggalLahir || '',
                 });
                 if (userData.profileImage) {
                     setProfileImage(getProfileImageUrl(userData.profileImage));
@@ -94,7 +149,9 @@ const ProfilePage: React.FC = () => {
                     setEditData({
                         nama: data.user.nama || '',
                         email: data.user.email || '',
-                        kelompok: data.user.kelompok || ''
+                        kelompok: data.user.kelompok || '',
+                        tempatLahir: data.user.tempatLahir || '',
+                        tanggalLahir: data.user.tanggalLahir || '',
                     });
                     if (data.user.profileImage) {
                         setProfileImage(getProfileImageUrl(data.user.profileImage));
@@ -128,8 +185,9 @@ const ProfilePage: React.FC = () => {
     useEffect(() => {
         if (!authLoading) {
             fetchUserData();
+            fetchKelompokList(); // Panggil fungsi untuk mengambil daftar kelompok
         }
-    }, [authLoading, fetchUserData]);
+    }, [authLoading, fetchUserData, fetchKelompokList]);
 
     const handleSave = async () => {
         if (!userId || !token) {
@@ -337,6 +395,9 @@ const ProfilePage: React.FC = () => {
         }
     };
 
+    // Cek apakah user memiliki role peternak
+    const isPeternak = userData?.role?.toLowerCase() === 'peternak';
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-4xl mx-auto px-4 py-8">
@@ -467,6 +528,71 @@ const ProfilePage: React.FC = () => {
                                             <p className="text-gray-800">{userData?.email || 'Tidak tersedia'}</p>
                                         )}
                                     </div>
+
+                                    {/* Tambahan: Tempat Lahir - Hanya tampil untuk peternak */}
+                                    {isPeternak && (
+                                        <div>
+                                            <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                                <MapPin size={14} />
+                                                Tempat Lahir
+                                            </label>
+                                            {isEditing ? (
+                                                <input
+                                                    type="text"
+                                                    value={editData.tempatLahir}
+                                                    onChange={(e) => setEditData({ ...editData, tempatLahir: e.target.value })}
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                />
+                                            ) : (
+                                                <p className="text-gray-800">{userData?.tempatLahir || 'Tidak tersedia'}</p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Tambahan: Tanggal Lahir - Hanya tampil untuk peternak */}
+                                    {isPeternak && (
+                                        <div>
+                                            <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                                <Calendar size={14} />
+                                                Tanggal Lahir
+                                            </label>
+                                            {isEditing ? (
+                                                <input
+                                                    type="date"
+                                                    value={editData.tanggalLahir}
+                                                    onChange={(e) => setEditData({ ...editData, tanggalLahir: e.target.value })}
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                />
+                                            ) : (
+                                                <p className="text-gray-800">
+                                                    {userData?.tanggalLahir
+                                                        ? new Date(userData.tanggalLahir).toLocaleDateString('id-ID', {
+                                                            year: 'numeric',
+                                                            month: 'long',
+                                                            day: 'numeric'
+                                                        })
+                                                        : 'Tidak tersedia'
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Tambahan: Umur (hanya tampil, tidak bisa diedit) - Hanya untuk peternak */}
+                                    {isPeternak && (
+                                        <div>
+                                            <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                                <Cake size={14} />
+                                                Umur
+                                            </label>
+                                            <p className="text-gray-800">
+                                                {userData?.tanggalLahir
+                                                    ? `${calculateAge(userData.tanggalLahir)} tahun`
+                                                    : 'Tidak tersedia'
+                                                }
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -481,12 +607,19 @@ const ProfilePage: React.FC = () => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-600 mb-1">Kelompok</label>
                                         {isEditing ? (
-                                            <input
-                                                type="text"
+                                            <select
                                                 value={editData.kelompok}
                                                 onChange={(e) => setEditData({ ...editData, kelompok: e.target.value })}
                                                 className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                            />
+                                                disabled={kelompokLoading}
+                                            >
+                                                <option value="">Pilih Kelompok</option>
+                                                {kelompokList.map((kelompok) => (
+                                                    <option key={kelompok._id} value={kelompok.nama}>
+                                                        {kelompok.nama}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         ) : (
                                             <p className="text-gray-800">{userData?.kelompok || 'Tidak tersedia'}</p>
                                         )}

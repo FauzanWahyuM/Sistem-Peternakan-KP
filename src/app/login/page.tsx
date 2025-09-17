@@ -15,13 +15,39 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Kredensial hardcode untuk admin
+    const adminCredentials = {
+        username: 'admin',
+        password: 'Admin@1234'
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg('');
         setIsLoading(true);
 
         try {
-            // LOGIN pakai NextAuth credentials
+            // Cek jika kredensial admin
+            if (username === adminCredentials.username && password === adminCredentials.password) {
+                // Simulasi login admin berhasil
+                const mockAdminUser = {
+                    _id: 'admin-001',
+                    username: 'admin',
+                    email: 'admin@sima.com',
+                    role: 'admin',
+                    name: 'Administrator'
+                };
+
+                // Simpan ke sessionStorage dan localStorage
+                sessionStorage.setItem('userId', mockAdminUser._id);
+                localStorage.setItem('userData', JSON.stringify(mockAdminUser));
+
+                // Redirect ke dashboard admin
+                router.push('/dashboard/admin');
+                return;
+            }
+
+            // LOGIN pakai NextAuth credentials untuk user biasa
             const res = await signIn('credentials', {
                 username,
                 password,
@@ -35,11 +61,10 @@ export default function LoginPage() {
             }
 
             // Ambil session terbaru
-            // Di tempat setelah login berhasil
             const session = await getSession();
             if (session?.user) {
                 // Simpan userId dan userData
-                const userId = (session.user as any)._id; // atau ambil dari response login
+                const userId = (session.user as any)._id;
                 sessionStorage.setItem('userId', userId);
                 localStorage.setItem('userData', JSON.stringify(session.user));
             }
@@ -81,21 +106,6 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     };
-
-    // const handleFacebookLogin = async () => {
-    //     setErrorMsg('');
-    //     setIsLoading(true);
-
-    //     try {
-    //         await signIn("facebook", {
-    //             callbackUrl: '/dashboard/peternak'
-    //         });
-    //     } catch (error) {
-    //         console.error('Facebook login error:', error);
-    //         setErrorMsg('Terjadi kesalahan saat login dengan Facebook');
-    //         setIsLoading(false);
-    //     }
-    // };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-green-100 via-white to-green-100 px-4">
@@ -162,22 +172,6 @@ export default function LoginPage() {
                     </p>
 
                     <div className="flex justify-center space-x-4 mb-4">
-                        {/* Tombol Facebook
-                        <button
-                            type="button"
-                            onClick={handleFacebookLogin}
-                            className="w-12 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isLoading}
-                        >
-                            <Image
-                                src="/facebook.svg"
-                                alt="facebook"
-                                width={48}
-                                height={48}
-                                className="object-contain"
-                            />
-                        </button> */}
-
                         {/* Tombol Google G */}
                         <button
                             type="button"
