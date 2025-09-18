@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
-import { ChevronLeft, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronLeft, CheckCircle, XCircle, Plus, X } from 'lucide-react';
 
 export default function TambahTernakPage() {
     const router = useRouter();
@@ -15,7 +15,8 @@ export default function TambahTernakPage() {
         jenisKelamin: '',
         umurTernak: '',
         statusTernak: '',
-        kondisiKesehatan: ''
+        kondisiKesehatan: '',
+        penyakit: [] as string[]
     });
 
     const [kelompokOptions, setKelompokOptions] = useState([]);
@@ -29,8 +30,8 @@ export default function TambahTernakPage() {
         kelompokNama: ''
     });
     const [error, setError] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false); // Tambah state untuk submit
-
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [newPenyakit, setNewPenyakit] = useState('');
     const jenisHewanOptions = ['Sapi', 'Kambing', 'Domba', 'Ayam', 'Bebek'];
     const jenisKelaminOptions = ['Jantan', 'Betina'];
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
@@ -161,6 +162,25 @@ export default function TambahTernakPage() {
         });
     };
 
+    // Fungsi untuk menambah penyakit
+    const addPenyakit = () => {
+        if (newPenyakit.trim() && !formData.penyakit.includes(newPenyakit.trim())) {
+            setFormData(prev => ({
+                ...prev,
+                penyakit: [...prev.penyakit, newPenyakit.trim()]
+            }));
+            setNewPenyakit('');
+        }
+    };
+
+    // Fungsi untuk menghapus penyakit
+    const removePenyakit = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            penyakit: prev.penyakit.filter((_, i) => i !== index)
+        }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -180,7 +200,6 @@ export default function TambahTernakPage() {
             const dataToSend = {
                 ...formData,
                 userId: userData._id
-                // kelompokId dan kelompokNama akan dihandle oleh API
             };
 
             console.log('Data to send:', dataToSend);
@@ -435,13 +454,68 @@ export default function TambahTernakPage() {
                             </div>
                         </div>
 
+                        {/* Field Penyakit yang Pernah Menyerang */}
+                        <div>
+                            <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
+                                Penyakit yang Pernah Menyerang
+                            </label>
+                            <div className="space-y-3">
+                                {/* Input untuk menambah penyakit baru */}
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={newPenyakit}
+                                        onChange={(e) => setNewPenyakit(e.target.value)}
+                                        placeholder="Masukkan nama penyakit"
+                                        className="flex-1 p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addPenyakit();
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={addPenyakit}
+                                        className="bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg font-medium font-[Judson] flex items-center justify-center"
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                </div>
+
+                                {/* Daftar penyakit yang sudah ditambahkan */}
+                                {formData.penyakit.length > 0 && (
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <h4 className="font-medium text-gray-700 mb-2 font-[Judson]">
+                                            Daftar Penyakit:
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {formData.penyakit.map((penyakit, index) => (
+                                                <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
+                                                    <span className="font-[Judson] text-black">{penyakit}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removePenyakit(index)}
+                                                        className="text-red-500 hover:text-red-700 p-1"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="flex gap-4 pt-6">
                             <button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isSubmitting}
                                 className="flex-1 bg-green-500 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium font-[Judson] text-lg disabled:opacity-50"
                             >
-                                {isLoading ? 'Menyimpan...' : 'Simpan'}
+                                {isSubmitting ? 'Menyimpan...' : 'Simpan'}
                             </button>
                             <button
                                 type="button"

@@ -113,8 +113,6 @@ export async function GET(req: NextRequest) {
         }
 
         // Default: ambil data berdasarkan filter
-        // Default: ambil data berdasarkan filter
-        // Default: ambil data berdasarkan filter
         let filter: any = {};
 
         // PERBAIKAN: Jangan gunakan tipe dari URL parameter untuk filter API
@@ -186,7 +184,18 @@ export async function POST(req: Request) {
         const body = await req.json();
         console.log('POST Ternak Body:', body);
 
-        const { userId, kelompokId, kelompokNama, jenisHewan, jenisKelamin, umurTernak, statusTernak, kondisiKesehatan, tipe } = body;
+        const {
+            userId,
+            kelompokId,
+            kelompokNama,
+            jenisHewan,
+            jenisKelamin,
+            umurTernak,
+            statusTernak,
+            kondisiKesehatan,
+            tipe,
+            penyakit // TAMBAHKAN INI
+        } = body;
 
         // Validasi data
         if (!userId || !jenisHewan || !jenisKelamin || !umurTernak || !statusTernak || !kondisiKesehatan || !tipe) {
@@ -211,7 +220,8 @@ export async function POST(req: Request) {
             umurTernak: umurTernak.trim(),
             statusTernak,
             kondisiKesehatan,
-            tipe
+            tipe,
+            penyakit: penyakit || [] // TAMBAHKAN INI
         };
 
         // Jika tipe kelompok, ambil data kelompok dari user

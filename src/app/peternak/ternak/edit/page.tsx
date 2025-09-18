@@ -3,8 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
-import { ChevronLeft, CheckCircle } from 'lucide-react';
-
+import { ChevronLeft, CheckCircle, Plus, X } from 'lucide-react';
 
 function EditTernakContent() {
     const router = useRouter();
@@ -16,12 +15,14 @@ function EditTernakContent() {
         jenisKelamin: '',
         umurTernak: '',
         statusTernak: '',
-        kondisiKesehatan: ''
+        kondisiKesehatan: '',
+        penyakit: [] as string[]
     });
 
+    const [newPenyakit, setNewPenyakit] = useState('');
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [showSuccessModal, setShowSuccessModal] = useState(false); // 🔔 state modal
+    const [error, setError] = useState<string | null>(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
 
@@ -53,6 +54,25 @@ function EditTernakContent() {
         return statusOptions[jenisHewan]?.[jenisKelamin] || [];
     };
 
+    // Fungsi untuk menambah penyakit
+    const addPenyakit = () => {
+        if (newPenyakit.trim() && !formData.penyakit.includes(newPenyakit.trim())) {
+            setFormData(prev => ({
+                ...prev,
+                penyakit: [...prev.penyakit, newPenyakit.trim()]
+            }));
+            setNewPenyakit('');
+        }
+    };
+
+    // Fungsi untuk menghapus penyakit
+    const removePenyakit = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            penyakit: prev.penyakit.filter((_, i) => i !== index)
+        }));
+    };
+
     useEffect(() => {
         if (!ternakId) {
             alert('ID ternak tidak ditemukan!');
@@ -62,7 +82,7 @@ function EditTernakContent() {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`/api/ternak/${ternakId}`);
+                const response = await fetch(`/api/ternak?id=${ternakId}`);
                 if (!response.ok) throw new Error('Failed to fetch data');
                 const result = await response.json();
 
@@ -71,7 +91,8 @@ function EditTernakContent() {
                     jenisKelamin: result.jenisKelamin,
                     umurTernak: result.umurTernak,
                     statusTernak: result.statusTernak,
-                    kondisiKesehatan: result.kondisiKesehatan
+                    kondisiKesehatan: result.kondisiKesehatan,
+                    penyakit: result.penyakit || []
                 });
                 setError(null);
             } catch (err) {
@@ -84,25 +105,28 @@ function EditTernakContent() {
         loadData();
     }, [ternakId, router]);
 
-    const handleInputChange = (field, value) => {
+    const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
         }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await fetch(`/api/ternak/${ternakId}`, {
+            const response = await fetch(`/api/ternak`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                    id: ternakId,
+                    ...formData
+                }),
             });
             if (!response.ok) throw new Error('Failed to update data');
 
             const result = await response.json();
-            console.log('Data ternak updated:', result.livestock);
+            console.log('Data ternak updated:', result);
 
             // 🔔 tampilkan modal sukses
             setShowSuccessModal(true);
@@ -112,7 +136,7 @@ function EditTernakContent() {
                 setShowSuccessModal(false);
                 router.push('/peternak/ternak/lihat');
             }, 2000);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating ternak data:', error);
             alert('Gagal memperbarui data ternak: ' + error.message);
         }
@@ -254,6 +278,61 @@ function EditTernakContent() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Field Penyakit yang Pernah Menyerang */}
+                        <div>
+                            <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
+                                Penyakit yang Pernah Menyerang
+                            </label>
+                            <div className="space-y-3">
+                                {/* Input untuk menambah penyakit baru */}
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={newPenyakit}
+                                        onChange={(e) => setNewPenyakit(e.target.value)}
+                                        placeholder="Masukkan nama penyakit"
+                                        className="flex-1 p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addPenyakit();
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={addPenyakit}
+                                        className="bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg font-medium font-[Judson] flex items-center justify-center"
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                </div>
+
+                                {/* Daftar penyakit yang sudah ditambahkan */}
+                                {formData.penyakit.length > 0 && (
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <h4 className="font-medium text-gray-700 mb-2 font-[Judson]">
+                                            Daftar Penyakit:
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {formData.penyakit.map((penyakit, index) => (
+                                                <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
+                                                    <span className="font-[Judson]">{penyakit}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removePenyakit(index)}
+                                                        className="text-red-500 hover:text-red-700 p-1"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

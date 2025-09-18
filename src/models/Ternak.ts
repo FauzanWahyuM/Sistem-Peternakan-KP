@@ -45,6 +45,10 @@ const TernakSchema: Schema = new Schema({
         type: String,
         required: true
     },
+    penyakit: {
+        type: [String], // Array of strings untuk menyimpan multiple penyakit
+        default: []
+    },
     kondisiKesehatan: {
         type: String,
         required: true,
