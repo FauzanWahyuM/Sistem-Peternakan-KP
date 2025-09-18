@@ -114,33 +114,38 @@ const ProfilePage: React.FC = () => {
         };
     }, [userId, clearUserCache]);
 
-    // Fungsi untuk mengambil daftar kelompok dari API
-    // Fungsi untuk mengambil daftar kelompok dari API
+    // Fungsi untuk mengambil daftar kelompok dari API - VERSION PRODUCTION
     const fetchKelompokList = useCallback(async () => {
-        if (!token) return;
+        if (!token) {
+            console.log('Token tidak tersedia, skip fetching kelompok');
+            return;
+        }
 
         try {
             setKelompokLoading(true);
+            console.log('🔄 Fetching kelompok data dari:', '/api/kelompok');
+
             const response = await fetch('/api/kelompok', {
                 headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include' // Penting untuk production
             });
+
+            console.log('Response status kelompok:', response.status);
 
             if (response.ok) {
                 const data = await response.json();
                 console.log('Data kelompok dari API:', data);
 
-                // API mengembalikan array of objects dengan struktur:
-                // [{ id: string, nama: string, ... }]
-                // Kita perlu mapping ke format yang diharapkan frontend: { _id: string, nama: string }
-
                 if (Array.isArray(data)) {
                     const formattedKelompok = data.map(item => ({
-                        _id: item.id || item._id, // Gunakan id sebagai _id
+                        _id: item.id || item._id || item.kelompokid,
                         nama: item.nama
                     }));
                     setKelompokList(formattedKelompok);
+                    console.log('Formatted kelompok data:', formattedKelompok);
                 } else {
                     console.error('Data kelompok bukan array:', data);
                     setModalMessage('Format data kelompok tidak valid');
@@ -148,28 +153,34 @@ const ProfilePage: React.FC = () => {
                 }
             } else {
                 console.error('Gagal mengambil daftar kelompok, status:', response.status);
-                const errorData = await response.json().catch(() => ({}));
-                console.error('Error details:', errorData);
-                setModalMessage('Gagal mengambil daftar kelompok');
-                setShowModal(true);
+                // Coba fallback tanpa auth header untuk debugging
+                try {
+                    const fallbackResponse = await fetch('/api/kelompok');
+                    if (fallbackResponse.ok) {
+                        const fallbackData = await fallbackResponse.json();
+                        console.log('Fallback data kelompok:', fallbackData);
+                    }
+                } catch (fallbackError) {
+                    console.error('Fallback juga gagal:', fallbackError);
+                }
             }
         } catch (error) {
             console.error('Error mengambil daftar kelompok:', error);
-            setModalMessage('Gagal mengambil daftar kelompok');
-            setShowModal(true);
+            // Jangan tampilkan modal di production untuk error kecil
         } finally {
             setKelompokLoading(false);
         }
     }, [token]);
 
+    // Fetch user data dengan error handling yang lebih baik
     const fetchUserData = useCallback(async () => {
         try {
             setDataLoading(true);
-
             console.log('🔄 Fetching user data...');
 
             // Cek jika user tidak login, bersihkan cache
             if (!userId) {
+                console.log('User ID tidak ada, bersihkan cache');
                 clearUserCache();
                 setDataLoading(false);
                 return;
@@ -178,39 +189,44 @@ const ProfilePage: React.FC = () => {
             // 1. Coba ambil dari localStorage dulu
             const savedUserData = localStorage.getItem('userData');
             if (savedUserData) {
-                const cachedUserData = JSON.parse(savedUserData);
-
-                // Validasi bahwa cached data sesuai dengan user yang login
-                if (cachedUserData._id === userId) {
-                    console.log('📦 Using cached user data:', cachedUserData);
-                    setUserData(cachedUserData);
-                    setEditData({
-                        nama: cachedUserData.nama || '',
-                        email: cachedUserData.email || '',
-                        kelompok: cachedUserData.kelompok || '',
-                        tempatLahir: cachedUserData.tempatLahir || '',
-                        tanggalLahir: cachedUserData.tanggalLahir || '',
-                    });
-                    if (cachedUserData.profileImage) {
-                        setProfileImage(getProfileImageUrl(cachedUserData.profileImage));
+                try {
+                    const cachedUserData = JSON.parse(savedUserData);
+                    if (cachedUserData._id === userId) {
+                        console.log('📦 Using cached user data');
+                        setUserData(cachedUserData);
+                        setEditData({
+                            nama: cachedUserData.nama || '',
+                            email: cachedUserData.email || '',
+                            kelompok: cachedUserData.kelompok || '',
+                            tempatLahir: cachedUserData.tempatLahir || '',
+                            tanggalLahir: cachedUserData.tanggalLahir || '',
+                        });
+                        if (cachedUserData.profileImage) {
+                            setProfileImage(getProfileImageUrl(cachedUserData.profileImage));
+                        }
+                        setDataLoading(false);
+                        return;
                     }
-                    setDataLoading(false);
-                    return;
-                } else {
-                    // Cache tidak sesuai, bersihkan
-                    clearUserCache();
+                } catch (cacheError) {
+                    console.error('Error parsing cached data:', cacheError);
+                    localStorage.removeItem('userData');
                 }
             }
 
             // 2. Jika tidak ada cached data yang valid, ambil dari API
             console.log('🌐 Fetching from API...');
             const response = await fetch('/api/auth/me', {
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
             });
+
+            console.log('API auth/me response status:', response.status);
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ API response:', data);
+                console.log('✅ API response received');
 
                 if (data.user) {
                     setUserData(data.user);
@@ -225,7 +241,6 @@ const ProfilePage: React.FC = () => {
                         setProfileImage(getProfileImageUrl(data.user.profileImage));
                     }
 
-                    // Simpan ke cache hanya jika user login
                     if (userId) {
                         saveUserDataToCache(data.user);
                     }
@@ -233,28 +248,18 @@ const ProfilePage: React.FC = () => {
                     window.dispatchEvent(new Event('userDataUpdated'));
                 } else {
                     console.error('❌ No user data in response');
-                    setModalMessage('Data pengguna tidak ditemukan dalam respons');
-                    setShowModal(true);
                 }
             } else {
                 console.error('❌ API failed, status:', response.status);
-                const errorData = await response.json().catch(() => ({}));
-                console.error('Error details:', errorData);
-
-                // Jika unauthorized, bersihkan cache
+                // Untuk production, mungkin perlu redirect ke login
                 if (response.status === 401) {
                     clearUserCache();
-                    logout(); // Panggil logout function dari useAuth
+                    logout();
                 }
-
-                setModalMessage('Gagal memuat data profil. Silakan login kembali.');
-                setShowModal(true);
             }
 
         } catch (error) {
             console.error('❌ Error mengambil data user:', error);
-            setModalMessage('Gagal memuat data profil');
-            setShowModal(true);
         } finally {
             setDataLoading(false);
         }
@@ -266,6 +271,20 @@ const ProfilePage: React.FC = () => {
             fetchKelompokList();
         }
     }, [authLoading, fetchUserData, fetchKelompokList]);
+
+    // Timeout untuk mencegah infinite loading
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            if (loading) {
+                console.log('Loading timeout triggered');
+                setDataLoading(false);
+                setModalMessage('Terjadi masalah saat memuat data. Silakan refresh halaman.');
+                setShowModal(true);
+            }
+        }, 10000); // 10 second timeout
+
+        return () => clearTimeout(timeout);
+    }, [loading]);
 
     const handleSave = async () => {
         if (!userId || !token) {
@@ -441,7 +460,11 @@ const ProfilePage: React.FC = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Memuat profil...</p>
+                    <p className="text-sm text-gray-500 mt-2">Jika loading terlalu lama, silakan refresh halaman</p>
+                </div>
             </div>
         );
     }

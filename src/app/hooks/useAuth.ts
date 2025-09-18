@@ -20,6 +20,7 @@ export const useAuth = () => {
         // Reset state
         setUserId(null);
         setToken(null);
+        setLoading(false);
 
         // Dispatch event untuk memberi tahu komponen lain tentang logout
         window.dispatchEvent(new CustomEvent('authStateChanged', {
@@ -31,29 +32,35 @@ export const useAuth = () => {
     }, [router]);
 
     // Fungsi untuk sync auth data
-    const syncAuth = useCallback(async () => {
+    const syncAuth = useCallback(async (): Promise<{ success: boolean }> => {
         try {
             const response = await fetch('/api/auth/sync');
             if (response.ok) {
                 const data = await response.json();
-                if (data.userId && data.token) {
+                if (data.userId) {
+                    // Untuk sync, kita hanya perlu userId, token tidak diperlukan
+                    // karena NextAuth.js menggunakan session cookie
                     sessionStorage.setItem('userId', data.userId);
-                    sessionStorage.setItem('token', data.token);
+                    sessionStorage.setItem('token', 'next-auth-sync-token'); // Token dummy
                     setUserId(data.userId);
-                    setToken(data.token);
+                    setToken('next-auth-sync-token');
 
                     window.dispatchEvent(new CustomEvent('authStateChanged', {
-                        detail: { isLoggedIn: true, userId: data.userId, token: data.token }
+                        detail: { isLoggedIn: true, userId: data.userId, token: 'next-auth-sync-token' }
                     }));
+
+                    return { success: true };
                 }
             }
+            return { success: false };
         } catch (error) {
             console.error('Failed to sync auth data:', error);
+            return { success: false };
         }
     }, []);
 
     useEffect(() => {
-        const getAuthData = () => {
+        const getAuthData = async () => {
             // Cek sessionStorage terlebih dahulu
             let storedUserId = sessionStorage.getItem('userId');
             let storedToken = sessionStorage.getItem('token');
@@ -72,7 +79,11 @@ export const useAuth = () => {
 
             // Jika masih tidak ada, coba sync dengan API
             if (!storedUserId || !storedToken) {
-                syncAuth();
+                const syncResult = await syncAuth();
+                if (!syncResult.success) {
+                    // Jika sync gagal, set loading false agar tidak infinite loading
+                    setLoading(false);
+                }
             } else {
                 setUserId(storedUserId);
                 setToken(storedToken);

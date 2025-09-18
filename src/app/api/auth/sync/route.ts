@@ -24,18 +24,7 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({
             userId: user._id.toString(),
-            user: {
-                _id: user._id.toString(),
-                nama: user.nama,
-                username: user.username,
-                email: user.email,
-                kelompok: user.kelompok,
-                role: user.role,
-                status: user.status,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-                profileImage: user.profileImage
-            }
+            token: "next-auth-sync-token" // Tambahkan token dummy
         });
     } catch (error: any) {
         console.error("Error in auth sync:", error);
