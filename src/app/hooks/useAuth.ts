@@ -1,10 +1,56 @@
 // app/hooks/useAuth.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 export const useAuth = () => {
     const [userId, setUserId] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
+
+    // Fungsi logout
+    const logout = useCallback(() => {
+        // Hapus semua data auth dari storage
+        sessionStorage.removeItem('userId');
+        sessionStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('token');
+        localStorage.removeItem('userData');
+
+        // Reset state
+        setUserId(null);
+        setToken(null);
+
+        // Dispatch event untuk memberi tahu komponen lain tentang logout
+        window.dispatchEvent(new CustomEvent('authStateChanged', {
+            detail: { isLoggedIn: false, userId: null, token: null }
+        }));
+
+        // Redirect ke halaman login
+        router.push('/login');
+    }, [router]);
+
+    // Fungsi untuk sync auth data
+    const syncAuth = useCallback(async () => {
+        try {
+            const response = await fetch('/api/auth/sync');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.userId && data.token) {
+                    sessionStorage.setItem('userId', data.userId);
+                    sessionStorage.setItem('token', data.token);
+                    setUserId(data.userId);
+                    setToken(data.token);
+
+                    window.dispatchEvent(new CustomEvent('authStateChanged', {
+                        detail: { isLoggedIn: true, userId: data.userId, token: data.token }
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error('Failed to sync auth data:', error);
+        }
+    }, []);
 
     useEffect(() => {
         const getAuthData = () => {
@@ -24,25 +70,48 @@ export const useAuth = () => {
                 }
             }
 
-            // Jika masih tidak ada, coba dari NextAuth session
+            // Jika masih tidak ada, coba sync dengan API
             if (!storedUserId || !storedToken) {
-                // Anda perlu mengimplementasi pengambilan dari NextAuth session
-                // atau sync dengan UnifiedSidebar
-                const userData = localStorage.getItem('userData');
-                if (userData) {
-                    const parsedData = JSON.parse(userData);
-                    storedUserId = parsedData._id;
-                    // Untuk token, Anda perlu menyimpannya saat login
-                }
-            }
+                syncAuth();
+            } else {
+                setUserId(storedUserId);
+                setToken(storedToken);
+                setLoading(false);
 
-            setUserId(storedUserId);
-            setToken(storedToken);
-            setLoading(false);
+                window.dispatchEvent(new CustomEvent('authStateChanged', {
+                    detail: { isLoggedIn: true, userId: storedUserId, token: storedToken }
+                }));
+            }
         };
 
         getAuthData();
-    }, []);
 
-    return { userId, token, loading };
+        // Event listener untuk perubahan auth state dari komponen lain
+        const handleAuthChange = (event: CustomEvent) => {
+            if (event.detail && event.detail.isLoggedIn === false) {
+                setUserId(null);
+                setToken(null);
+                setLoading(false);
+            }
+        };
+
+        window.addEventListener('authStateChanged', handleAuthChange as EventListener);
+
+        return () => {
+            window.removeEventListener('authStateChanged', handleAuthChange as EventListener);
+        };
+    }, [syncAuth]);
+
+    // Fungsi untuk mengecek apakah user terautentikasi
+    const isAuthenticated = useCallback(() => {
+        return !!userId && !!token;
+    }, [userId, token]);
+
+    return {
+        userId,
+        token,
+        loading,
+        logout,
+        isAuthenticated
+    };
 };
