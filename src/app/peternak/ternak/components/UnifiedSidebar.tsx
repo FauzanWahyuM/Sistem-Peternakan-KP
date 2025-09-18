@@ -366,9 +366,9 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
       </aside>
 
       {/* Padding untuk konten utama ketika sidebar collapsed di desktop */}
-      {!isMobile && (
+      {/* {!isMobile && (
         <div className={`hidden md:block transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-56 md:ml-64'}`}></div>
-      )}
+      )} */}
     </>
   );
 }

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft, Edit, Trash2, AlertTriangle, X, Filter, Eye } from 'lucide-react';
 
-// Interface untuk data ternak - TAMBAHKAN FIELD PENYAKIT
+// Interface untuk data ternak - DENGAN FIELD PENYAKIT
 interface Ternak {
     _id: string;
     tipe: string;
@@ -340,7 +340,7 @@ function LihatTernakContent() {
         <div className="flex min-h-screen">
             <Sidebar userType="peternak" />
             <main className="flex-1 bg-gray-100 p-6">
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-6xl mx-auto">
                     {/* Header */}
                     <div className="flex items-center mb-8">
                         <button
@@ -349,28 +349,25 @@ function LihatTernakContent() {
                         >
                             <ChevronLeft size={24} />
                         </button>
-                        <h1 className="text-3xl font-bold font-[Judson] text-center flex-1 text-gray-800">Data Ternak</h1>
+                        <h1 className="text-3xl font-bold font-[Judson] text-center flex-1 text-black">Data Ternak</h1>
                     </div>
 
                     {/* Search and Filter Section */}
-                    <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">
-                        <div className="flex flex-col md:flex-row gap-4 items-end">
-                            <div className="flex-1">
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Cari berdasarkan umur
-                                </label>
+                    <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
+                        <div className="flex flex-col md:flex-row gap-4">
+                            <div className="relative flex-1">
                                 <input
                                     type="text"
                                     value={filters.umurTernak}
                                     onChange={(e) => handleFilterChange('umurTernak', e.target.value)}
-                                    placeholder="Masukkan umur ternak..."
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700"
+                                    placeholder="Cari berdasarkan umur..."
+                                    className="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700"
                                 />
                             </div>
                             <div className="relative">
                                 <button
                                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                    className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 font-[Judson] text-gray-700"
+                                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 font-[Judson] text-black"
                                 >
                                     <Filter size={20} />
                                     Filter
@@ -396,86 +393,116 @@ function LihatTernakContent() {
                         </div>
                     </div>
 
-                    {/* Filters Grid */}
-                    <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {/* Jenis Hewan Filter */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Jenis Hewan
-                                </label>
-                                <select
-                                    value={filters.jenisHewan}
-                                    onChange={(e) => handleFilterChange('jenisHewan', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700"
-                                >
-                                    <option value="">Semua Jenis</option>
-                                    {jenisHewanOptions.map((option) => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
+                    {/* Filters */}
+                    <div className="flex justify-center">
+                        <div className="bg-white rounded-lg p-6 mb-6 shadow-sm w-full max-w-6xl">
+                            <div className="flex flex-col md:flex-row gap-4">
+                                {/* Jenis Hewan Filter */}
+                                <div className="relative flex-1">
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Jenis Hewan
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.jenisHewan}
+                                            onChange={(e) => handleFilterChange('jenisHewan', e.target.value)}
+                                            className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700 appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Semua Jenis</option>
+                                            {jenisHewanOptions.map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Jenis Kelamin Filter */}
+                                <div className="relative flex-1">
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Jenis Kelamin
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.jenisKelamin}
+                                            onChange={(e) => handleFilterChange('jenisKelamin', e.target.value)}
+                                            className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700 appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Semua Kelamin</option>
+                                            {jenisKelaminOptions.map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Status Ternak Filter */}
+                                <div className="relative flex-1">
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Status Ternak
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.statusTernak}
+                                            onChange={(e) => handleFilterChange('statusTernak', e.target.value)}
+                                            className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700 appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Semua Status</option>
+                                            {getStatusOptions().map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Kondisi Kesehatan Filter */}
+                                <div className="relative flex-1">
+                                    <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                        Kondisi Kesehatan
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.kondisiKesehatan}
+                                            onChange={(e) => handleFilterChange('kondisiKesehatan', e.target.value)}
+                                            className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700 appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Semua Kondisi</option>
+                                            {kondisiKesehatanOptions.map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Jenis Kelamin Filter */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Jenis Kelamin
-                                </label>
-                                <select
-                                    value={filters.jenisKelamin}
-                                    onChange={(e) => handleFilterChange('jenisKelamin', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700"
+                            {/* Clear Filters Button */}
+                            <div className="flex justify-center mt-4">
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-[Judson]"
                                 >
-                                    <option value="">Semua Kelamin</option>
-                                    {jenisKelaminOptions.map((option) => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
+                                    Reset Filter
+                                </button>
                             </div>
-
-                            {/* Status Ternak Filter */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Status Ternak
-                                </label>
-                                <select
-                                    value={filters.statusTernak}
-                                    onChange={(e) => handleFilterChange('statusTernak', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700"
-                                >
-                                    <option value="">Semua Status</option>
-                                    {getStatusOptions().map((option) => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Kondisi Kesehatan Filter */}
-                            <div>
-                                <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                    Kondisi Kesehatan
-                                </label>
-                                <select
-                                    value={filters.kondisiKesehatan}
-                                    onChange={(e) => handleFilterChange('kondisiKesehatan', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-[Judson] text-gray-700"
-                                >
-                                    <option value="">Semua Kondisi</option>
-                                    {kondisiKesehatanOptions.map((option) => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Clear Filters Button */}
-                        <div className="flex justify-center mt-6">
-                            <button
-                                onClick={clearAllFilters}
-                                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-[Judson] text-sm"
-                            >
-                                Reset Semua Filter
-                            </button>
                         </div>
                     </div>
 
@@ -485,32 +512,32 @@ function LihatTernakContent() {
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
-                                            No
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                            ID
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             Tipe
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             Jenis
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             Kelamin
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             Umur
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             Status
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             Kondisi
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             Penyakit
                                         </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
-                                            Aksi
+                                        <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                            Actions
                                         </th>
                                     </tr>
                                 </thead>
@@ -518,41 +545,36 @@ function LihatTernakContent() {
                                     {filteredData.length > 0 ? (
                                         filteredData.map((ternak, index) => (
                                             <tr key={ternak._id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900 text-center">
-                                                    {index + 1}
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
+                                                    {String(index + 1).padStart(2, '0')}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-center">
-                                                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${ternak.tipe === 'pribadi'
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson]">
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${ternak.tipe === 'pribadi'
                                                         ? 'bg-blue-100 text-blue-800'
                                                         : 'bg-green-100 text-green-800'
                                                         }`}>
                                                         {ternak.tipe === 'pribadi' ? 'Pribadi' : 'Kelompok'}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900 text-center">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
                                                     {ternak.jenisHewan}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900 text-center">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
                                                     {ternak.jenisKelamin}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900 text-center">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
                                                     {ternak.umurTernak}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900 text-center">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
                                                     {ternak.statusTernak}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-center">
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ternak.kondisiKesehatan === 'Sehat'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-red-100 text-red-800'
-                                                        }`}>
-                                                        {ternak.kondisiKesehatan}
-                                                    </span>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
+                                                    {ternak.kondisiKesehatan}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-center">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
                                                     {ternak.penyakit.length > 0 ? (
                                                         <span
-                                                            className="text-blue-600 cursor-pointer hover:underline font-medium"
+                                                            className="text-blue-600 cursor-pointer hover:underline"
                                                             onClick={() => handleViewDetail(ternak)}
                                                         >
                                                             {ternak.penyakit.length} penyakit
@@ -561,28 +583,28 @@ function LihatTernakContent() {
                                                         <span className="text-gray-400">-</span>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
-                                                    <div className="flex space-x-2 justify-center">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                    <div className="flex space-x-2">
                                                         <button
                                                             onClick={() => handleViewDetail(ternak)}
-                                                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                                                            className="text-blue-600 hover:text-blue-900"
                                                             title="Lihat Detail"
                                                         >
-                                                            <Eye size={18} />
+                                                            <Eye size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleEdit(ternak._id)}
-                                                            className="text-orange-600 hover:text-orange-900 p-1 rounded hover:bg-orange-50"
+                                                            className="text-orange-600 hover:text-orange-900"
                                                             title="Edit"
                                                         >
-                                                            <Edit size={18} />
+                                                            <Edit size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(ternak._id)}
-                                                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                                                            className="text-red-600 hover:text-red-900"
                                                             title="Hapus"
                                                         >
-                                                            <Trash2 size={18} />
+                                                            <Trash2 size={16} />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -590,21 +612,11 @@ function LihatTernakContent() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={9} className="px-6 py-8 text-center">
-                                                <div className="flex flex-col items-center justify-center text-gray-500">
-                                                    <div className="text-lg font-[Judson] mb-2">
-                                                        {ternakList.length === 0
-                                                            ? 'Belum ada data ternak'
-                                                            : 'Tidak ada data yang sesuai dengan filter'
-                                                        }
-                                                    </div>
-                                                    <div className="text-sm">
-                                                        {ternakList.length === 0
-                                                            ? 'Silakan tambah data ternak terlebih dahulu'
-                                                            : 'Coba ubah filter atau kata kunci pencarian'
-                                                        }
-                                                    </div>
-                                                </div>
+                                            <td colSpan={9} className="px-6 py-4 text-center text-sm font-[Judson] text-gray-500">
+                                                {ternakList.length === 0
+                                                    ? 'Belum ada data ternak. Silakan tambah data ternak terlebih dahulu.'
+                                                    : 'Tidak ada data yang sesuai dengan filter yang dipilih.'
+                                                }
                                             </td>
                                         </tr>
                                     )}
@@ -615,16 +627,14 @@ function LihatTernakContent() {
 
                     {/* Data Summary */}
                     {filteredData.length > 0 && (
-                        <div className="mt-4 text-sm font-[Judson] text-gray-600 text-center">
+                        <div className="mt-4 text-sm font-[Judson] text-gray-600">
                             Menampilkan {filteredData.length} dari {ternakList.length} data ternak
                         </div>
                     )}
 
                     {error && (
                         <div className="mt-6 flex justify-center">
-                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded font-[Judson]">
-                                {error}
-                            </div>
+                            <p className="text-lg font-[Judson] text-red-500">{error}</p>
                         </div>
                     )}
 
@@ -675,23 +685,23 @@ function LihatTernakContent() {
                                     <>
                                         <h2 className="text-lg font-bold text-blue-600 mb-4">Detail Ternak</h2>
                                         <div className="space-y-3 mb-6">
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between text-black">
                                                 <span className="font-medium">Jenis Hewan:</span>
                                                 <span>{selectedTernak.jenisHewan}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between text-black">
                                                 <span className="font-medium">Jenis Kelamin:</span>
                                                 <span>{selectedTernak.jenisKelamin}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between text-black">
                                                 <span className="font-medium">Umur:</span>
                                                 <span>{selectedTernak.umurTernak}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between text-black">
                                                 <span className="font-medium">Status:</span>
                                                 <span>{selectedTernak.statusTernak}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between text-black">
                                                 <span className="font-medium">Kondisi Kesehatan:</span>
                                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${selectedTernak.kondisiKesehatan === 'Sehat'
                                                     ? 'bg-green-100 text-green-800'
@@ -700,7 +710,7 @@ function LihatTernakContent() {
                                                     {selectedTernak.kondisiKesehatan}
                                                 </span>
                                             </div>
-                                            <div className="border-t pt-3 mt-3">
+                                            <div className="border-t pt-3 mt-3 text-black">
                                                 <span className="font-medium block mb-2">Penyakit yang Pernah Menyerang:</span>
                                                 {selectedTernak.penyakit.length > 0 ? (
                                                     <ul className="list-disc list-inside space-y-1">
@@ -709,7 +719,7 @@ function LihatTernakContent() {
                                                         ))}
                                                     </ul>
                                                 ) : (
-                                                    <span className="text-gray-400">Tidak ada penyakit yang tercatat</span>
+                                                    <span className="text-gray-600">Tidak ada penyakit yang tercatat</span>
                                                 )}
                                             </div>
                                         </div>

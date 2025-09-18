@@ -274,7 +274,7 @@ function EditTernakContent() {
                                     ))}
                                 </select>
                                 <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </div>
@@ -294,7 +294,7 @@ function EditTernakContent() {
                                         value={newPenyakit}
                                         onChange={(e) => setNewPenyakit(e.target.value)}
                                         placeholder="Masukkan nama penyakit"
-                                        className="flex-1 p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        className="flex-1 p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-black focus:outline-none focus:ring-2 focus:ring-green-500"
                                         onKeyPress={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
@@ -320,7 +320,7 @@ function EditTernakContent() {
                                         <div className="space-y-2">
                                             {formData.penyakit.map((penyakit, index) => (
                                                 <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
-                                                    <span className="font-[Judson]">{penyakit}</span>
+                                                    <span className="font-[Judson] text-black">{penyakit}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => removePenyakit(index)}
