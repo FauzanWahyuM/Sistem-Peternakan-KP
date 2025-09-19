@@ -36,6 +36,9 @@ export default function TambahTernakPage() {
     const jenisKelaminOptions = ['Jantan', 'Betina'];
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
     const tipeOptions = ['pribadi', 'kelompok'];
+    // Tambahan state
+    const [jumlahTernak, setJumlahTernak] = useState(1);
+
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -199,7 +202,8 @@ export default function TambahTernakPage() {
 
             const dataToSend = {
                 ...formData,
-                userId: userData._id
+                userId: userData._id,
+                jumlahTernak // <-- ini dikirim ke backend
             };
 
             console.log('Data to send:', dataToSend);
@@ -507,6 +511,20 @@ export default function TambahTernakPage() {
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
+                                Jumlah Ternak
+                            </label>
+                            <input
+                                type="number"
+                                min={1}
+                                value={jumlahTernak}
+                                onChange={(e) => setJumlahTernak(Number(e.target.value))}
+                                className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                required
+                            />
                         </div>
 
                         <div className="flex gap-4 pt-6">

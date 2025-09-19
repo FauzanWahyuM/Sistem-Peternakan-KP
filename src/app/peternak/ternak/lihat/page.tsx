@@ -85,6 +85,10 @@ function LihatTernakContent() {
         { value: 'kelompok', label: 'Kelompok' }
     ];
 
+    // Di dalam component LihatTernakContent, tambahkan state ini:
+    const [selectedItems, setSelectedItems] = useState<string[]>([]);
+    const [isSelectAll, setIsSelectAll] = useState(false);
+
     // PERBAIKAN: Inisialisasi filter dengan nilai dari URL jika ada
     const [filters, setFilters] = useState({
         jenisHewan: '',
@@ -286,28 +290,33 @@ function LihatTernakContent() {
     };
 
     const confirmDelete = async () => {
-        if (!selectedId) return;
-        try {
-            const response = await fetch('/api/ternak', {
-                method: 'DELETE',
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: selectedId }),
-            });
+        if (selectedItems.length > 0) {
+            // Bulk delete
+            await confirmBulkDelete();
+        } else if (selectedId) {
+            // Single delete
+            try {
+                const response = await fetch('/api/ternak', {
+                    method: 'DELETE',
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: selectedId }),
+                });
 
-            if (!response.ok) throw new Error('Failed to delete data');
+                if (!response.ok) throw new Error('Failed to delete data');
 
-            const updatedList = ternakList.filter(item => item._id !== selectedId);
-            setTernakList(updatedList);
-            setFilteredData(updatedList);
+                const updatedList = ternakList.filter(item => item._id !== selectedId);
+                setTernakList(updatedList);
+                setFilteredData(updatedList);
 
-            setModalType('success');
-            setModalMessage('Data ternak berhasil dihapus!');
-        } catch (error) {
-            console.error('Error deleting ternak:', error);
-            setModalType('success');
-            setModalMessage('Gagal menghapus data ternak.');
-        } finally {
-            setSelectedId(null);
+                setModalType('success');
+                setModalMessage('Data ternak berhasil dihapus!');
+            } catch (error) {
+                console.error('Error deleting ternak:', error);
+                setModalType('success');
+                setModalMessage('Gagal menghapus data ternak.');
+            } finally {
+                setSelectedId(null);
+            }
         }
     };
 
@@ -321,6 +330,58 @@ function LihatTernakContent() {
             kondisiKesehatan: '',
             tipeTernak: 'semua'
         });
+    };
+
+    // Tambahkan fungsi-fungsi ini di dalam component
+    const toggleSelectItem = (id: string) => {
+        setSelectedItems(prev =>
+            prev.includes(id)
+                ? prev.filter(itemId => itemId !== id)
+                : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (isSelectAll) {
+            setSelectedItems([]);
+        } else {
+            setSelectedItems(filteredData.map(item => item._id));
+        }
+        setIsSelectAll(!isSelectAll);
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedItems.length === 0) return;
+
+        setSelectedId(null); // Reset single delete
+        setModalType('delete');
+        setModalMessage(`Apakah Anda yakin ingin menghapus ${selectedItems.length} data ternak sekaligus?`);
+        setIsModalOpen(true);
+    };
+
+    const confirmBulkDelete = async () => {
+        try {
+            const response = await fetch('/api/ternak', {
+                method: 'DELETE',
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ids: selectedItems }),
+            });
+
+            if (!response.ok) throw new Error('Failed to delete data');
+
+            const updatedList = ternakList.filter(item => !selectedItems.includes(item._id));
+            setTernakList(updatedList);
+            setFilteredData(updatedList);
+            setSelectedItems([]);
+            setIsSelectAll(false);
+
+            setModalType('success');
+            setModalMessage(`${selectedItems.length} data ternak berhasil dihapus!`);
+        } catch (error) {
+            console.error('Error deleting ternak:', error);
+            setModalType('success');
+            setModalMessage('Gagal menghapus data ternak.');
+        }
     };
 
     if (loading) {
@@ -512,6 +573,14 @@ function LihatTernakContent() {
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                     <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
+                                            <input
+                                                type="checkbox"
+                                                checked={isSelectAll}
+                                                onChange={toggleSelectAll}
+                                                className="h-4 w-4 text-green-600 rounded focus:ring-green-500"
+                                            />
+                                        </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium font-[Judson] text-gray-500 uppercase tracking-wider">
                                             ID
                                         </th>
@@ -545,6 +614,14 @@ function LihatTernakContent() {
                                     {filteredData.length > 0 ? (
                                         filteredData.map((ternak, index) => (
                                             <tr key={ternak._id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedItems.includes(ternak._id)}
+                                                        onChange={() => toggleSelectItem(ternak._id)}
+                                                        className="h-4 w-4 text-green-600 rounded focus:ring-green-500"
+                                                    />
+                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-[Judson] text-gray-900">
                                                     {String(index + 1).padStart(2, '0')}
                                                 </td>
@@ -611,14 +688,15 @@ function LihatTernakContent() {
                                             </tr>
                                         ))
                                     ) : (
-                                        <tr>
-                                            <td colSpan={9} className="px-6 py-4 text-center text-sm font-[Judson] text-gray-500">
-                                                {ternakList.length === 0
-                                                    ? 'Belum ada data ternak. Silakan tambah data ternak terlebih dahulu.'
-                                                    : 'Tidak ada data yang sesuai dengan filter yang dipilih.'
-                                                }
-                                            </td>
-                                        </tr>
+                                            <tr>
+                                                <td colSpan={10} className="px-6 py-4 text-center text-sm font-[Judson] text-gray-500">
+                                                    {/* Perhatikan colSpan menjadi 10 karena tambahan 1 kolom */}
+                                                    {ternakList.length === 0
+                                                        ? 'Belum ada data ternak. Silakan tambah data ternak terlebih dahulu.'
+                                                        : 'Tidak ada data yang sesuai dengan filter yang dipilih.'
+                                                    }
+                                                </td>
+                                            </tr>
                                     )}
                                 </tbody>
                             </table>
@@ -635,6 +713,22 @@ function LihatTernakContent() {
                     {error && (
                         <div className="mt-6 flex justify-center">
                             <p className="text-lg font-[Judson] text-red-500">{error}</p>
+                        </div>
+                    )}
+
+                    {/* Tambahkan di bawah Data Summary dan di atas tabel */}
+                    {selectedItems.length > 0 && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex justify-between items-center">
+                            <span className="text-blue-800 font-[Judson]">
+                                {selectedItems.length} data terpilih
+                            </span>
+                            <button
+                                onClick={handleBulkDelete}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-[Judson] flex items-center gap-2"
+                            >
+                                <Trash2 size={16} />
+                                Hapus yang dipilih
+                            </button>
                         </div>
                     )}
 

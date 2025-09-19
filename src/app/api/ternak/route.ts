@@ -177,95 +177,108 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST: tambah ternak
+// POST: tambah ternak (support single, bulk & jumlahTernak)
 export async function POST(req: Request) {
     await connectDB();
     try {
         const body = await req.json();
         console.log('POST Ternak Body:', body);
 
-        const {
-            userId,
-            kelompokId,
-            kelompokNama,
-            jenisHewan,
-            jenisKelamin,
-            umurTernak,
-            statusTernak,
-            kondisiKesehatan,
-            tipe,
-            penyakit // TAMBAHKAN INI
-        } = body;
+        // Kalau request berupa array langsung
+        let dataArray: any[] = [];
+
+        if (Array.isArray(body)) {
+            dataArray = body;
+        }
+        // Kalau ada jumlahTernak di body, duplikasi datanya
+        else if (body.jumlahTernak && body.jumlahTernak > 1) {
+            dataArray = Array.from({ length: body.jumlahTernak }, () => {
+                const { jumlahTernak, ...rest } = body;
+                return { ...rest };
+            });
+        }
+        // Default: 1 data saja
+        else {
+            dataArray = [body];
+        }
 
         // Validasi data
-        if (!userId || !jenisHewan || !jenisKelamin || !umurTernak || !statusTernak || !kondisiKesehatan || !tipe) {
-            return new Response(JSON.stringify({ error: "Data tidak lengkap" }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
-        // Validasi umurTernak tidak boleh kosong
-        if (!umurTernak.trim()) {
-            return new Response(JSON.stringify({ error: "Umur ternak tidak boleh kosong" }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
-        const ternakData: any = {
-            userId,
-            jenisHewan,
-            jenisKelamin,
-            umurTernak: umurTernak.trim(),
-            statusTernak,
-            kondisiKesehatan,
-            tipe,
-            penyakit: penyakit || [] // TAMBAHKAN INI
-        };
-
-        // Jika tipe kelompok, ambil data kelompok dari user
-        if (tipe === "kelompok") {
-            // Gunakan approach yang lebih aman untuk mongoose model
-            let userData: IUser | null = null;
-
-            try {
-                if (mongoose.models.User) {
-                    userData = await mongoose.models.User.findById(userId).select('kelompok').lean().exec() as IUser;
-                } else {
-                    const userSchema = new mongoose.Schema({
-                        kelompok: String
-                    });
-                    const UserModel = mongoose.model('User', userSchema);
-                    userData = await UserModel.findById(userId).select('kelompok').lean().exec() as IUser;
-                }
-            } catch (userError) {
-                console.error('Error fetching user data:', userError);
-                userData = null;
+        for (const item of dataArray) {
+            if (!item.userId || !item.jenisHewan || !item.jenisKelamin || !item.umurTernak ||
+                !item.statusTernak || !item.kondisiKesehatan || !item.tipe) {
+                return new Response(JSON.stringify({ error: "Data tidak lengkap" }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
             }
-
-            if (userData && userData.kelompok && userData.kelompok !== 'Tidak tersedia') {
-                ternakData.kelompokId = userData.kelompok;
-                ternakData.kelompokNama = `Kelompok ${userData.kelompok}`;
-            } else {
-                return new Response(JSON.stringify({ error: "User tidak memiliki kelompok" }), {
+            if (!item.umurTernak.trim()) {
+                return new Response(JSON.stringify({ error: "Umur ternak tidak boleh kosong" }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
         }
 
-        const ternakBaru = await Ternak.create(ternakData);
-        console.log('Ternak Created:', ternakBaru);
+        // Mapping data
+        const processedData = await Promise.all(
+            dataArray.map(async (item) => {
+                const ternakData: any = {
+                    userId: item.userId,
+                    jenisHewan: item.jenisHewan,
+                    jenisKelamin: item.jenisKelamin,
+                    umurTernak: item.umurTernak.trim(),
+                    statusTernak: item.statusTernak,
+                    kondisiKesehatan: item.kondisiKesehatan,
+                    tipe: item.tipe,
+                    penyakit: item.penyakit || []
+                };
+
+                // Kalau tipe kelompok → ambil kelompok user
+                if (item.tipe === "kelompok") {
+                    let userData: IUser | null = null;
+                    try {
+                        if (mongoose.models.User) {
+                            userData = await mongoose.models.User.findById(item.userId)
+                                .select('kelompok')
+                                .lean()
+                                .exec() as IUser;
+                        } else {
+                            const userSchema = new mongoose.Schema({ kelompok: String });
+                            const UserModel = mongoose.model('User', userSchema);
+                            userData = await UserModel.findById(item.userId)
+                                .select('kelompok')
+                                .lean()
+                                .exec() as IUser;
+                        }
+                    } catch (err) {
+                        console.error("Error fetch user:", err);
+                        userData = null;
+                    }
+
+                    if (userData?.kelompok && userData.kelompok !== "Tidak tersedia") {
+                        ternakData.kelompokId = userData.kelompok;
+                        ternakData.kelompokNama = `Kelompok ${userData.kelompok}`;
+                    } else {
+                        throw new Error("User tidak memiliki kelompok");
+                    }
+                }
+
+                return ternakData;
+            })
+        );
+
+        // Simpan ke DB sekaligus
+        const result = await Ternak.insertMany(processedData);
 
         return new Response(JSON.stringify({
             success: true,
-            data: ternakBaru,
-            message: "Data ternak berhasil disimpan"
+            data: result,
+            message: `Data ternak berhasil disimpan (${result.length} entri)`
         }), {
             status: 201,
             headers: { 'Content-Type': 'application/json' }
         });
+
     } catch (error: any) {
         console.error("Error tambah ternak:", error);
         return new Response(JSON.stringify({ error: "Gagal tambah data", detail: error.message }), {
@@ -274,6 +287,7 @@ export async function POST(req: Request) {
         });
     }
 }
+
 
 // PUT: update ternak
 export async function PUT(req: Request) {
@@ -314,34 +328,51 @@ export async function PUT(req: Request) {
 }
 
 // DELETE: hapus ternak
+// DELETE: hapus ternak (support single & bulk)
 export async function DELETE(req: Request) {
     await connectDB();
     try {
         const body = await req.json();
         console.log('DELETE Ternak Body:', body);
 
-        const { id } = body;
+        const { id, ids } = body;
 
-        if (!id) {
-            return new Response(JSON.stringify({ error: "ID tidak ditemukan" }), {
+        if (!id && (!ids || !Array.isArray(ids))) {
+            return new Response(JSON.stringify({ error: "ID atau daftar ID tidak ditemukan" }), {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        const ternakHapus = await Ternak.findByIdAndDelete(id).exec();
-        if (!ternakHapus) {
-            return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), {
-                status: 404,
+        if (ids && Array.isArray(ids)) {
+            // Bulk delete
+            const objectIds = ids.map((id: string) => new mongoose.Types.ObjectId(id));
+            const result = await Ternak.deleteMany({ _id: { $in: objectIds } }).exec();
+            console.log('Bulk Deleted:', result.deletedCount, 'records');
+
+            return new Response(JSON.stringify({
+                message: `${result.deletedCount} data berhasil dihapus`
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } else if (id) {
+            // Single delete
+            const ternakHapus = await Ternak.findByIdAndDelete(new mongoose.Types.ObjectId(id)).exec();
+            if (!ternakHapus) {
+                return new Response(JSON.stringify({ error: "Data tidak ditemukan" }), {
+                    status: 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            console.log('Ternak Deleted:', id);
+
+            return new Response(JSON.stringify({ message: "Data berhasil dihapus" }), {
+                status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        console.log('Ternak Deleted:', id);
-        return new Response(JSON.stringify({ message: "Data berhasil dihapus" }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        });
     } catch (error: any) {
         console.error("Error hapus ternak:", error);
         return new Response(JSON.stringify({ error: "Gagal hapus data", detail: error.message }), {
