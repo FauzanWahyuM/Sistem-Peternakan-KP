@@ -9,7 +9,7 @@ import User from "../../../../models/User";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { kelompok: string } }
+    context: { params: { kelompok: string } }
 ) {
     await connectDB();
     try {
@@ -18,7 +18,7 @@ export async function GET(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const kelompokId = params.kelompok;
+        const kelompokId = context.params.kelompok; // Gunakan context.params
         const { searchParams } = new URL(req.url);
         const bulan = searchParams.get("bulan");
         const tahun = searchParams.get("tahun");
