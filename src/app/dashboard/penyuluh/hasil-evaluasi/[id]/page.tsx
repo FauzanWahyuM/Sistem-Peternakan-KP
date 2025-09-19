@@ -232,7 +232,7 @@ export default function DetailHasilEvaluasiPage() {
                     <div className="flex items-center mb-4">
                         <button
                             onClick={handleBack}
-                            className={`flex items-center justify-center w-10 h-10 ${getStatusColor(kelompokData.status)} text-white rounded-full transition-colors mr-4`}
+                            className={`flex items-center justify-center w-10 h-10 ${getStatusColor(kelompokData.statusEvaluasi)} text-white rounded-full transition-colors mr-4`}
                         >
                             <ChevronLeft size={20} />
                         </button>
@@ -240,8 +240,8 @@ export default function DetailHasilEvaluasiPage() {
                             <h1 className="text-3xl font-bold text-gray-800 mr-4">
                                 Hasil Evaluasi - {kelompokData.kelompok === 'Belum Dikelompokkan' ? 'Belum Dikelompokkan' : `Kelompok ${kelompokData.kelompok}`}
                             </h1>
-                            <span className={`${getStatusColor(kelompokData.status)} text-white px-4 py-2 rounded-full text-sm font-medium`}>
-                                {kelompokData.status}
+                            <span className={`${getStatusColor(kelompokData.statusEvaluasi)} text-white px-4 py-2 rounded-full text-sm font-medium`}>
+                                {kelompokData.statusEvaluasi}
                             </span>
                         </div>
                     </div>
