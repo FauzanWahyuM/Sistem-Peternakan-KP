@@ -30,21 +30,25 @@ export async function GET() {
     try {
         await dbConnect();
 
-        // Use the safe helper function
+        // Ambil semua kelompok
         const kelompokData = await safeFind(Kelompok, {}, null, { sort: { tanggalDibuat: -1 } });
 
         const kelompokWithDetails = await Promise.all(
             kelompokData.map(async (kelompok: any) => {
+                // Filter hanya role: 'peternak'
                 const filterAktif: FilterQuery<typeof User> = {
                     kelompok: kelompok.kelompokid,
-                    status: 'Aktif'
+                    status: 'Aktif',
+                    role: 'peternak'
                 };
                 const filterNonAktif: FilterQuery<typeof User> = {
                     kelompok: kelompok.kelompokid,
-                    status: 'Non-Aktif'
+                    status: 'Non-Aktif',
+                    role: 'peternak'
                 };
                 const filterAnggota: FilterQuery<typeof User> = {
-                    kelompok: kelompok.kelompokid
+                    kelompok: kelompok.kelompokid,
+                    role: 'peternak'
                 };
 
                 const [anggotaAktif, anggotaNonAktif, anggotaUsers] = await Promise.all([

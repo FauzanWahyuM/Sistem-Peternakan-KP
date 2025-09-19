@@ -4,8 +4,8 @@ import connectDB from "../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../models/Kuesioner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/authOptions";
+import Kelompok from "../../../models/Kelompok";
 import User from "../../../models/User";
-import mongoose from "mongoose";
 
 export async function GET(req: NextRequest) {
     await connectDB();
@@ -15,168 +15,220 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Cek role user
-        const currentUser = await User.findById(session.user.id);
-        if (!currentUser) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
         const { searchParams } = new URL(req.url);
         const bulan = searchParams.get("bulan");
         const tahun = searchParams.get("tahun");
         const questionnaireId = searchParams.get("questionnaireId");
 
-        // Query untuk mengambil data responses
-        const query: any = {};
-        if (bulan) query.bulan = Number(bulan);
-        if (tahun) query.tahun = Number(tahun);
-        if (questionnaireId) query.questionnaireId = questionnaireId;
+        const currentDate = new Date();
+        const finalBulan = bulan ? Number(bulan) : currentDate.getMonth() + 1;
+        const finalTahun = tahun ? Number(tahun) : currentDate.getFullYear();
 
-        // Cek role user yang mengakses
-        if (currentUser.role !== 'penyuluh' && currentUser.role !== 'admin') {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        // 1. Ambil semua kelompok
+        const semuaKelompokDocs = await Kelompok.find({})
+            .select("kelompokid nama status")
+            .sort({ kelompokid: 1 });
+        const semuaKelompok = semuaKelompokDocs.map(doc => doc.toObject());
+
+        // 2. Ambil semua peternak
+        const semuaPeternakDocs = await User.find({ role: "peternak" })
+            .select("nama username _id role kelompok");
+        const semuaPeternak = semuaPeternakDocs.map(doc => doc.toObject());
+
+        // Kalau questionnaireId kosong → kembalikan kelompok & anggota tapi semua status "Belum Mengisi"
+        if (!questionnaireId) {
+            const kosongEvaluasiData = semuaKelompok.map((kelompok: any) => {
+                const anggotaKelompok = semuaPeternak.filter(
+                    (peternak: any) => peternak.kelompok === kelompok.kelompokid
+                );
+
+                const anggotaDenganEvaluasi = anggotaKelompok.map((user: any, index: number) => ({
+                    _id: user._id.toString(),
+                    id: index + 1,
+                    nama: user.nama || user.username || `User ${user._id}`,
+                    bulan: null,
+                    tahun: null,
+                    bulanSingkat: "-",
+                    nilaiEvaluasi: 0,
+                    questionnaireId: null,
+                    userId: user._id.toString(),
+                    hasResponse: false,
+                    status: "Belum Mengisi",
+                    userData: {
+                        username: user.username,
+                        nama: user.nama,
+                        role: user.role,
+                        kelompok: user.kelompok,
+                    },
+                }));
+
+                return {
+                    kelompok: kelompok.kelompokid,
+                    namaKelompok: kelompok.nama,
+                    statusKelompok: kelompok.status,
+                    anggota: anggotaDenganEvaluasi,
+                    totalNilai: 0,
+                    jumlahAnggota: anggotaKelompok.length,
+                    jumlahResponden: 0,
+                    rataRata: 0,
+                    persentaseResponden: 0,
+                    statusEvaluasi: "Belum Ada Responden",
+                };
+            });
+
+            return NextResponse.json(kosongEvaluasiData, { status: 200 });
         }
 
-        // Ambil user dengan role peternak saja
-        const allUsers = await User.find({ role: 'peternak' })
-            .select('username nama _id kelompok')
-            .lean();
+        // === kalau questionnaireId ada, baru hitung responses ===
+        const query: any = {
+            bulan: finalBulan,
+            tahun: finalTahun,
+            questionnaireId: questionnaireId,
+        };
 
-        console.log("Total peternak users found:", allUsers.length);
+        const responsesDocs = await QuestionnaireResponse.find(query)
+            .populate("userId", "nama username kelompok")
+            .sort({ tahun: -1, bulan: -1 });
+        const responses = responsesDocs.map(doc => doc.toObject());
 
-        // 2. Ambil responses yang sesuai filter
-        const responses = await QuestionnaireResponse.find(query)
-            .sort({ tahun: -1, bulan: -1 })
-            .lean();
-
-        console.log("Total responses found:", responses.length);
-
-        // 3. Buat mapping untuk responses by userId
+        // Mapping responses by userId
         const responseMap = new Map();
-        responses.forEach(response => {
-            if (response.userId) {
-                // Handle both ObjectId and string userId
-                const userIdStr = response.userId.toString();
-                responseMap.set(userIdStr, response);
-
-                // Debug: log response data
-                console.log("Response for user:", userIdStr, "Answers:", response.answers ? response.answers.length : 0);
-                if (response.answers && response.answers.length > 0) {
-                    console.log("Sample answer:", response.answers[0]);
-                }
+        responses.forEach((response) => {
+            if (response.userId && (response.userId as any)._id) {
+                const userIdStr = (response.userId as any)._id.toString();
+                responseMap.set(userIdStr, { ...response, userId: response.userId });
             }
         });
 
-        // 4. Kelompokkan data berdasarkan kelompok dari semua user
-        const kelompokMap = new Map();
-
-        allUsers.forEach((user, index) => {
-            const userKelompok = user.kelompok || 'Belum Dikelompokkan';
-            const userIdStr = user._id.toString();
-
-            // Cek apakah user ini memiliki response
-            const userResponse = responseMap.get(userIdStr);
-
-            let nilaiEvaluasi = 0;
-            let hasResponse = false;
-
-            if (userResponse && userResponse.answers) {
-                nilaiEvaluasi = calculateEvaluationScore(userResponse.answers);
-                hasResponse = true;
-                console.log(`User ${user.nama} has response with score: ${nilaiEvaluasi}`);
-            }
-
-            // Prioritaskan nama, jika tidak ada baru pakai username
-            const userDisplayName = user.nama || user.username || `User ${userIdStr}`;
-
-            const evaluationData = {
-                _id: userResponse?._id || userIdStr,
-                id: index + 1,
-                nama: userDisplayName,
-                bulan: userResponse?.bulan || null,
-                tahun: userResponse?.tahun || null,
-                bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : '-',
-                nilaiEvaluasi: nilaiEvaluasi,
-                questionnaireId: userResponse?.questionnaireId || null,
-                userId: userIdStr,
-                hasResponse: hasResponse,
-                status: hasResponse ? 'Sudah Mengisi' : 'Belum Mengisi'
-            };
-
-            // Kelompokkan berdasarkan kelompok user
-            if (!kelompokMap.has(userKelompok)) {
-                kelompokMap.set(userKelompok, {
-                    kelompok: userKelompok,
-                    anggota: [],
-                    totalNilai: 0,
-                    jumlahAnggota: 0,
-                    jumlahResponden: 0,
-                    rataRata: 0
-                });
-            }
-
-            const kelompok = kelompokMap.get(userKelompok);
-            kelompok.anggota.push(evaluationData);
-            kelompok.jumlahAnggota += 1;
-
-            // Hanya tambahkan nilai jika punya response
-            if (hasResponse) {
-                kelompok.totalNilai += nilaiEvaluasi;
-                kelompok.jumlahResponden += 1;
-            }
+        // Kelompokkan peternak berdasarkan kelompok
+        const peternakByKelompok = new Map();
+        const peternakTanpaKelompok: any[] = [];
+        semuaKelompok.forEach((kelompok: any) => {
+            peternakByKelompok.set(kelompok.kelompokid, []);
         });
-
-        // 5. Hitung rata-rata untuk setiap kelompok
-        kelompokMap.forEach(kelompok => {
-            console.log(`Kelompok ${kelompok.kelompok}: totalNilai=${kelompok.totalNilai}, jumlahResponden=${kelompok.jumlahResponden}`);
-
-            if (kelompok.jumlahResponden > 0) {
-                kelompok.rataRata = Math.round(kelompok.totalNilai / kelompok.jumlahResponden);
+        semuaPeternak.forEach((peternak: any) => {
+            const kelompok = peternak.kelompok;
+            if (kelompok && peternakByKelompok.has(kelompok)) {
+                peternakByKelompok.get(kelompok).push(peternak);
             } else {
-                kelompok.rataRata = 0;
+                peternakTanpaKelompok.push(peternak);
             }
+        });
 
-            // Hitung persentase responden
-            kelompok.persentaseResponden = kelompok.jumlahAnggota > 0
-                ? Math.round((kelompok.jumlahResponden / kelompok.jumlahAnggota) * 100)
+        // Format hasil evaluasi per kelompok
+        const evaluasiData = semuaKelompok.map((kelompok: any) => {
+            const anggotaKelompok = peternakByKelompok.get(kelompok.kelompokid) || [];
+            let totalNilai = 0;
+            let jumlahResponden = 0;
+
+            const anggotaDenganEvaluasi = anggotaKelompok.map((user: any, index: number) => {
+                const userIdStr = user._id.toString();
+                const userResponse = responseMap.get(userIdStr);
+
+                let nilaiEvaluasi = 0;
+                let hasResponse = false;
+
+                if (userResponse && userResponse.answers) {
+                    nilaiEvaluasi = calculateEvaluationScore(userResponse.answers);
+                    hasResponse = true;
+                    totalNilai += nilaiEvaluasi;
+                    jumlahResponden += 1;
+                }
+
+                return {
+                    _id: userResponse?._id || userIdStr,
+                    id: index + 1,
+                    nama: user.nama || user.username || `User ${userIdStr}`,
+                    bulan: userResponse?.bulan || null,
+                    tahun: userResponse?.tahun || null,
+                    bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : "-",
+                    nilaiEvaluasi,
+                    questionnaireId: userResponse?.questionnaireId || null,
+                    userId: userIdStr,
+                    hasResponse,
+                    status: hasResponse ? "Sudah Mengisi" : "Belum Mengisi",
+                    userData: {
+                        username: user.username,
+                        nama: user.nama,
+                        role: user.role,
+                        kelompok: user.kelompok,
+                    },
+                };
+            });
+
+            const jumlahAnggota = anggotaKelompok.length;
+            const rataRata = jumlahResponden > 0 ? Math.round(totalNilai / jumlahResponden) : 0;
+            const persentaseResponden = jumlahAnggota > 0
+                ? Math.round((jumlahResponden / jumlahAnggota) * 100)
                 : 0;
 
-            // Status kelompok berdasarkan responden
-            if (kelompok.jumlahResponden === 0) {
-                kelompok.status = 'Belum Ada Responden';
-            } else if (kelompok.jumlahResponden === kelompok.jumlahAnggota) {
-                kelompok.status = 'Semua Sudah Mengisi';
-            } else {
-                kelompok.status = 'Sebagian Sudah Mengisi';
-            }
+            let statusEvaluasi = "Belum Ada Data";
+            if (jumlahResponden === 0) statusEvaluasi = "Belum Ada Responden";
+            else if (jumlahResponden === jumlahAnggota) statusEvaluasi = "Semua Sudah Mengisi";
+            else statusEvaluasi = "Sebagian Sudah Mengisi";
+
+            return {
+                kelompok: kelompok.kelompokid,
+                namaKelompok: kelompok.nama,
+                statusKelompok: kelompok.status,
+                anggota: anggotaDenganEvaluasi,
+                totalNilai,
+                jumlahAnggota,
+                jumlahResponden,
+                rataRata,
+                persentaseResponden,
+                statusEvaluasi,
+            };
         });
 
-        // 6. Konversi map ke array dan urutkan
-        const evaluasiData = Array.from(kelompokMap.values())
-            .sort((a, b) => {
-                if (a.kelompok === 'Belum Dikelompokkan') return 1;
-                if (b.kelompok === 'Belum Dikelompokkan') return -1;
-                return a.kelompok.localeCompare(b.kelompok);
-            });
+        // Tambah kategori "Belum Dikelompokkan"
+        if (peternakTanpaKelompok.length > 0) {
+            evaluasiData.push({
+                kelompok: "Belum Dikelompokkan",
+                namaKelompok: "Belum Dikelompokkan",
+                statusKelompok: "aktif",
+                anggota: peternakTanpaKelompok.map((user: any, index: number) => {
+                    const userIdStr = user._id.toString();
+                    const userResponse = responseMap.get(userIdStr);
 
-        // 7. Untuk setiap kelompok, urutkan anggota
-        evaluasiData.forEach(kelompok => {
-            kelompok.anggota.sort((a: any, b: any) => {
-                // Urutkan: sudah mengisi di atas, belum mengisi di bawah
-                if (a.hasResponse && !b.hasResponse) return -1;
-                if (!a.hasResponse && b.hasResponse) return 1;
-                // Jika sama-sama sudah mengisi, urutkan berdasarkan nilai
-                if (a.hasResponse && b.hasResponse && a.nilaiEvaluasi !== b.nilaiEvaluasi) {
-                    return b.nilaiEvaluasi - a.nilaiEvaluasi;
-                }
-                // Jika sama atau belum mengisi, urutkan berdasarkan nama
-                return a.nama.localeCompare(b.nama);
-            });
-        });
+                    let nilaiEvaluasi = 0;
+                    let hasResponse = false;
 
-        console.log("Final data prepared with", evaluasiData.length, "kelompok");
+                    if (userResponse && userResponse.answers) {
+                        nilaiEvaluasi = calculateEvaluationScore(userResponse.answers);
+                        hasResponse = true;
+                    }
+
+                    return {
+                        _id: userResponse?._id || userIdStr,
+                        id: index + 1,
+                        nama: user.nama || user.username || `User ${userIdStr}`,
+                        bulan: userResponse?.bulan || null,
+                        tahun: userResponse?.tahun || null,
+                        bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : "-",
+                        nilaiEvaluasi,
+                        questionnaireId: userResponse?.questionnaireId || null,
+                        userId: userIdStr,
+                        hasResponse,
+                        status: hasResponse ? "Sudah Mengisi" : "Belum Mengisi",
+                        userData: {
+                            username: user.username,
+                            nama: user.nama,
+                            role: user.role,
+                            kelompok: user.kelompok,
+                        },
+                    };
+                }),
+                totalNilai: 0,
+                jumlahAnggota: peternakTanpaKelompok.length,
+                jumlahResponden: 0,
+                rataRata: 0,
+                persentaseResponden: 0,
+                statusEvaluasi: "Belum Ada Responden",
+            });
+        }
+
         return NextResponse.json(evaluasiData, { status: 200 });
-
     } catch (err) {
         console.error("Error getting evaluation results:", err);
         return NextResponse.json(
@@ -186,88 +238,45 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// Fungsi untuk menghitung nilai evaluasi dengan debugging
+// Fungsi hitung nilai
 function calculateEvaluationScore(answers: any[]): number {
-    if (!answers || answers.length === 0) {
-        console.log("No answers provided");
-        return 0;
-    }
-
-    console.log(`Calculating score for ${answers.length} answers`);
-
+    if (!answers || answers.length === 0) return 0;
     let totalSkor = 0;
     let soalTerjawab = 0;
-
-    answers.forEach((answer, index) => {
-        if (!answer) {
-            console.log(`Answer ${index} is null or undefined`);
-            return;
-        }
-
+    answers.forEach((answer) => {
+        if (!answer) return;
         const numericValue = convertAnswerToNumber(answer.answer || answer.value || answer);
-        console.log(`Answer ${index}: ${answer.answer || answer.value || answer} -> ${numericValue}`);
-
         if (!isNaN(numericValue) && numericValue >= 1 && numericValue <= 5) {
             totalSkor += numericValue;
             soalTerjawab++;
-        } else {
-            console.log(`Invalid answer value at index ${index}:`, answer);
         }
     });
-
-    console.log(`Total skor: ${totalSkor}, Soal terjawab: ${soalTerjawab}`);
-
-    if (soalTerjawab === 0) {
-        console.log("No valid answers found");
-        return 0;
-    }
-
+    if (soalTerjawab === 0) return 0;
     const skorRataRata = totalSkor / soalTerjawab;
-    const skala100 = ((skorRataRata - 1) / 4) * 100;
-    const roundedScore = Math.round(skala100);
-
-    console.log(`Final score: ${roundedScore} (from average: ${skorRataRata})`);
-    return roundedScore;
+    return Math.round(((skorRataRata - 1) / 4) * 100);
 }
 
-// Helper function untuk konversi jawaban ke angka dengan lebih banyak opsi
 function convertAnswerToNumber(answer: any): number {
-    if (answer === null || answer === undefined) {
-        return 0;
-    }
-
-    // Jika sudah angka, langsung return
-    if (typeof answer === 'number') {
-        return answer;
-    }
-
-    // Jika string, coba konversi
-    if (typeof answer === 'string') {
+    if (answer === null || answer === undefined) return 0;
+    if (typeof answer === "number") return answer;
+    if (typeof answer === "string") {
         const answerLower = answer.toLowerCase().trim();
-
         const jawabanMapping: { [key: string]: number } = {
-            'sangat tidak setuju': 1, 'tidak setuju': 2, 'netral': 3,
-            'setuju': 4, 'sangat setuju': 5,
-            'sts': 1, 'ts': 2, 'n': 3, 's': 4, 'ss': 5,
-            '1': 1, '2': 2, '3': 3, '4': 4, '5': 5
+            "sangat tidak setuju": 1, "tidak setuju": 2, "netral": 3,
+            "setuju": 4, "sangat setuju": 5,
+            "sts": 1, "ts": 2, "n": 3, "s": 4, "ss": 5,
+            "1": 1, "2": 2, "3": 3, "4": 4, "5": 5,
         };
-
         if (jawabanMapping[answerLower] !== undefined) {
             return jawabanMapping[answerLower];
         }
-
-        // Coba parse sebagai angka
         const numeric = parseFloat(answerLower);
-        if (!isNaN(numeric)) {
-            return numeric;
-        }
+        if (!isNaN(numeric)) return numeric;
     }
-
-    console.log(`Cannot convert answer to number:`, answer);
     return 0;
 }
 
 function getBulanSingkat(bulanNumber: number): string {
-    const bulanList = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const bulanList = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
     return bulanList[bulanNumber - 1] || `${bulanNumber}`;
 }

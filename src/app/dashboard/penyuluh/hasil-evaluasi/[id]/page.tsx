@@ -20,13 +20,15 @@ interface AnggotaEvaluasi {
 
 interface KelompokEvaluasiDetail {
     kelompok: string;
+    namaKelompok: string; // Ditambahkan
+    statusKelompok: string; // Ditambahkan
     anggota: AnggotaEvaluasi[];
     totalNilai: number;
     jumlahAnggota: number;
     jumlahResponden: number;
     rataRata: number;
     persentaseResponden: number;
-    status: string;
+    statusEvaluasi: string; // Diubah dari 'status'
 }
 
 export default function DetailHasilEvaluasiPage() {
@@ -43,11 +45,15 @@ export default function DetailHasilEvaluasiPage() {
         const fetchData = async () => {
             try {
                 setLoading(true);
+                setError(null);
+
                 const response = await fetch(`/api/hasil-evaluasi/${kelompokId}`);
 
                 if (!response.ok) {
                     if (response.status === 404) {
                         throw new Error('Data evaluasi kelompok tidak ditemukan');
+                    } else if (response.status === 501) {
+                        throw new Error('Fitur untuk peternak belum dikelompokkan belum tersedia');
                     }
                     throw new Error('Gagal mengambil data evaluasi');
                 }
@@ -124,11 +130,11 @@ export default function DetailHasilEvaluasiPage() {
         if (!kelompokData) return [];
 
         const distribution = [
-            { range: '90-100%', count: 0, color: 'bg-green-500' },
-            { range: '80-89%', count: 0, color: 'bg-blue-500' },
-            { range: '70-79%', count: 0, color: 'bg-yellow-500' },
-            { range: '60-69%', count: 0, color: 'bg-orange-500' },
-            { range: '0-59%', count: 0, color: 'bg-red-500' }
+            { range: '90-100', count: 0, color: 'bg-green-500' },
+            { range: '80-89', count: 0, color: 'bg-blue-500' },
+            { range: '70-79', count: 0, color: 'bg-yellow-500' },
+            { range: '60-69', count: 0, color: 'bg-orange-500' },
+            { range: '0-59', count: 0, color: 'bg-red-500' }
         ];
 
         kelompokData.anggota.forEach(anggota => {
@@ -257,7 +263,7 @@ export default function DetailHasilEvaluasiPage() {
                     </div>
                     <div className="bg-white rounded-lg shadow p-6 text-center">
                         <div className={`text-3xl font-bold ${getGradeColor(kelompokData.rataRata).split(' ')[0]}`}>
-                            {kelompokData.rataRata}%
+                            {kelompokData.rataRata}
                         </div>
                         <p className="text-gray-600">Rata-rata Nilai</p>
                     </div>
@@ -294,7 +300,7 @@ export default function DetailHasilEvaluasiPage() {
                                         <td className="py-4 px-6">
                                             {anggota.hasResponse ? (
                                                 <span className={`font-bold ${getGradeColor(anggota.nilaiEvaluasi).split(' ')[0]}`}>
-                                                    {anggota.nilaiEvaluasi}%
+                                                    {anggota.nilaiEvaluasi}
                                                 </span>
                                             ) : (
                                                 <span className="text-gray-400">-</span>
@@ -343,7 +349,7 @@ export default function DetailHasilEvaluasiPage() {
                                                         style={{ width: `${anggota.nilaiEvaluasi}%` }}
                                                     ></div>
                                                     <span className="ml-2 text-sm font-medium text-gray-900">
-                                                        {anggota.nilaiEvaluasi}%
+                                                        {anggota.nilaiEvaluasi}
                                                     </span>
                                                 </div>
                                             </div>
@@ -453,7 +459,7 @@ export default function DetailHasilEvaluasiPage() {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700">Nilai</label>
                                         <p className={`mt-1 font-bold text-xl ${getGradeColor(selectedAnggota.nilaiEvaluasi).split(' ')[0]}`}>
-                                            {selectedAnggota.nilaiEvaluasi}%
+                                            {selectedAnggota.nilaiEvaluasi}
                                         </p>
                                         <p className={`text-sm ${getGradeColor(selectedAnggota.nilaiEvaluasi)}`}>
                                             {getGradeText(selectedAnggota.nilaiEvaluasi)}

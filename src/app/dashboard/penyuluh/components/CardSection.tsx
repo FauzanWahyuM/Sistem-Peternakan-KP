@@ -2,6 +2,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGri
 import { usePelatihanStorage } from '../hooks/usePelatihanStorage';
 import { useState, useEffect } from 'react';
 import { Users, FileText, Calendar, TrendingUp, ArrowRight, BookOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation'; // Ganti dengan next/navigation
 
 // Interface untuk data evaluasi kelompok
 interface KelompokEvaluasi {
@@ -22,7 +23,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
                 <p className="font-semibold text-gray-800">{label}</p>
                 <p className="text-green-600 font-bold">
-                    Nilai: <span className="text-blue-600">{payload[0].value}%</span>
+                    Nilai: <span className="text-blue-600">{payload[0].value}</span>
                 </p>
             </div>
         );
@@ -60,6 +61,7 @@ const StatCard = ({ title, value, subtitle, icon, color, loading }: {
 );
 
 export default function CardSection() {
+    const router = useRouter(); // Sekarang menggunakan next/navigation
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [evaluasiData, setEvaluasiData] = useState<KelompokEvaluasi[]>([]);
     const [loading, setLoading] = useState(true);
@@ -109,6 +111,11 @@ export default function CardSection() {
         return 'text-red-600';
     };
 
+    // Fungsi untuk navigasi
+    const handleLihatDetail = () => {
+        router.push('/dashboard/penyuluh/hasil-evaluasi');
+    };
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -139,7 +146,7 @@ export default function CardSection() {
 
                 <StatCard
                     title="Rata-rata Nilai"
-                    value={loading ? "..." : `${Math.round(averageScore)}%`}
+                    value={loading ? "..." : Math.round(averageScore)}
                     subtitle={loading ? "..." : "Nilai keseluruhan"}
                     icon={<BookOpen className="w-6 h-6 text-white" />}
                     color="bg-orange-500"
@@ -158,7 +165,7 @@ export default function CardSection() {
                         {!loading && (
                             <div className="bg-green-50 px-3 py-1 rounded-full">
                                 <span className={`font-semibold text-sm ${getGradeColor(averageScore)}`}>
-                                    Avg: {averageScore.toFixed(1)}%
+                                    Avg: {averageScore.toFixed(1)}
                                 </span>
                             </div>
                         )}
@@ -195,7 +202,6 @@ export default function CardSection() {
                                             tickLine={false}
                                             fontSize={12}
                                             tickMargin={10}
-                                            tickFormatter={(value) => `${value}%`}
                                         />
                                         <YAxis
                                             dataKey="name"
@@ -233,7 +239,10 @@ export default function CardSection() {
                                     </svg>
                                     <span className="text-sm text-gray-600">Data evaluasi terkini</span>
                                 </div>
-                                <button className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+                                <button
+                                    onClick={handleLihatDetail}
+                                    className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center"
+                                >
                                     Lihat detail
                                     <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -276,7 +285,7 @@ export default function CardSection() {
                     </div>
                     <p className="text-sm text-gray-600">Rata-rata Nilai</p>
                     <p className="font-bold text-gray-800">
-                        {loading ? '...' : `${Math.round(averageScore)}%`}
+                        {loading ? '...' : Math.round(averageScore)}
                     </p>
                 </div>
 
@@ -298,6 +307,7 @@ export default function CardSection() {
 function PelatihanTerbaru() {
     const { pelatihan } = usePelatihanStorage();
     const [isClient, setIsClient] = useState(false);
+    const router = useRouter(); // Juga ganti di sini
 
     useEffect(() => {
         setIsClient(true);

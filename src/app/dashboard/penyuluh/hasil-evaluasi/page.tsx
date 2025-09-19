@@ -6,20 +6,24 @@ import { useState, useEffect } from 'react';
 
 interface KelompokEvaluasi {
     kelompok: string;
+    namaKelompok: string;
+    statusKelompok: string;
     anggota: any[];
     totalNilai: number;
     jumlahAnggota: number;
     jumlahResponden: number;
     rataRata: number;
     persentaseResponden: number;
-    status: string;
+    statusEvaluasi: string;
 }
 
 export default function HasilEvaluasiPage() {
     const router = useRouter();
     const [evaluasiData, setEvaluasiData] = useState<KelompokEvaluasi[]>([]);
+    const [filteredData, setFilteredData] = useState<KelompokEvaluasi[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [kelompokFilter, setKelompokFilter] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -33,6 +37,7 @@ export default function HasilEvaluasiPage() {
 
                 const data = await response.json();
                 setEvaluasiData(data);
+                setFilteredData(data);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
             } finally {
@@ -43,6 +48,29 @@ export default function HasilEvaluasiPage() {
         fetchData();
     }, []);
 
+    // Apply filter
+    useEffect(() => {
+        if (kelompokFilter) {
+            const filtered = evaluasiData.filter(item =>
+                item.kelompok.toLowerCase() === kelompokFilter.toLowerCase()
+            );
+            setFilteredData(filtered);
+        } else {
+            setFilteredData(evaluasiData);
+        }
+    }, [kelompokFilter, evaluasiData]);
+
+    // Get unique filter options from data
+    const kelompokOptions = [...new Set(evaluasiData.map(item => item.kelompok))].sort();
+
+    const handleFilterChange = (value: string) => {
+        setKelompokFilter(value);
+    };
+
+    const clearFilter = () => {
+        setKelompokFilter('');
+    };
+
     const handleKelompokClick = (kelompokId: string) => {
         router.push(`/dashboard/penyuluh/hasil-evaluasi/${kelompokId}`);
     };
@@ -52,6 +80,15 @@ export default function HasilEvaluasiPage() {
             case 'Semua Sudah Mengisi': return 'bg-green-100 text-green-800 border border-green-200';
             case 'Sebagian Sudah Mengisi': return 'bg-blue-100 text-blue-800 border border-blue-200';
             case 'Belum Ada Responden': return 'bg-gray-100 text-gray-800 border border-gray-200';
+            default: return 'bg-gray-100 text-gray-800 border border-gray-200';
+        }
+    };
+
+    const getStatusKelompokColor = (status: string) => {
+        switch (status) {
+            case 'aktif': return 'bg-green-100 text-green-800 border border-green-200';
+            case 'nonaktif': return 'bg-red-100 text-red-800 border border-red-200';
+            case 'pending': return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
             default: return 'bg-gray-100 text-gray-800 border border-gray-200';
         }
     };
@@ -85,9 +122,16 @@ export default function HasilEvaluasiPage() {
         return nama;
     };
 
+    const formatNamaKelompok = (kelompokId: string, namaKelompok: string) => {
+        if (kelompokId === 'Belum Dikelompokkan') {
+            return 'Belum Dikelompokkan';
+        }
+        return namaKelompok || `Kelompok ${kelompokId}`;
+    };
+
     if (loading) {
         return (
-            <div className="flex min-h-screen bg-gray-50">
+            <div className="flex min-h-screen bg-gray-100">
                 <div className="sticky top-0 h-screen">
                     <Sidebar userType="penyuluh" />
                 </div>
@@ -105,7 +149,7 @@ export default function HasilEvaluasiPage() {
 
     if (error) {
         return (
-            <div className="flex min-h-screen bg-gray-50">
+            <div className="flex min-h-screen bg-gray-100">
                 <div className="sticky top-0 h-screen">
                     <Sidebar userType="penyuluh" />
                 </div>
@@ -132,24 +176,67 @@ export default function HasilEvaluasiPage() {
     }
 
     return (
-        <div className="flex min-h-screen bg-gray-50">
+        <div className="flex min-h-screen bg-gray-100">
             <div className="sticky top-0 h-screen">
                 <Sidebar userType="penyuluh" />
             </div>
 
             <main className="flex-1 p-6">
                 {/* Header */}
-                <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                        Hasil Evaluasi Kuesioner
-                    </h1>
-                    <p className="text-gray-600">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-800 text-center">Hasil Evaluasi Kuesioner</h1>
+                    <p className="text-gray-600 text-center mt-2">
                         Monitoring dan analisis hasil evaluasi seluruh kelompok
                     </p>
                 </div>
 
+                {/* Filters Section */}
+                <div className="flex justify-center">
+                    <div className="bg-white rounded-lg shadow p-6 mb-6 max-w-2xl w-full">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Filter Kelompok</h3>
+
+                        <div className="flex flex-col md:flex-row gap-4 mb-4 justify-center items-center">
+                            {/* Kelompok Filter */}
+                            <div className="w-full md:w-2/3">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Kelompok
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={kelompokFilter}
+                                        onChange={(e) => handleFilterChange(e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    >
+                                        <option value="">Semua Kelompok</option>
+                                        {kelompokOptions.map((option) => (
+                                            <option key={option} value={option}>
+                                                {option === 'Belum Dikelompokkan' ? 'Belum Dikelompokkan' : `Kelompok ${option}`}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Clear Filter Button */}
+                        <div className="flex justify-center">
+                            <button
+                                onClick={clearFilter}
+                                className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
+                            >
+                                Reset Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 max-w-6xl mx-auto">
                     <div className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-center">
                             <div className="rounded-full bg-blue-50 p-3">
@@ -182,39 +269,61 @@ export default function HasilEvaluasiPage() {
                                 <span className="text-purple-600 text-2xl">📊</span>
                             </div>
                             <div className="ml-4">
-                                <p className="text-sm text-gray-600 font-medium">Rata-rata Keseluruhan</p>
+                                <p className="text-sm text-gray-600 font-medium">Rata-rata Nilai Keseluruhan</p>
                                 <p className="text-2xl font-bold text-gray-800">
                                     {evaluasiData.length > 0
                                         ? Math.round(evaluasiData.reduce((sum, kelompok) => sum + kelompok.rataRata, 0) / evaluasiData.length)
                                         : 0
-                                    }%
+                                    }
                                 </p>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                {/* Data Summary */}
+                {filteredData.length > 0 && (
+                    <div className="mb-4 text-sm text-gray-600 text-center">
+                        Menampilkan {filteredData.length} dari {evaluasiData.length} kelompok
+                    </div>
+                )}
+
                 {/* Kelompok Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {evaluasiData.length === 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                    {filteredData.length === 0 ? (
                         <div className="col-span-full text-center py-12">
                             <div className="bg-white rounded-xl p-8 shadow-sm border">
                                 <span className="text-6xl">📋</span>
-                                <h3 className="text-xl font-semibold text-gray-800 mt-4">Belum ada data evaluasi</h3>
-                                <p className="text-gray-600 mt-2">Data akan muncul setelah peserta mengisi kuesioner</p>
+                                <h3 className="text-xl font-semibold text-gray-800 mt-4">
+                                    {evaluasiData.length === 0
+                                        ? 'Belum ada data evaluasi'
+                                        : 'Tidak ada data yang sesuai dengan filter yang dipilih'
+                                    }
+                                </h3>
+                                <p className="text-gray-600 mt-2">
+                                    {evaluasiData.length === 0
+                                        ? 'Data akan muncul setelah peserta mengisi kuesioner'
+                                        : 'Coba gunakan filter yang berbeda'
+                                    }
+                                </p>
                             </div>
                         </div>
                     ) : (
-                        evaluasiData.map((kelompok) => (
+                        filteredData.map((kelompok) => (
                             <div key={kelompok.kelompok} className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-shadow flex flex-col">
                                 {/* Card Header */}
                                 <div className="px-6 py-4 border-b">
                                     <div className="flex justify-between items-start mb-2">
-                                        <h3 className="text-xl font-bold text-gray-800">
-                                            {kelompok.kelompok === 'Belum Dikelompokkan' ? 'Belum Dikelompokkan' : `Kelompok ${kelompok.kelompok}`}
-                                        </h3>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(kelompok.status)}`}>
-                                            {kelompok.status}
+                                        <div>
+                                            <h3 className="text-xl font-bold text-gray-800">
+                                                {formatNamaKelompok(kelompok.kelompok, kelompok.namaKelompok)}
+                                            </h3>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusKelompokColor(kelompok.statusKelompok)} mt-1 inline-block`}>
+                                                {kelompok.statusKelompok}
+                                            </span>
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(kelompok.statusEvaluasi)}`}>
+                                            {kelompok.statusEvaluasi}
                                         </span>
                                     </div>
                                     <div className="flex items-center text-sm text-gray-600">
@@ -229,7 +338,7 @@ export default function HasilEvaluasiPage() {
                                     <div className="text-center mb-4">
                                         <p className="text-sm text-gray-600 mb-1">Rata-rata Kelompok</p>
                                         <p className={`text-3xl font-bold ${getGradeColor(kelompok.rataRata)}`}>
-                                            {kelompok.rataRata}%
+                                            {kelompok.rataRata}
                                         </p>
                                         <p className={`text-sm ${getGradeColor(kelompok.rataRata)}`}>
                                             {getGradeText(kelompok.rataRata)}
@@ -265,7 +374,7 @@ export default function HasilEvaluasiPage() {
                                                                 {formatNama(anggota.nama)}
                                                             </span>
                                                             <span className={`font-semibold ${getGradeColor(anggota.nilaiEvaluasi)}`}>
-                                                                {anggota.nilaiEvaluasi}%
+                                                                {anggota.nilaiEvaluasi}
                                                             </span>
                                                         </div>
                                                     ))}
@@ -289,10 +398,10 @@ export default function HasilEvaluasiPage() {
                 </div>
 
                 {/* Footer Info */}
-                {evaluasiData.length > 0 && (
+                {filteredData.length > 0 && (
                     <div className="mt-8 text-center">
                         <p className="text-gray-600 text-sm">
-                            Menampilkan {evaluasiData.length} kelompok •
+                            Menampilkan {filteredData.length} dari {evaluasiData.length} kelompok •
                             Total {evaluasiData.reduce((sum, k) => sum + k.jumlahAnggota, 0)} anggota
                         </p>
                     </div>

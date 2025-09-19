@@ -4,22 +4,12 @@ import connectDB from "../../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../../models/Kuesioner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/authOptions";
+import Kelompok from "../../../../models/Kelompok";
 import User from "../../../../models/User";
-
-interface KelompokEvaluasiDetail {
-    kelompok: string;
-    anggota: any[];
-    totalNilai: number;
-    jumlahAnggota: number;
-    jumlahResponden: number;
-    rataRata: number;
-    persentaseResponden: number;
-    status: string;
-}
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ kelompok: string }> }
+    { params }: { params: { kelompok: string } }
 ) {
     await connectDB();
     try {
@@ -28,89 +18,113 @@ export async function GET(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const resolvedParams = await params;
-        const kelompokId = resolvedParams.kelompok;
-
-        // Cek role user
-        const currentUser = await User.findById(session.user.id);
-        if (!currentUser) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
+        const kelompokId = params.kelompok;
         const { searchParams } = new URL(req.url);
         const bulan = searchParams.get("bulan");
         const tahun = searchParams.get("tahun");
         const questionnaireId = searchParams.get("questionnaireId");
 
-        // Query untuk mengambil data responses
-        const query: any = {};
-        if (bulan) query.bulan = Number(bulan);
-        if (tahun) query.tahun = Number(tahun);
-        if (questionnaireId) query.questionnaireId = questionnaireId;
+        // Default bulan & tahun
+        const currentDate = new Date();
+        const finalBulan = bulan ? Number(bulan) : currentDate.getMonth() + 1;
+        const finalTahun = tahun ? Number(tahun) : currentDate.getFullYear();
 
-        // Cek role user yang mengakses
-        if (currentUser.role !== 'penyuluh' && currentUser.role !== 'admin') {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+        let namaKelompok = "Belum Dikelompokkan";
+        let statusKelompok = "aktif";
+        let anggotaKelompok: any[] = [];
 
-        console.log(`Fetching data for kelompok: ${kelompokId}`);
+        if (kelompokId !== "Belum Dikelompokkan") {
+            const kelompokDataFromDB = await Kelompok.findOne({ kelompokid: kelompokId })
+                .select("kelompokid nama status")
+                .lean();
 
-        // Ambil user dengan role peternak dan kelompok tertentu
-        // Handle khusus untuk "Belum Dikelompokkan"
-        const userQuery: any = { role: 'peternak' };
+            if (!kelompokDataFromDB) {
+                return NextResponse.json({ error: "Kelompok tidak ditemukan" }, { status: 404 });
+            }
 
-        if (kelompokId === 'Belum Dikelompokkan') {
-            userQuery.$or = [
-                { kelompok: { $exists: false } },
-                { kelompok: null },
-                { kelompok: '' },
-                { kelompok: 'Belum Dikelompokkan' }
-            ];
+            namaKelompok = kelompokDataFromDB.nama;
+            statusKelompok = kelompokDataFromDB.status;
+
+            anggotaKelompok = await User.find({
+                role: "peternak",
+                kelompok: kelompokId,
+            }).select("username nama _id role kelompok").lean();
         } else {
-            userQuery.kelompok = kelompokId;
+            anggotaKelompok = await User.find({
+                role: "peternak",
+                $or: [
+                    { kelompok: { $exists: false } },
+                    { kelompok: null },
+                    { kelompok: "" },
+                ],
+            }).select("username nama _id role kelompok").lean();
+
+            namaKelompok = "Belum Dikelompokkan";
+            statusKelompok = "aktif";
         }
 
-        const allUsers = await User.find(userQuery)
-            .select('username nama _id kelompok')
-            .lean();
+        // Kalau questionnaireId kosong → langsung return anggota dengan status "Belum Mengisi"
+        if (!questionnaireId) {
+            const anggotaTanpaEvaluasi = anggotaKelompok.map((user: any, index: number) => ({
+                _id: user._id.toString(),
+                id: index + 1,
+                nama: user.nama || user.username || `User ${user._id}`,
+                bulan: null,
+                tahun: null,
+                bulanSingkat: "-",
+                nilaiEvaluasi: 0,
+                questionnaireId: null,
+                userId: user._id.toString(),
+                hasResponse: false,
+                status: "Belum Mengisi",
+                userData: {
+                    username: user.username,
+                    nama: user.nama,
+                    role: user.role,
+                    kelompok: user.kelompok,
+                },
+            }));
 
-        console.log(`Total peternak users found for kelompok ${kelompokId}:`, allUsers.length);
+            return NextResponse.json({
+                kelompok: kelompokId,
+                namaKelompok,
+                statusKelompok,
+                anggota: anggotaTanpaEvaluasi,
+                totalNilai: 0,
+                jumlahAnggota: anggotaKelompok.length,
+                jumlahResponden: 0,
+                rataRata: 0,
+                persentaseResponden: 0,
+                statusEvaluasi: "Belum Ada Responden",
+            }, { status: 200 });
+        }
 
-        // 2. Ambil responses yang sesuai filter
+        // Ambil responses hanya jika questionnaireId ada
+        const query: any = {
+            bulan: finalBulan,
+            tahun: finalTahun,
+            questionnaireId: questionnaireId,
+        };
+
         const responses = await QuestionnaireResponse.find(query)
+            .populate("userId", "nama username kelompok")
             .sort({ tahun: -1, bulan: -1 })
             .lean();
 
-        console.log("Total responses found:", responses.length);
-
-        // 3. Buat mapping untuk responses by userId
         const responseMap = new Map();
-        responses.forEach(response => {
-            if (response.userId) {
-                const userIdStr = response.userId.toString();
-                // Hanya simpan response terbaru untuk setiap user
-                if (!responseMap.has(userIdStr)) {
-                    responseMap.set(userIdStr, response);
-                }
+        responses.forEach((response) => {
+            if (response.userId && response.userId._id) {
+                const userIdStr = response.userId._id.toString();
+                responseMap.set(userIdStr, response);
             }
         });
 
-        // 4. Siapkan data evaluasi untuk kelompok tertentu dengan tipe yang benar
-        const kelompokData: KelompokEvaluasiDetail = {
-            kelompok: kelompokId,
-            anggota: [],
-            totalNilai: 0,
-            jumlahAnggota: 0,
-            jumlahResponden: 0,
-            rataRata: 0,
-            persentaseResponden: 0,
-            status: 'Belum Ada Responden'
-        };
+        // Hitung evaluasi
+        let totalNilai = 0;
+        let jumlahResponden = 0;
 
-        allUsers.forEach((user, index) => {
+        const anggotaDenganEvaluasi = anggotaKelompok.map((user: any, index: number) => {
             const userIdStr = user._id.toString();
-
-            // Cek apakah user ini memiliki response
             const userResponse = responseMap.get(userIdStr);
 
             let nilaiEvaluasi = 0;
@@ -119,55 +133,43 @@ export async function GET(
             if (userResponse && userResponse.answers) {
                 nilaiEvaluasi = calculateEvaluationScore(userResponse.answers);
                 hasResponse = true;
-                console.log(`User ${user.nama || user.username} has response with score: ${nilaiEvaluasi}`);
+                totalNilai += nilaiEvaluasi;
+                jumlahResponden++;
             }
 
-            const userDisplayName = user.nama || user.username || `User ${userIdStr}`;
-
-            const evaluationData = {
+            return {
                 _id: userResponse?._id || userIdStr,
                 id: index + 1,
-                nama: userDisplayName,
+                nama: user.nama || user.username || `User ${userIdStr}`,
                 bulan: userResponse?.bulan || null,
                 tahun: userResponse?.tahun || null,
-                bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : '-',
-                nilaiEvaluasi: nilaiEvaluasi,
+                bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : "-",
+                nilaiEvaluasi,
                 questionnaireId: userResponse?.questionnaireId || null,
                 userId: userIdStr,
-                hasResponse: hasResponse,
-                status: hasResponse ? 'Sudah Mengisi' : 'Belum Mengisi'
+                hasResponse,
+                status: hasResponse ? "Sudah Mengisi" : "Belum Mengisi",
+                userData: {
+                    username: user.username,
+                    nama: user.nama,
+                    role: user.role,
+                    kelompok: user.kelompok,
+                },
             };
-
-            kelompokData.anggota.push(evaluationData);
-            kelompokData.jumlahAnggota += 1;
-
-            if (hasResponse) {
-                kelompokData.totalNilai += nilaiEvaluasi;
-                kelompokData.jumlahResponden += 1;
-            }
         });
 
-        // 5. Hitung rata-rata
-        if (kelompokData.jumlahResponden > 0) {
-            kelompokData.rataRata = Math.round(kelompokData.totalNilai / kelompokData.jumlahResponden);
-        }
-
-        // Hitung persentase responden
-        kelompokData.persentaseResponden = kelompokData.jumlahAnggota > 0
-            ? Math.round((kelompokData.jumlahResponden / kelompokData.jumlahAnggota) * 100)
+        const jumlahAnggota = anggotaKelompok.length;
+        const rataRata = jumlahResponden > 0 ? Math.round(totalNilai / jumlahResponden) : 0;
+        const persentaseResponden = jumlahAnggota > 0
+            ? Math.round((jumlahResponden / jumlahAnggota) * 100)
             : 0;
 
-        // Status kelompok berdasarkan responden
-        if (kelompokData.jumlahResponden === 0) {
-            kelompokData.status = 'Belum Ada Responden';
-        } else if (kelompokData.jumlahResponden === kelompokData.jumlahAnggota) {
-            kelompokData.status = 'Semua Sudah Mengisi';
-        } else {
-            kelompokData.status = 'Sebagian Sudah Mengisi';
-        }
+        let statusEvaluasi = "Belum Ada Data";
+        if (jumlahResponden === 0) statusEvaluasi = "Belum Ada Responden";
+        else if (jumlahResponden === jumlahAnggota) statusEvaluasi = "Semua Sudah Mengisi";
+        else statusEvaluasi = "Sebagian Sudah Mengisi";
 
-        // Urutkan anggota
-        kelompokData.anggota.sort((a: any, b: any) => {
+        anggotaDenganEvaluasi.sort((a: any, b: any) => {
             if (a.hasResponse && !b.hasResponse) return -1;
             if (!a.hasResponse && b.hasResponse) return 1;
             if (a.hasResponse && b.hasResponse && a.nilaiEvaluasi !== b.nilaiEvaluasi) {
@@ -176,8 +178,18 @@ export async function GET(
             return a.nama.localeCompare(b.nama);
         });
 
-        console.log("Final data prepared for kelompok:", kelompokId, "with", kelompokData.jumlahAnggota, "members and", kelompokData.jumlahResponden, "respondents");
-        return NextResponse.json(kelompokData, { status: 200 });
+        return NextResponse.json({
+            kelompok: kelompokId,
+            namaKelompok,
+            statusKelompok,
+            anggota: anggotaDenganEvaluasi,
+            totalNilai,
+            jumlahAnggota,
+            jumlahResponden,
+            rataRata,
+            persentaseResponden,
+            statusEvaluasi,
+        }, { status: 200 });
 
     } catch (err) {
         console.error("Error getting evaluation results:", err);
@@ -188,55 +200,43 @@ export async function GET(
     }
 }
 
-// Fungsi untuk menghitung nilai evaluasi
+// Hitung nilai evaluasi
 function calculateEvaluationScore(answers: any[]): number {
     if (!answers || answers.length === 0) return 0;
-
     let totalSkor = 0;
     let soalTerjawab = 0;
-
     answers.forEach((answer) => {
+        if (!answer) return;
         const numericValue = convertAnswerToNumber(answer.answer || answer.value || answer);
         if (!isNaN(numericValue) && numericValue >= 1 && numericValue <= 5) {
             totalSkor += numericValue;
             soalTerjawab++;
         }
     });
-
     if (soalTerjawab === 0) return 0;
-
     const skorRataRata = totalSkor / soalTerjawab;
-    const skala100 = ((skorRataRata - 1) / 4) * 100;
-    return Math.round(skala100);
+    return Math.round(((skorRataRata - 1) / 4) * 100);
 }
 
-// Helper function untuk konversi jawaban ke angka
 function convertAnswerToNumber(answer: any): number {
     if (answer === null || answer === undefined) return 0;
-
-    if (typeof answer === 'number') return answer;
-
-    if (typeof answer === 'string') {
+    if (typeof answer === "number") return answer;
+    if (typeof answer === "string") {
         const answerLower = answer.toLowerCase().trim();
         const jawabanMapping: { [key: string]: number } = {
-            'sangat tidak setuju': 1, 'tidak setuju': 2, 'netral': 3,
-            'setuju': 4, 'sangat setuju': 5,
-            'sts': 1, 'ts': 2, 'n': 3, 's': 4, 'ss': 5,
-            '1': 1, '2': 2, '3': 3, '4': 4, '5': 5
+            "sangat tidak setuju": 1, "tidak setuju": 2, "netral": 3,
+            "setuju": 4, "sangat setuju": 5,
+            "sts": 1, "ts": 2, "n": 3, "s": 4, "ss": 5,
+            "1": 1, "2": 2, "3": 3, "4": 4, "5": 5,
         };
-
-        if (jawabanMapping[answerLower] !== undefined) {
-            return jawabanMapping[answerLower];
-        }
-
+        if (jawabanMapping[answerLower] !== undefined) return jawabanMapping[answerLower];
         const numeric = parseFloat(answerLower);
         if (!isNaN(numeric)) return numeric;
     }
-
     return 0;
 }
 
 function getBulanSingkat(bulanNumber: number): string {
-    const bulanList = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const bulanList = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
     return bulanList[bulanNumber - 1] || `${bulanNumber}`;
 }
