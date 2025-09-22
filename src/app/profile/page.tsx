@@ -46,6 +46,7 @@ const ProfilePage: React.FC = () => {
     const [modalMessage, setModalMessage] = useState('');
     const [kelompokList, setKelompokList] = useState<KelompokData[]>([]);
     const [kelompokLoading, setKelompokLoading] = useState(false);
+    const isPeternak = userData?.role?.toLowerCase() === 'peternak';
 
     const loading = authLoading || dataLoading;
 
@@ -460,6 +461,31 @@ const ProfilePage: React.FC = () => {
         }
     }, [authLoading, userId, router]);
 
+    // Tambahkan useEffect baru setelah userData berhasil di-set
+    useEffect(() => {
+        if (!loading && userData) {
+            // Cek field yang wajib diisi
+            const requiredFields = [
+                userData.nama,
+                userData.email,
+                userData.kelompok,
+            ];
+
+            // Kalau role peternak, cek tambahan
+            if (isPeternak) {
+                requiredFields.push(userData.tempatLahir, userData.tanggalLahir);
+            }
+
+            const hasEmptyField = requiredFields.some(field => !field || field.trim() === '');
+
+            if (hasEmptyField) {
+                setModalMessage('Lengkapi Data Profil Anda');
+                setShowModal(true);
+            }
+        }
+    }, [loading, userData, isPeternak]);
+
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -483,8 +509,6 @@ const ProfilePage: React.FC = () => {
             default: return 'text-gray-600 bg-gray-100';
         }
     };
-
-    const isPeternak = userData?.role?.toLowerCase() === 'peternak';
 
     return (
         <div className="min-h-screen bg-gray-50">
