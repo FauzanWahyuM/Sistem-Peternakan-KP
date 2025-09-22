@@ -97,9 +97,25 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            await signIn("google", {
-                callbackUrl: '/dashboard/peternak'
-            });
+            // Login dengan Google
+            const res = await signIn("google", { redirect: false });
+
+            if (res?.error) {
+                setErrorMsg('Login dengan Google gagal');
+                setIsLoading(false);
+                return;
+            }
+
+            // Ambil session setelah login
+            const session = await getSession();
+            if (session?.user) {
+                // Simpan data user Google ke localStorage dan sessionStorage
+                sessionStorage.setItem('userId', session.user.email ?? '');
+                localStorage.setItem('userData', JSON.stringify(session.user));
+            }
+
+            // Redirect ke dashboard (peternak by default)
+            router.push('/dashboard/peternak');
         } catch (error) {
             console.error('Google login error:', error);
             setErrorMsg('Terjadi kesalahan saat login dengan Google');
