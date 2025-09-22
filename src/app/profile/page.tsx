@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Camera, Save, Edit2, User, Shield, X, MapPin, Calendar, Cake } from 'lucide-react';
+import { ArrowLeft, Camera, Save, Edit2, User, Shield, X, MapPin, Calendar, Cake, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '../hooks/useAuth';
 
@@ -46,9 +46,21 @@ const ProfilePage: React.FC = () => {
     const [modalMessage, setModalMessage] = useState('');
     const [kelompokList, setKelompokList] = useState<KelompokData[]>([]);
     const [kelompokLoading, setKelompokLoading] = useState(false);
-    const isPeternak = userData?.role?.toLowerCase() === 'peternak';
+    const [showIncompleteDataAlert, setShowIncompleteDataAlert] = useState(false); // State untuk notifikasi data kosong
 
     const loading = authLoading || dataLoading;
+
+    // Fungsi untuk mengecek apakah ada data yang kosong
+    const checkIncompleteData = useCallback((data: UserData) => {
+        const requiredFields = ['nama', 'email', 'kelompok'];
+        const isPeternak = data.role?.toLowerCase() === 'peternak';
+
+        if (isPeternak) {
+            requiredFields.push('tempatLahir', 'tanggalLahir');
+        }
+
+        return requiredFields.some(field => !data[field as keyof UserData]);
+    }, []);
 
     // Fungsi untuk menghitung umur berdasarkan tanggal lahir
     const calculateAge = (birthDate: string): number => {
@@ -205,6 +217,10 @@ const ProfilePage: React.FC = () => {
                         if (cachedUserData.profileImage) {
                             setProfileImage(getProfileImageUrl(cachedUserData.profileImage));
                         }
+
+                        // Cek data tidak lengkap setelah set data
+                        setShowIncompleteDataAlert(checkIncompleteData(cachedUserData));
+
                         setDataLoading(false);
                         return;
                     }
@@ -249,6 +265,9 @@ const ProfilePage: React.FC = () => {
                         saveUserDataToCache({ ...data.user, profileImage: profileImageFromAPI });
                     }
 
+                    // Cek data tidak lengkap setelah set data
+                    setShowIncompleteDataAlert(checkIncompleteData(data.user));
+
                     window.dispatchEvent(new Event('userDataUpdated'));
                 } else {
                     console.error('❌ No user data in response');
@@ -267,7 +286,7 @@ const ProfilePage: React.FC = () => {
         } finally {
             setDataLoading(false);
         }
-    }, [userId, clearUserCache, saveUserDataToCache, logout]);
+    }, [userId, clearUserCache, saveUserDataToCache, logout, checkIncompleteData]);
 
     useEffect(() => {
         if (!authLoading) {
@@ -338,6 +357,9 @@ const ProfilePage: React.FC = () => {
             // Update state dan cache
             setUserData(data.user);
             saveUserDataToCache(data.user);
+
+            // Cek data tidak lengkap setelah update
+            setShowIncompleteDataAlert(checkIncompleteData(data.user));
 
             window.dispatchEvent(new Event('userDataUpdated'));
 
@@ -461,31 +483,6 @@ const ProfilePage: React.FC = () => {
         }
     }, [authLoading, userId, router]);
 
-    // Tambahkan useEffect baru setelah userData berhasil di-set
-    useEffect(() => {
-        if (!loading && userData) {
-            // Cek field yang wajib diisi
-            const requiredFields = [
-                userData.nama,
-                userData.email,
-                userData.kelompok,
-            ];
-
-            // Kalau role peternak, cek tambahan
-            if (isPeternak) {
-                requiredFields.push(userData.tempatLahir, userData.tanggalLahir);
-            }
-
-            const hasEmptyField = requiredFields.some(field => !field || field.trim() === '');
-
-            if (hasEmptyField) {
-                setModalMessage('Lengkapi Data Profil Anda');
-                setShowModal(true);
-            }
-        }
-    }, [loading, userData, isPeternak]);
-
-
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -510,6 +507,8 @@ const ProfilePage: React.FC = () => {
         }
     };
 
+    const isPeternak = userData?.role?.toLowerCase() === 'peternak';
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-4xl mx-auto px-4 py-8">
@@ -526,6 +525,19 @@ const ProfilePage: React.FC = () => {
                         <p className="text-gray-500 text-sm mt-1">Kelola informasi akun Anda</p>
                     </div>
                 </div>
+
+                {/* Notifikasi Lengkapi Data Profil */}
+                {showIncompleteDataAlert && (
+                    <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                        <AlertCircle className="text-yellow-600 mt-0.5 flex-shrink-0" size={20} />
+                        <div>
+                            <h3 className="font-medium text-yellow-800">Lengkapi Data Profil Anda</h3>
+                            <p className="text-yellow-700 text-sm mt-1">
+                                Silakan lengkapi informasi profil Anda untuk pengalaman yang lebih baik.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     {/* Profile Header with Cover Photo */}
