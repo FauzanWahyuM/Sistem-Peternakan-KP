@@ -99,7 +99,7 @@ export default function LoginPage() {
         try {
             const res = await signIn("google", {
                 redirect: false,
-                callbackUrl: "/dashboard/peternak" // 👈 tambahkan callback URL
+                callbackUrl: "/dashboard/peternak"
             });
 
             if (res?.error) {
@@ -111,11 +111,17 @@ export default function LoginPage() {
             // Ambil session terbaru
             const session = await getSession();
             if (session?.user) {
+                // ✅ Pastikan foto profil ikut disimpan
+                const userWithPhoto = {
+                    ...session.user,
+                    profileImage: session.user.image ?? '/Vector.svg'
+                };
+
                 sessionStorage.setItem('userId', session.user.email ?? '');
-                localStorage.setItem('userData', JSON.stringify(session.user));
+                localStorage.setItem('userData', JSON.stringify(userWithPhoto));
             }
 
-            // ✅ Redirect manual ke halaman tujuan
+            // Redirect manual
             router.push(res?.url ?? "/dashboard/peternak");
         } catch (error) {
             console.error('Google login error:', error);
@@ -123,7 +129,6 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     };
-
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-green-100 via-white to-green-100 px-4">

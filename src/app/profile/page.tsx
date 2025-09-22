@@ -229,7 +229,9 @@ const ProfilePage: React.FC = () => {
                 console.log('✅ API response received');
 
                 if (data.user) {
-                    setUserData(data.user);
+                    const profileImageFromAPI = data.user.profileImage || data.user.picture || null;
+
+                    setUserData({ ...data.user, profileImage: profileImageFromAPI });
                     setEditData({
                         nama: data.user.nama || '',
                         email: data.user.email || '',
@@ -237,12 +239,13 @@ const ProfilePage: React.FC = () => {
                         tempatLahir: data.user.tempatLahir || '',
                         tanggalLahir: data.user.tanggalLahir || '',
                     });
-                    if (data.user.profileImage) {
-                        setProfileImage(getProfileImageUrl(data.user.profileImage));
+
+                    if (profileImageFromAPI) {
+                        setProfileImage(getProfileImageUrl(profileImageFromAPI));
                     }
 
                     if (userId) {
-                        saveUserDataToCache(data.user);
+                        saveUserDataToCache({ ...data.user, profileImage: profileImageFromAPI });
                     }
 
                     window.dispatchEvent(new Event('userDataUpdated'));
