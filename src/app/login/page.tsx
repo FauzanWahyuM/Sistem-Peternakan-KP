@@ -97,8 +97,10 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            // Login dengan Google
-            const res = await signIn("google", { redirect: false });
+            const res = await signIn("google", {
+                redirect: false,
+                callbackUrl: "/dashboard/peternak" // 👈 tambahkan callback URL
+            });
 
             if (res?.error) {
                 setErrorMsg('Login dengan Google gagal');
@@ -106,22 +108,22 @@ export default function LoginPage() {
                 return;
             }
 
-            // Ambil session setelah login
+            // Ambil session terbaru
             const session = await getSession();
             if (session?.user) {
-                // Simpan data user Google ke localStorage dan sessionStorage
                 sessionStorage.setItem('userId', session.user.email ?? '');
                 localStorage.setItem('userData', JSON.stringify(session.user));
             }
 
-            // Redirect ke dashboard (peternak by default)
-            router.push('/dashboard/peternak');
+            // ✅ Redirect manual ke halaman tujuan
+            router.push(res?.url ?? "/dashboard/peternak");
         } catch (error) {
             console.error('Google login error:', error);
             setErrorMsg('Terjadi kesalahan saat login dengan Google');
             setIsLoading(false);
         }
     };
+
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-green-100 via-white to-green-100 px-4">
