@@ -399,7 +399,9 @@ function LihatTernakContent() {
 
     return (
         <div className="flex min-h-screen">
-            <Sidebar userType="peternak" />
+            <div className="sticky top-0 h-screen">
+                <Sidebar userType="peternak" />
+            </div>
             <main className="flex-1 bg-gray-100 p-6">
                 <div className="max-w-6xl mx-auto">
                     {/* Header */}

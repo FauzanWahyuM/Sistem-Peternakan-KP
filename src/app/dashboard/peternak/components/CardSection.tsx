@@ -73,15 +73,11 @@ export default function CardSection() {
         try {
             setDashboardData(prev => ({ ...prev, loading: true, error: null }));
 
-            // Data ternak
-            const ternakRes = await fetch("/api/ternak", { credentials: 'include' });
-            if (!ternakRes.ok) throw new Error('Gagal mengambil data ternak');
-            const ternakData: TernakData[] = await ternakRes.json();
+            // Data ternak (gunakan endpoint khusus dashboard)
+            const ternakRes = await fetch("/api/ternak/dashboard", { credentials: 'include' });
+            if (!ternakRes.ok) throw new Error('Gagal mengambil data dashboard ternak');
+            const filteredTernakData: TernakData[] = await ternakRes.json(); // tidak perlu filter manual
 
-            // Filter data ternak yang memiliki tipe dan hanya ternak pribadi milik user yang login
-            const filteredTernakData = ternakData.filter(ternak =>
-                ternak.tipe && (ternak.tipe === 'pribadi' || ternak.tipe === 'kelompok')
-            );
 
             // Hitung ternak pribadi dan kelompok
             let jumlahTernakPribadi = 0;
