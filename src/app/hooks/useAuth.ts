@@ -38,16 +38,17 @@ export const useAuth = () => {
             if (response.ok) {
                 const data = await response.json();
                 if (data.userId) {
-                    // Untuk sync, kita hanya perlu userId, token tidak diperlukan
-                    // karena NextAuth.js menggunakan session cookie
                     sessionStorage.setItem('userId', data.userId);
-                    sessionStorage.setItem('token', 'next-auth-sync-token'); // Token dummy
+                    sessionStorage.setItem('token', 'next-auth-sync-token');
                     setUserId(data.userId);
                     setToken('next-auth-sync-token');
 
                     window.dispatchEvent(new CustomEvent('authStateChanged', {
                         detail: { isLoggedIn: true, userId: data.userId, token: 'next-auth-sync-token' }
                     }));
+
+                    // 🪄 Tambahkan ini:
+                    setLoading(false);
 
                     return { success: true };
                 }
@@ -81,17 +82,15 @@ export const useAuth = () => {
             if (!storedUserId || !storedToken) {
                 const syncResult = await syncAuth();
                 if (!syncResult.success) {
-                    // Jika sync gagal, set loading false agar tidak infinite loading
+                    setLoading(false);
+                } else {
+                    // 🪄 Pastikan state ikut update setelah sync
+                    const newUserId = sessionStorage.getItem('userId');
+                    const newToken = sessionStorage.getItem('token');
+                    setUserId(newUserId);
+                    setToken(newToken);
                     setLoading(false);
                 }
-            } else {
-                setUserId(storedUserId);
-                setToken(storedToken);
-                setLoading(false);
-
-                window.dispatchEvent(new CustomEvent('authStateChanged', {
-                    detail: { isLoggedIn: true, userId: storedUserId, token: storedToken }
-                }));
             }
         };
 

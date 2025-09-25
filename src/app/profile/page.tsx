@@ -47,7 +47,7 @@ const ProfilePage: React.FC = () => {
     const [kelompokList, setKelompokList] = useState<KelompokData[]>([]);
     const [kelompokLoading, setKelompokLoading] = useState(false);
 
-    const loading = authLoading || dataLoading;
+    const loading = authLoading || (dataLoading && !userData);
 
     // Fungsi untuk menghitung umur berdasarkan tanggal lahir
     const calculateAge = (birthDate: string): number => {
@@ -180,11 +180,9 @@ const ProfilePage: React.FC = () => {
 
             // Cek jika user tidak login, bersihkan cache
             if (!userId) {
-                console.log('User ID tidak ada, bersihkan cache');
-                clearUserCache();
-                setDataLoading(false);
-                return;
+                console.warn('⚠️ User ID belum tersedia dari useAuth, tetap lanjut ambil data dari API');
             }
+
 
             // 1. Coba ambil dari localStorage dulu
             const savedUserData = localStorage.getItem('userData');
@@ -246,6 +244,10 @@ const ProfilePage: React.FC = () => {
                     }
 
                     window.dispatchEvent(new Event('userDataUpdated'));
+
+                    // ✅ Tambahkan ini
+                    setDataLoading(false);
+                    return; // langsung keluar supaya nggak lanjut ke bawah
                 } else {
                     console.error('❌ No user data in response');
                 }
@@ -266,11 +268,20 @@ const ProfilePage: React.FC = () => {
     }, [userId, clearUserCache, saveUserDataToCache, logout]);
 
     useEffect(() => {
-        if (!authLoading) {
+        console.log("Auth state:", { authLoading, userId, token });
+        if (!authLoading && userId && token) {
+            console.log("🔎 userId:", userId, "token:", token);
             fetchUserData();
             fetchKelompokList();
         }
-    }, [authLoading, fetchUserData, fetchKelompokList]);
+    }, [authLoading, userId, token, fetchUserData, fetchKelompokList]);
+
+    useEffect(() => {
+        if (userData && dataLoading) {
+            console.log("✅ User data sudah ada, hentikan loading");
+            setDataLoading(false);
+        }
+    }, [userData, dataLoading]);
 
     // Timeout untuk mencegah infinite loading
     useEffect(() => {
@@ -435,27 +446,35 @@ const ProfilePage: React.FC = () => {
     };
 
     useEffect(() => {
-        if (!authLoading && !userId) {
-            const syncAuthData = async () => {
+        if (!userId) {
+            (async () => {
                 try {
+                    console.log("🔄 Attempting to sync auth...");
                     const response = await fetch('/api/auth/sync');
                     if (response.ok) {
                         const data = await response.json();
-                        if (data.userId) {
+                        if (data?.userId && data?.token) {
                             sessionStorage.setItem('userId', data.userId);
-                            sessionStorage.setItem('token', 'next-auth-sync-token');
-                            window.location.reload();
+                            sessionStorage.setItem('token', data.token);
+                            console.log("✅ Auth sync success:", data);
+                            // 🚀 Langsung fetch data user dan kelompok
+                            fetchUserData();
+                            fetchKelompokList();
+                        } else {
+                            console.warn("❌ Sync gagal: data tidak lengkap");
+                            router.push('/login');
                         }
+                    } else {
+                        console.warn("❌ Sync response:", response.status);
+                        router.push('/login');
                     }
                 } catch (error) {
                     console.error('Failed to sync auth data:', error);
                     router.push('/login');
                 }
-            };
-
-            syncAuthData();
+            })();
         }
-    }, [authLoading, userId, router]);
+    }, [userId, router, fetchUserData, fetchKelompokList]);
 
     if (loading) {
         return (
