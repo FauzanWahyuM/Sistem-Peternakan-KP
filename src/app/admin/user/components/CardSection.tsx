@@ -14,6 +14,8 @@ export type User = {
     nama: string;
     role: string;
     status: string;
+    createdAt?: string; // Tambahkan field createdAt
+    updatedAt?: string; // Tambahkan field updatedAt
 };
 
 const customStyles = {
@@ -57,13 +59,33 @@ export default function UserManagement() {
                 ? response
                 : response.users || [];
 
-            setData(users);
+            // Urutkan data berdasarkan createdAt (terbaru di atas)
+            const sortedUsers = sortUsersByNewest(users);
+            setData(sortedUsers);
         } catch (error) {
             console.error("Gagal mengambil data pengguna:", error);
             setData([]);
         } finally {
             setLoading(false);
         }
+    };
+
+    // Fungsi untuk mengurutkan user dari yang terbaru
+    const sortUsersByNewest = (users: User[]): User[] => {
+        return users.sort((a, b) => {
+            // Jika ada field createdAt, urutkan berdasarkan tanggal
+            if (a.createdAt && b.createdAt) {
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            }
+
+            // Jika ada field updatedAt, urutkan berdasarkan tanggal update terbaru
+            if (a.updatedAt && b.updatedAt) {
+                return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+            }
+
+            // Fallback: urutkan berdasarkan _id (asumsi _id adalah ObjectId yang mengandung timestamp)
+            return b._id.localeCompare(a._id);
+        });
     };
 
     const openModal = (user: User) => {
@@ -110,6 +132,25 @@ export default function UserManagement() {
             sortable: true,
         },
         {
+            name: "Tanggal Dibuat",
+            selector: (row) => {
+                if (row.createdAt) {
+                    return new Date(row.createdAt).toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                }
+                return '-';
+            },
+            sortable: true,
+            sortFunction: (a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return dateB - dateA; // Default: terbaru di atas
+            },
+        },
+        {
             name: "Aksi",
             cell: (row) => (
                 <div className="flex gap-3">
@@ -130,7 +171,6 @@ export default function UserManagement() {
                 </div>
             ),
             ignoreRowClick: true,
-            // Removed allowOverflow: true,
         },
     ];
 
@@ -177,6 +217,8 @@ export default function UserManagement() {
                 striped
                 customStyles={customStyles}
                 noDataComponent="Tidak ada data user."
+                defaultSortFieldId="createdAt" // Default sort by createdAt
+                defaultSortAsc={false} // Descending (terbaru di atas)
             />
 
             <div className="mt-3 text-sm text-gray-600">

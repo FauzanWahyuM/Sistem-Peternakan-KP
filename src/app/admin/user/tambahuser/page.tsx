@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, ChangeEvent, FormEvent } from 'react';
-import { Eye, EyeOff, ArrowLeft, X } from 'lucide-react';
+import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
+import { Eye, EyeOff, ArrowLeft, X, ChevronDown, Calendar, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ApiClient } from '../../../../lib/api-client';
 
@@ -13,6 +13,14 @@ interface FormData {
     kelompok: string;
     role: 'Peternak' | 'Penyuluh' | 'Admin' | '';
     status: 'Aktif' | 'Non-Aktif' | '';
+    tempatLahir: string;
+    tanggalLahir: string;
+    umur: string;
+}
+
+interface KelompokOption {
+    id: string;
+    nama: string;
 }
 
 const TambahUser: React.FC = () => {
@@ -26,15 +34,63 @@ const TambahUser: React.FC = () => {
         kelompok: '',
         role: '',
         status: '',
+        tempatLahir: '',
+        tanggalLahir: '',
+        umur: '',
     });
     const [passwordError, setPasswordError] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
+    const [kelompokOptions, setKelompokOptions] = useState<KelompokOption[]>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(true);
 
-    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    // Fetch data kelompok dari API
+    useEffect(() => {
+        const fetchKelompokOptions = async () => {
+            try {
+                setIsLoadingOptions(true);
+                const response = await fetch('/api/kelompok');
+                if (response.ok) {
+                    const data = await response.json();
+                    setKelompokOptions(data);
+                } else {
+                    console.error('Gagal mengambil data kelompok');
+                    setModalMessage('Gagal memuat data kelompok. Silakan coba lagi.');
+                    setShowModal(true);
+                }
+            } catch (error) {
+                console.error('Error fetching kelompok options:', error);
+                setModalMessage('Terjadi kesalahan saat memuat data kelompok.');
+                setShowModal(true);
+            } finally {
+                setIsLoadingOptions(false);
+            }
+        };
+
+        fetchKelompokOptions();
+    }, []);
+
+    const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
+
+        // Hitung umur otomatis jika tanggal lahir diubah
+        if (name === 'tanggalLahir' && value) {
+            const birthDate = new Date(value);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                umur: age.toString()
+            }));
+        }
 
         if (name === 'password') {
             validatePassword(value);
@@ -42,7 +98,17 @@ const TambahUser: React.FC = () => {
     };
 
     const handleRoleChange = (role: FormData['role']) => {
-        setFormData((prev) => ({ ...prev, role }));
+        setFormData((prev) => ({
+            ...prev,
+            role,
+            // Reset kelompok dan data lahir ketika role diubah
+            ...(role !== 'Peternak' && {
+                kelompok: '',
+                tempatLahir: '',
+                tanggalLahir: '',
+                umur: ''
+            })
+        }));
     };
 
     const handleStatusChange = (status: FormData['status']) => {
@@ -90,9 +156,24 @@ const TambahUser: React.FC = () => {
             return;
         }
 
+        // Validasi untuk Peternak
+        if (formData.role === 'Peternak') {
+            if (!formData.kelompok) {
+                setModalMessage('Kelompok Peternak harus dipilih untuk role Peternak.');
+                setShowModal(true);
+                return;
+            }
+            if (!formData.tempatLahir || !formData.tanggalLahir || !formData.umur) {
+                setModalMessage('Data tempat lahir, tanggal lahir, dan umur harus diisi untuk role Peternak.');
+                setShowModal(true);
+                return;
+            }
+        }
+
         setIsSubmitting(true);
         try {
-            const userData = {
+            // Siapkan data berdasarkan role
+            const userData: any = {
                 nama: formData.nama,
                 username: formData.username,
                 email: formData.email,
@@ -101,6 +182,13 @@ const TambahUser: React.FC = () => {
                 role: formData.role.toLowerCase(),
                 status: formData.status
             };
+
+            // Tambahkan data lahir hanya untuk Peternak
+            if (formData.role === 'Peternak') {
+                userData.tempatLahir = formData.tempatLahir;
+                userData.tanggalLahir = formData.tanggalLahir;
+                userData.umur = parseInt(formData.umur);
+            }
 
             const res = await ApiClient.createUser(userData);
 
@@ -205,17 +293,96 @@ const TambahUser: React.FC = () => {
                         />
                     </div>
 
+                    {/* Field data lahir - Hanya tampil untuk Peternak */}
+                    {formData.role === 'Peternak' && (
+                        <>
+                            <div>
+                                <label className="block font-semibold mb-1 text-black">Tempat Lahir</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        name="tempatLahir"
+                                        value={formData.tempatLahir}
+                                        onChange={handleChange}
+                                        className="w-full border rounded px-4 py-2 pl-10 text-black"
+                                        placeholder="Masukkan Tempat Lahir"
+                                        required
+                                    />
+                                    <MapPin size={18} className="absolute left-3 top-2.5 text-gray-400" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block font-semibold mb-1 text-black">Tanggal Lahir</label>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        name="tanggalLahir"
+                                        value={formData.tanggalLahir}
+                                        onChange={handleChange}
+                                        className="w-full border rounded px-4 py-2 pl-10 text-black"
+                                        required
+                                        max={new Date().toISOString().split('T')[0]} // Tidak boleh lebih dari hari ini
+                                    />
+                                    <Calendar size={18} className="absolute left-3 top-2.5 text-gray-400" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block font-semibold mb-1 text-black">Umur</label>
+                                <input
+                                    type="number"
+                                    name="umur"
+                                    value={formData.umur}
+                                    onChange={handleChange}
+                                    className="w-full border rounded px-4 py-2 text-black bg-gray-50"
+                                    placeholder="Umur akan terisi otomatis"
+                                    required
+                                    readOnly
+                                    min="1"
+                                    max="120"
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {/* Field Kelompok dengan dropdown select */}
                     <div>
-                        <label className="block font-semibold mb-1 text-black">Kelompok Peternak</label>
-                        <input
-                            type="text"
-                            name="kelompok"
-                            value={formData.kelompok}
-                            onChange={handleChange}
-                            className="w-full border rounded px-4 py-2 text-black"
-                            placeholder="Masukkan Kelompok Peternak Anda"
-                            required
-                        />
+                        <label className="block font-semibold mb-1 text-black">
+                            {formData.role === 'Peternak' ? 'Kelompok Peternak' :
+                                formData.role === 'Penyuluh' ? 'Wilayah Binaan' : 'Kelompok/Wilayah'}
+                        </label>
+                        <div className="relative">
+                            <select
+                                name="kelompok"
+                                value={formData.kelompok}
+                                onChange={handleChange}
+                                className="w-full border rounded px-4 py-2 pr-10 text-black appearance-none"
+                                disabled={formData.role === 'Admin' || isLoadingOptions}
+                                required={formData.role === 'Peternak' || formData.role === 'Penyuluh'}
+                            >
+                                <option value="">
+                                    {isLoadingOptions
+                                        ? 'Memuat data...'
+                                        : formData.role === 'Admin'
+                                            ? 'Tidak diperlukan untuk Admin'
+                                            : `Pilih ${formData.role === 'Peternak' ? 'Kelompok' : 'Wilayah'}`
+                                    }
+                                </option>
+                                {kelompokOptions.map((kelompok) => (
+                                    <option key={kelompok.id} value={kelompok.id}>
+                                        {kelompok.nama}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown size={18} className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" />
+                        </div>
+                        {formData.role === 'Peternak' && kelompokOptions.length === 0 && !isLoadingOptions && (
+                            <p className="text-red-600 text-sm mt-1">Tidak ada kelompok tersedia. Silakan tambahkan kelompok terlebih dahulu.</p>
+                        )}
+                        {formData.role === 'Penyuluh' && kelompokOptions.length === 0 && !isLoadingOptions && (
+                            <p className="text-red-600 text-sm mt-1">Tidak ada wilayah binaan tersedia. Silakan tambahkan wilayah terlebih dahulu.</p>
+                        )}
                     </div>
 
                     <div>
@@ -258,7 +425,9 @@ const TambahUser: React.FC = () => {
                         <button
                             type="submit"
                             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting ||
+                                (formData.role === 'Peternak' && kelompokOptions.length === 0) ||
+                                (formData.role === 'Penyuluh' && kelompokOptions.length === 0)}
                         >
                             {isSubmitting ? 'Menyimpan...' : 'Simpan'}
                         </button>
