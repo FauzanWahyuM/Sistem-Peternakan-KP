@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 
 interface SidebarProps {
   userType: 'admin' | 'penyuluh' | 'peternak';
+  isCollapsed?: boolean;
   onCollapseChange?: (isCollapsed: boolean) => void;
 }
 
