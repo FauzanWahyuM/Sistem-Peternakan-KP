@@ -31,7 +31,6 @@ export default function DashboardPage() {
             <aside className={`fixed h-screen bg-green-700 text-white z-50 transition-all duration-300 ${isSidebarCollapsed ? 'w-10' : 'w-64'}`}>
                 <Sidebar
                     userType="admin"
-                    isCollapsed={isSidebarCollapsed}
                     onCollapseChange={setIsSidebarCollapsed}
                 />
             </aside>

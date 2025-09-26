@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 
 interface SidebarProps {
   userType: 'admin' | 'penyuluh' | 'peternak';
-  isCollapsed?: boolean; // <-- tambahkan prop opsional
   onCollapseChange?: (isCollapsed: boolean) => void;
 }
 
@@ -28,7 +27,7 @@ interface NavItem {
   label: string;
 }
 
-export default function UnifiedSidebar({ userType, isCollapsed: isCollapsedProp, onCollapseChange }: SidebarProps) {
+export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -36,33 +35,22 @@ export default function UnifiedSidebar({ userType, isCollapsed: isCollapsedProp,
   const [profileImageError, setProfileImageError] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // internal state (dipakai kalau parent TIDAK mengontrol)
-  const [internalCollapsed, setInternalCollapsed] = useState(false);
-
-  const isControlled = typeof isCollapsedProp === 'boolean';
-  const isCollapsed = isControlled ? isCollapsedProp! : internalCollapsed;
-
-  // Beri tahu parent hanya jika kita uncontrolled (agar tidak memicu loop ketika parent mengontrol)
   useEffect(() => {
-    if (!isControlled) {
-      onCollapseChange?.(isCollapsed);
+    if (onCollapseChange) {
+      onCollapseChange(isCollapsed);
     }
-  }, [isCollapsed, isControlled, onCollapseChange]);
+  }, [isCollapsed, onCollapseChange]);
 
-  // Deteksi ukuran layar (jika mobile, collapse)
+  // Deteksi ukuran layar
   useEffect(() => {
     const checkIfMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
       // Auto collapse sidebar di mobile
       if (mobile) {
-        if (isControlled) {
-          // beri tahu parent kalau parent yang mengontrol
-          onCollapseChange?.(true);
-        } else {
-          setInternalCollapsed(true);
-        }
+        setIsCollapsed(true);
       }
     };
 
@@ -72,8 +60,7 @@ export default function UnifiedSidebar({ userType, isCollapsed: isCollapsedProp,
     return () => {
       window.removeEventListener('resize', checkIfMobile);
     };
-    // masukkan deps yang penting
-  }, [isControlled, onCollapseChange]);
+  }, []);
 
   // Fungsi untuk mendapatkan URL gambar profil yang valid
   const getProfileImageUrl = () => {
@@ -178,23 +165,23 @@ export default function UnifiedSidebar({ userType, isCollapsed: isCollapsedProp,
     switch (userType) {
       case 'admin':
         return [
-          { href: '/dashboard/admin', icon: Home, label: 'Dashboard' },
-          { href: '/admin/user', icon: Users, label: 'User' },
-          { href: '/admin/artikel', icon: Newspaper, label: 'Artikel' },
-          { href: '/admin/laporan', icon: FileText, label: 'Laporan' },
+          { href: '/dashboard/admin', icon: '/group-white.svg', label: 'Dashboard' },
+          { href: '/admin/user', icon: '/user.svg', label: 'User' },
+          { href: '/admin/artikel', icon: '/task-square-white.svg', label: 'Artikel' },
+          { href: '/admin/laporan', icon: '/clipboard-text-white.svg', label: 'Laporan' },
         ];
       case 'penyuluh':
         return [
-          { href: '/dashboard/penyuluh', icon: Home, label: 'Dashboard' },
-          { href: '/dashboard/penyuluh/data-kelompok', icon: Users, label: 'Data kelompok' },
-          { href: '/dashboard/penyuluh/hasil-evaluasi', icon: FileText, label: 'Hasil evaluasi' },
-          { href: '/dashboard/penyuluh/pelatihan', icon: BookOpen, label: 'Pelatihan' },
+          { href: '/dashboard/penyuluh', icon: '/group.svg', label: 'Dashboard' },
+          { href: '/dashboard/penyuluh/data-kelompok', icon: '/task-square-white.svg', label: 'Data kelompok' },
+          { href: '/dashboard/penyuluh/hasil-evaluasi', icon: '/folder-2-white.svg', label: 'Hasil evaluasi' },
+          { href: '/dashboard/penyuluh/pelatihan', icon: '/book-white.svg', label: 'Pelatihan' },
         ];
       case 'peternak':
         return [
-          { href: '/dashboard/peternak', icon: '/group-white.svg', label: 'Dashboard' },
+          { href: '/dashboard/peternak', icon: '/group.svg', label: 'Dashboard' },
           { href: '/peternak/kuesioner', icon: '/task-square-white.svg', label: 'Kuesioner' },
-          { href: '/peternak/ternak', icon: '/folder-2.svg', label: 'Data Ternak' },
+          { href: '/peternak/ternak', icon: '/folder-2-white.svg', label: 'Data Ternak' },
           { href: '/peternak/pelatihan', icon: '/book-white.svg', label: 'Pelatihan' },
           { href: '/peternak/hasil', icon: '/clipboard-text-white.svg', label: 'Hasil Evaluasi' },
         ];
@@ -212,35 +199,16 @@ export default function UnifiedSidebar({ userType, isCollapsed: isCollapsedProp,
 
   const navItems = getNavItems();
 
-  // toggle collapse: kalau controlled, panggil onCollapseChange, kalau uncontrolled, update internal state
-  const toggleCollapsed = () => {
-    if (isControlled) {
-      onCollapseChange?.(!isCollapsedProp);
-    } else {
-      setInternalCollapsed(prev => {
-        const next = !prev;
-        onCollapseChange?.(next);
-        return next;
-      });
-    }
-  };
-
   // Komponen sidebar utama
-  const SidebarContent = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
+  const SidebarContent = ({ isCollapsed = false }) => (
     <>
       {!isCollapsed ? (
         <Image
           src="/img/Logo Sistem.png"
           alt="Logo Sistem Peternakan"
-          width={200} // ✅ kasih nilai default, biar Next.js gak error
+          width={200}
           height={200}
-          unoptimized
-          style={{
-            display: 'block',
-            width: '160px', // ✅ ini override ukuran final, bebas kamu ubah
-            height: 'auto',
-            margin: '0 auto 20px auto',
-          }}
+          className="mx-auto mb-5 w-40 md:w-48"
         />
       ) : (
         <div className="flex justify-center mb-5">
@@ -249,87 +217,45 @@ export default function UnifiedSidebar({ userType, isCollapsed: isCollapsedProp,
             alt="Logo Sistem Peternakan"
             width={50}
             height={50}
-            unoptimized
-            style={{
-              width: '48px',
-              height: '48px',
-              objectFit: 'cover',  // crop isi biar pas kotak
-              borderRadius: '6px',
-            }}
+            className="rounded-md"
           />
         </div>
       )}
 
       <nav className="space-y-2 sm:space-y-3 md:space-y-4">
         {navItems.map((item: NavItem, index: number) => {
-          if (userType === 'peternak') {
-            const active = isActive(item.href);
-            return (
-              <a
-                key={index}
-                href={item.href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavClick(item.href);
-                }}
-                className={`flex items-center gap-3 font-[Judson] text-lg md:text-xl transition-colors ${active
-                  ? 'text-black bg-white px-4 py-2 md:px-5 md:py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
-                  : 'text-white hover:bg-green-700 px-2 py-1 md:px-3 md:py-2 rounded'
-                  } ${isCollapsed ? 'justify-center' : ''}`}
-                title={isCollapsed ? item.label : ''}
-              >
-                <Image
-                  src={item.icon as string}
-                  alt={item.label}
-                  width={isCollapsed ? 32 : 20}
-                  height={isCollapsed ? 32 : 20}
-                  style={{
-                    width: isCollapsed ? '32px' : '20px',
-                    height: isCollapsed ? '32px' : '20px',
-                    flexShrink: 0,
-                  }}
-                  className="transition-all"
-                />
-                {!isCollapsed && <span className="text-sm md:text-base">{item.label}</span>}
-              </a>
-            );
-          } else {
-            const Icon = item.icon as React.ElementType;
-            const active = isActive(item.href);
-            return (
-              <a
-                key={index}
-                href={item.href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavClick(item.href);
-                }}
-                className={`flex items-center gap-3 font-[Judson] text-lg md:text-xl transition-colors ${active
-                  ? 'text-black bg-white px-4 py-2 md:px-5 md:py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
-                  : 'text-white hover:bg-green-700 px-2 py-1 md:px-3 md:py-2 rounded'
-                  } ${isCollapsed ? 'justify-center' : ''}`}
-                title={isCollapsed ? item.label : ''}
-              >
-                <Icon
-                  size={isCollapsed ? 32 : 20}
-                  style={{
-                    width: isCollapsed ? '25px' : '20px',
-                    height: isCollapsed ? '25px' : '20px',
-                    flexShrink: 0, // supaya gak dipaksa kecil oleh flex
-                  }}
-                  className="transition-all"
-                />
-                {!isCollapsed && <span className="text-sm md:text-base">{item.label}</span>}
-              </a>
-            );
-          }
+          const active = isActive(item.href);
+          return (
+            <a
+              key={index}
+              href={item.href}
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavClick(item.href);
+              }}
+              className={`flex items-center gap-3 font-[Judson] text-lg md:text-xl transition-colors ${active
+                ? 'text-black bg-white px-4 py-2 md:px-5 md:py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
+                : 'text-white hover:bg-green-700 px-2 py-1 md:px-3 md:py-2 rounded'
+                } ${isCollapsed ? 'justify-center' : ''}`}
+              title={isCollapsed ? item.label : ''}
+            >
+              <Image
+                src={item.icon as string}
+                alt={item.label}
+                width={20}
+                height={20}
+                className="w-5 h-5 md:w-6 md:h-6"
+              />
+              {!isCollapsed && <span className="text-sm md:text-base">{item.label}</span>}
+            </a>
+          );
         })}
       </nav>
     </>
   );
 
   // Komponen profil dan logout (ditempatkan di bagian bawah)
-  const ProfileSection = ({ isCollapsed = false }: { isCollapsed?: boolean }) => (
+  const ProfileSection = ({ isCollapsed = false }) => (
     <div className="mt-auto pt-4 border-t border-green-500">
       <div
         onClick={handleProfileClick}
@@ -367,7 +293,7 @@ export default function UnifiedSidebar({ userType, isCollapsed: isCollapsedProp,
       {/* Tombol collapse untuk desktop */}
       {!isMobile && (
         <button
-          onClick={toggleCollapsed}
+          onClick={() => setIsCollapsed(!isCollapsed)}
           className="mt-3 md:mt-4 w-full bg-green-700 hover:bg-green-800 text-white py-1.5 md:py-2 rounded flex items-center justify-center"
           title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -415,6 +341,11 @@ export default function UnifiedSidebar({ userType, isCollapsed: isCollapsedProp,
         </div>
         <ProfileSection />
       </aside>
+
+      {/* Padding untuk konten utama ketika sidebar collapsed di desktop */}
+      {!isMobile && (
+        <div className={`hidden md:block transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-56 md:ml-64'}`}></div>
+      )}
     </>
   );
 }

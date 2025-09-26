@@ -165,17 +165,17 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
     switch (userType) {
       case 'admin':
         return [
-          { href: '/dashboard/admin', icon: Home, label: 'Dashboard' },
-          { href: '/admin/user', icon: Users, label: 'User' },
-          { href: '/admin/artikel', icon: Newspaper, label: 'Artikel' },
-          { href: '/admin/laporan', icon: FileText, label: 'Laporan' },
+          { href: '/dashboard/admin', icon: '/group.svg', label: 'Dashboard' },
+          { href: '/admin/user', icon: '/user-white.svg', label: 'User' },
+          { href: '/admin/artikel', icon: '/task-square-white.svg', label: 'Artikel' },
+          { href: '/admin/laporan', icon: '/clipboard-text-white.svg', label: 'Laporan' },
         ];
       case 'penyuluh':
         return [
-          { href: '/dashboard/penyuluh', icon: Home, label: 'Dashboard' },
-          { href: '/dashboard/penyuluh/data-kelompok', icon: Users, label: 'Data kelompok' },
-          { href: '/dashboard/penyuluh/hasil-evaluasi', icon: FileText, label: 'Hasil evaluasi' },
-          { href: '/dashboard/penyuluh/pelatihan', icon: BookOpen, label: 'Pelatihan' },
+          { href: '/dashboard/penyuluh', icon: '/group.svg', label: 'Dashboard' },
+          { href: '/dashboard/penyuluh/data-kelompok', icon: '/task-square-white.svg', label: 'Data kelompok' },
+          { href: '/dashboard/penyuluh/hasil-evaluasi', icon: '/folder-2-white.svg', label: 'Hasil evaluasi' },
+          { href: '/dashboard/penyuluh/pelatihan', icon: '/book-white.svg', label: 'Pelatihan' },
         ];
       case 'peternak':
         return [
@@ -223,57 +223,34 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
       )}
 
       <nav className="space-y-2 sm:space-y-3 md:space-y-4">
-        {navItems.map((item: NavItem, index: number) => {
-          if (userType === 'peternak') {
-            const active = isActive(item.href);
-            return (
-              <a
-                key={index}
-                href={item.href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavClick(item.href);
-                }}
-                className={`flex items-center gap-3 font-[Judson] text-lg md:text-xl transition-colors ${active
-                  ? 'text-black bg-white px-4 py-2 md:px-5 md:py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
-                  : 'text-white hover:bg-green-700 px-2 py-1 md:px-3 md:py-2 rounded'
-                  } ${isCollapsed ? 'justify-center' : ''}`}
-                title={isCollapsed ? item.label : ''}
-              >
-                <Image
-                  src={item.icon as string}
-                  alt={item.label}
-                  width={20}
-                  height={20}
-                  className="w-5 h-5 md:w-6 md:h-6"
-                />
-                {!isCollapsed && <span className="text-sm md:text-base">{item.label}</span>}
-              </a>
-            );
-          } else {
-            const Icon = item.icon as React.ElementType;
-            const active = isActive(item.href);
-            return (
-              <a
-                key={index}
-                href={item.href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavClick(item.href);
-                }}
-                className={`flex items-center gap-3 font-[Judson] text-lg md:text-xl transition-colors ${active
-                  ? 'text-black bg-white px-4 py-2 md:px-5 md:py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
-                  : 'text-white hover:bg-green-700 px-2 py-1 md:px-3 md:py-2 rounded'
-                  } ${isCollapsed ? 'justify-center' : ''}`}
-                title={isCollapsed ? item.label : ''}
-              >
-                <Icon size={20} className="w-5 h-5 md:w-6 md:h-6" />
-                {!isCollapsed && <span className="text-sm md:text-base">{item.label}</span>}
-              </a>
-            );
-          }
-        })}
-      </nav>
+              {navItems.map((item: NavItem, index: number) => {
+                const active = isActive(item.href);
+                return (
+                  <a
+                    key={index}
+                    href={item.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick(item.href);
+                    }}
+                    className={`flex items-center gap-3 font-[Judson] text-lg md:text-xl transition-colors ${active
+                        ? 'text-black bg-white px-4 py-2 md:px-5 md:py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
+                        : 'text-white hover:bg-green-700 px-2 py-1 md:px-3 md:py-2 rounded'
+                      } ${isCollapsed ? 'justify-center' : ''}`}
+                    title={isCollapsed ? item.label : ''}
+                  >
+                    <Image
+                      src={item.icon as string}
+                      alt={item.label}
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 md:w-6 md:h-6"
+                    />
+                    {!isCollapsed && <span className="text-sm md:text-base">{item.label}</span>}
+                  </a>
+                );
+              })}
+            </nav>
     </>
   );
 

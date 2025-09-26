@@ -4,6 +4,7 @@ import Sidebar from './components/UnifiedSidebar';
 import Header from './components/Header';
 import CardSection from './components/CardSection';
 import { useState, useEffect } from 'react';
+import './dashboard.css';
 
 export default function DashboardPage() {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -30,7 +31,6 @@ export default function DashboardPage() {
             <aside className={`fixed h-screen bg-green-700 text-white z-50 transition-all duration-300 ${isSidebarCollapsed ? 'w-10' : 'w-64'}`}>
                 <Sidebar
                     userType="penyuluh"
-                    isCollapsed={isSidebarCollapsed}
                     onCollapseChange={setIsSidebarCollapsed}
                 />
             </aside>
