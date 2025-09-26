@@ -132,7 +132,7 @@ function HasilEvaluasiContent() {
         window.location.reload();
     };
 
-    // Fungsi Download PDF
+    // FUNGSI DOWNLOAD PDF DARI CODE KEDUA
     const handleDownload = async () => {
         try {
             if (filteredData.length === 0) {
@@ -140,90 +140,272 @@ function HasilEvaluasiContent() {
                 return;
             }
 
+            // Gunakan font yang support karakter Indonesia
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
 
-            // Judul
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(16);
-            doc.text("LAPORAN HASIL EVALUASI KUESIONER", pageWidth / 2, 20, { align: "center" });
+            // Ganti bagian logo dengan error handling
+            try {
+                const logo = await fetch('/img/Logo Sistem.png').then(res => {
+                    if (!res.ok) throw new Error('Logo not found');
+                    return res.blob();
+                });
+                const reader = new FileReader();
 
-            doc.setFontSize(12);
-            doc.setFont("helvetica", "normal");
-            doc.text("SIMANTEK - Sistem Informasi Penjaminan Mutu Kelompok Peternak", pageWidth / 2, 28, { align: "center" });
+                reader.readAsDataURL(logo);
+                reader.onloadend = () => {
+                    const base64data = reader.result as string;
+                    doc.addImage(base64data, 'PNG', 10, 10, 30, 30);
+                    // Lanjutkan dengan membuat konten PDF
+                    createPDFContentWithLogo(doc, pageWidth, filteredData);
+                };
 
-            // Informasi filter jika ada
-            let currentY = 35;
-            if (filters.bulan || filters.tahun) {
-                doc.setFontSize(10);
-                let filterText = "Filter: ";
-                if (filters.bulan) filterText += `Bulan ${filters.bulan}`;
-                if (filters.tahun) filterText += `${filters.bulan ? ', ' : ''}Tahun ${filters.tahun}`;
-                doc.text(filterText, 15, currentY);
-                currentY += 5;
+                reader.onerror = () => {
+                    // Jika gagal load logo, buat PDF tanpa logo
+                    createPDFContentWithoutLogo(doc, pageWidth, filteredData);
+                };
+            } catch (error) {
+                console.warn("Logo tidak ditemukan, membuat PDF tanpa logo");
+                createPDFContentWithoutLogo(doc, pageWidth, filteredData);
             }
-
-            // Tabel Data - TANPA PERSEN
-            const tableColumn = ["No", "Nama Pengguna", "Bulan", "Tahun", "Nilai Evaluasi"];
-            const tableRows: any[] = [];
-
-            filteredData.forEach((item, idx) => {
-                const namaBulan = item.bulan && item.bulan >= 1 && item.bulan <= 12
-                    ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][item.bulan - 1]
-                    : item.bulan || '-';
-
-                // TANPA TANDA PERSEN
-                tableRows.push([
-                    (idx + 1).toString(),
-                    item.nama || item.username || 'Unknown',
-                    namaBulan,
-                    item.tahun || '-',
-                    (item.nilaiEvaluasi || item.nilai || item.score || 0).toString()
-                ]);
-            });
-
-            autoTable(doc, {
-                startY: currentY + 10,
-                head: [tableColumn],
-                body: tableRows,
-                theme: 'grid',
-                styles: {
-                    fontSize: 10,
-                    halign: "center",
-                    cellPadding: 3
-                },
-                headStyles: {
-                    fillColor: [96, 198, 122],
-                    textColor: 255,
-                    fontStyle: "bold"
-                },
-                columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 70, halign: "left" },
-                    2: { cellWidth: 25 },
-                    3: { cellWidth: 25 },
-                    4: { cellWidth: 30, halign: "center" }
-                },
-                margin: { left: 15, right: 15 }
-            });
-
-            // Footer
-            const date = new Date().toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
-
-            doc.setFontSize(10);
-            doc.text(`Dicetak pada: ${date}`, 15, doc.internal.pageSize.height - 15);
-            doc.text(`Total Data: ${filteredData.length}`, pageWidth - 15, doc.internal.pageSize.height - 15, { align: "right" });
-
-            doc.save("laporan-hasil-evaluasi.pdf");
-
         } catch (error) {
             console.error("Gagal membuat PDF:", error);
-            alert('Gagal membuat laporan PDF');
+            // Fallback: buat PDF sederhana
+            createSimplePDF(filteredData);
         }
+    };
+
+    // Fungsi untuk membuat konten PDF dengan logo
+    const createPDFContentWithLogo = (doc: jsPDF, pageWidth: number, data: any[]) => {
+        // === KOP SIMANTEK ===
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(12);
+        doc.text(
+            "SISTEM INFORMASI PENJAMINAN MUTU KELOMPOK PETERNAK",
+            pageWidth / 2,
+            20,
+            { align: "center" }
+        );
+
+        doc.text(
+            "(SIMANTEK)",
+            pageWidth / 2,
+            25,
+            { align: "center" }
+        );
+
+        doc.setFontSize(9);
+        doc.text(
+            "Jl. Jend. Sudirman No.57, Pesayangan, Kedungwuluh, Kec. Purwokerto Bar.",
+            pageWidth / 2,
+            32,
+            { align: "center" }
+        );
+        doc.text(
+            "Kabupaten Banyumas, Jawa Tengah 53131",
+            pageWidth / 2,
+            37,
+            { align: "center" }
+        );
+
+        // === Garis Bawah Kop ===
+        doc.setLineWidth(0.5);
+        doc.line(15, 42, pageWidth - 15, 42);
+
+        // Judul Laporan
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text("Laporan Hasil Evaluasi Kuesioner", pageWidth / 2, 50, { align: "center" });
+
+        // === Tabel Data ===
+        const tableColumn = ["No", "Nama Pengguna", "Bulan", "Tahun", "Nilai"];
+        const tableRows: any[] = [];
+
+        data.forEach((item, idx) => {
+            const namaBulan = item.bulan && item.bulan >= 1 && item.bulan <= 12
+                ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][item.bulan - 1]
+                : item.bulan;
+
+            // TANPA PERSEN (sesuai permintaan code pertama)
+            tableRows.push([
+                String(idx + 1).padStart(2, "0"),
+                item.nama || item.username || 'Unknown',
+                namaBulan,
+                item.tahun || '-',
+                (item.nilaiEvaluasi || item.nilai || item.score || 0).toString() // TANPA PERSEN
+            ]);
+        });
+
+        // PERBAIKAN: Sesuaikan lebar kolom persis seperti contoh PDF
+        const columnStyles: { [key: string]: any } = {
+            0: { cellWidth: 15, halign: "center" },  // No
+            1: { cellWidth: 90, halign: "left" },    // Nama Pengguna
+            2: { cellWidth: 25, halign: "center" },  // Bulan
+            3: { cellWidth: 25, halign: "center" },  // Tahun
+            4: { cellWidth: 25, halign: "center" }   // Nilai
+        };
+
+        autoTable(doc, {
+            startY: 55,
+            head: [tableColumn],
+            body: tableRows,
+            theme: 'grid',
+            styles: {
+                fontSize: 10,
+                halign: "center",
+                font: "helvetica",
+                cellPadding: 3
+            },
+            headStyles: {
+                fillColor: [96, 198, 122],
+                textColor: 255,
+                fontStyle: "bold",
+                fontSize: 10,
+                cellPadding: 3
+            },
+            bodyStyles: {
+                fontSize: 9,
+                cellPadding: 3
+            },
+            columnStyles: columnStyles,
+            margin: { left: 15, right: 15 }
+        });
+
+        // Footer
+        const date = new Date().toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Dicetak pada: ${date}`, 15, doc.internal.pageSize.height - 15);
+
+        doc.save("laporan-hasil-evaluasi.pdf");
+    };
+
+    // Fungsi untuk membuat konten PDF tanpa logo
+    const createPDFContentWithoutLogo = (doc: jsPDF, pageWidth: number, data: any[]) => {
+        // === HEADER ===
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("LAPORAN HASIL EVALUASI KUESIONER", pageWidth / 2, 15, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("SIMANTEK - Sistem Informasi Penjaminan Mutu Kelompok Peternak", pageWidth / 2, 22, { align: "center" });
+
+        // === Tabel Data ===
+        const tableColumn = ["No", "Nama", "Bulan", "Tahun", "Nilai"];
+        const tableRows: any[] = [];
+
+        data.forEach((item, idx) => {
+            const namaBulan = item.bulan && item.bulan >= 1 && item.bulan <= 12
+                ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][item.bulan - 1]
+                : item.bulan;
+
+            // TANPA PERSEN (sesuai permintaan code pertama)
+            tableRows.push([
+                String(idx + 1).padStart(2, "0"),
+                (item.nama || item.username || 'Unknown').length > 20 ?
+                    (item.nama || item.username || 'Unknown').substring(0, 20) + '...' :
+                    (item.nama || item.username || 'Unknown'),
+                namaBulan,
+                item.tahun || '-',
+                (item.nilaiEvaluasi || item.nilai || item.score || 0).toString() // TANPA PERSEN
+            ]);
+        });
+
+        autoTable(doc, {
+            startY: 30,
+            head: [tableColumn],
+            body: tableRows,
+            styles: { fontSize: 8, halign: "center" },
+            headStyles: {
+                fillColor: [96, 198, 122],
+                textColor: 255,
+                fontStyle: "bold"
+            },
+            columnStyles: {
+                0: { cellWidth: 10 },
+                1: { halign: "left", cellWidth: 60 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 20 }
+            },
+            margin: { left: 14, right: 14 }
+        });
+
+        // Footer
+        const date = new Date().toLocaleDateString('id-ID');
+        doc.setFontSize(8);
+        doc.text(`Dicetak pada: ${date}`, 14, doc.internal.pageSize.height - 10);
+
+        doc.save("laporan-hasil-evaluasi.pdf");
+    };
+
+    // Fallback function untuk PDF sederhana tanpa logo
+    const createSimplePDF = (data: any[]) => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // === HEADER ===
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("LAPORAN HASIL EVALUASI KUESIONER", pageWidth / 2, 15, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("SIMANTEK - Sistem Informasi Penjaminan Mutu Kelompok Peternak", pageWidth / 2, 22, { align: "center" });
+
+        // === Tabel Data ===
+        const tableColumn = ["No", "Nama", "Bulan", "Tahun", "Nilai"];
+        const tableRows: any[] = [];
+
+        data.forEach((item, idx) => {
+            const namaBulan = item.bulan && item.bulan >= 1 && item.bulan <= 12
+                ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][item.bulan - 1]
+                : item.bulan;
+
+            // TANPA PERSEN (sesuai permintaan code pertama)
+            tableRows.push([
+                String(idx + 1).padStart(2, "0"),
+                (item.nama || item.username || 'Unknown').length > 20 ?
+                    (item.nama || item.username || 'Unknown').substring(0, 20) + '...' :
+                    (item.nama || item.username || 'Unknown'),
+                namaBulan,
+                item.tahun || '-',
+                (item.nilaiEvaluasi || item.nilai || item.score || 0).toString() // TANPA PERSEN
+            ]);
+        });
+
+        autoTable(doc, {
+            startY: 30,
+            head: [tableColumn],
+            body: tableRows,
+            styles: { fontSize: 8, halign: "center" },
+            headStyles: {
+                fillColor: [96, 198, 122],
+                textColor: 255,
+                fontStyle: "bold"
+            },
+            columnStyles: {
+                0: { cellWidth: 10 },
+                1: { halign: "left", cellWidth: 60 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 20 }
+            },
+            margin: { left: 14, right: 14 }
+        });
+
+        // Footer
+        const date = new Date().toLocaleDateString('id-ID');
+        doc.setFontSize(8);
+        doc.text(`Dicetak pada: ${date}`, 14, doc.internal.pageSize.height - 10);
+
+        doc.save("laporan-hasil-evaluasi.pdf");
     };
 
     // Animasi Loading
