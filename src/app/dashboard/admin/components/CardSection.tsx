@@ -90,6 +90,60 @@ const formatTanggal = (tanggalString: string) => {
     }
 };
 
+// Komponen Loading untuk Card
+const CardLoadingSkeleton = ({ title, rows = 3 }: { title: string; rows?: number }) => (
+    <section className="bg-white rounded-xl shadow-md p-4">
+        <div className="flex justify-between items-center mb-4">
+            <h1 className="text-xl font-bold">{title}</h1>
+        </div>
+        <div className="space-y-3">
+            {/* Header Table Skeleton */}
+            <div className="flex gap-4 mb-2">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-4 bg-gray-200 rounded flex-1 animate-pulse"></div>
+                ))}
+            </div>
+            {/* Rows Skeleton */}
+            {[...Array(rows)].map((_, rowIndex) => (
+                <div key={rowIndex} className="flex gap-4 py-2">
+                    {[...Array(4)].map((_, colIndex) => (
+                        <div
+                            key={colIndex}
+                            className="h-4 bg-gray-100 rounded flex-1 animate-pulse"
+                            style={{ animationDelay: `${rowIndex * 0.1}s` }}
+                        ></div>
+                    ))}
+                </div>
+            ))}
+        </div>
+        {/* Button Skeleton */}
+        <div className="mt-4 flex justify-between items-center">
+            <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded w-20 animate-pulse"></div>
+        </div>
+    </section>
+);
+
+// Komponen Loading Spinner
+const LoadingSpinner = ({ text = "Memuat data..." }: { text?: string }) => (
+    <div className="flex flex-col items-center justify-center py-8">
+        <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+            <div className="absolute top-0 left-0 animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-300 opacity-50"
+                style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+        </div>
+        <p className="mt-3 text-gray-600 font-medium">{text}</p>
+    </div>
+);
+
+// Komponen Loading Bar
+const LoadingBar = () => (
+    <div className="w-full bg-gray-200 rounded-full h-1.5 mb-4 overflow-hidden">
+        <div className="bg-green-600 h-1.5 rounded-full animate-pulse"
+            style={{ animation: 'loadingBar 1.5s ease-in-out infinite' }}></div>
+    </div>
+);
+
 export default function CardSection() {
     const router = useRouter();
     const [data, setData] = useState<User[]>([]);
@@ -98,12 +152,16 @@ export default function CardSection() {
     const [laporanData, setLaporanData] = useState<Laporan[]>([]);
     const [selectedItem, setSelectedItem] = useState<{ type: 'user' | 'artikel' | 'laporan', data: User | Artikel | Laporan } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [loading, setLoading] = useState<boolean>(true);
+
+    // State loading untuk setiap card
+    const [userLoading, setUserLoading] = useState<boolean>(true);
+    const [artikelLoading, setArtikelLoading] = useState<boolean>(true);
     const [laporanLoading, setLaporanLoading] = useState<boolean>(true);
+    const [overallLoading, setOverallLoading] = useState<boolean>(true);
 
     const fetchUsers = async () => {
         try {
-            setLoading(true);
+            setUserLoading(true);
             const response = await ApiClient.getUsers();
             const users: User[] = Array.isArray(response) ? response : response.users || [];
             const sortedUsers = users.sort((a, b) =>
@@ -118,12 +176,13 @@ export default function CardSection() {
             setData([]);
             setUserData([]);
         } finally {
-            setLoading(false);
+            setUserLoading(false);
         }
     };
 
     const fetchArtikels = async () => {
         try {
+            setArtikelLoading(true);
             const response = await fetch("/api/artikel");
             if (!response.ok) throw new Error("Gagal fetch artikel");
             const artikels: Artikel[] = await response.json();
@@ -136,6 +195,8 @@ export default function CardSection() {
         } catch (error) {
             console.error("Gagal mengambil artikel:", error);
             setArtikelData([]);
+        } finally {
+            setArtikelLoading(false);
         }
     };
 
@@ -158,7 +219,6 @@ export default function CardSection() {
             if (!response.ok) {
                 if (response.status === 401) {
                     console.log('Unauthorized, mungkin perlu login');
-                    // Tidak redirect, hanya set data kosong
                     setLaporanData([]);
                     return;
                 }
@@ -168,7 +228,6 @@ export default function CardSection() {
             const result = await response.json();
             console.log('Data laporan diterima:', result);
 
-            // Pastikan result adalah array
             let dataArray = [];
             if (Array.isArray(result)) {
                 dataArray = result;
@@ -181,7 +240,6 @@ export default function CardSection() {
 
             console.log('Data array length:', dataArray.length);
 
-            // Format data untuk memastikan konsistensi
             const formattedData = dataArray.map((item: any, index: number) => ({
                 _id: item._id || `item-${index}`,
                 nama: item.nama || item.username || 'Unknown User',
@@ -190,7 +248,6 @@ export default function CardSection() {
                 nilaiEvaluasi: item.nilaiEvaluasi || item.nilai || item.score || 0
             }));
 
-            // Ambil hanya 5 data terbaru (urut berdasarkan tahun dan bulan descending)
             const sortedData = formattedData.sort((a, b) => {
                 if (a.tahun !== b.tahun) return b.tahun - a.tahun;
                 return b.bulan - a.bulan;
@@ -202,7 +259,6 @@ export default function CardSection() {
 
         } catch (err) {
             console.error('Error loading laporan data:', err);
-            // Fallback data untuk testing jika API error
             const fallbackData: Laporan[] = [
                 {
                     _id: '1',
@@ -267,9 +323,22 @@ export default function CardSection() {
     };
 
     useEffect(() => {
-        fetchUsers();
-        fetchArtikels();
-        fetchLaporan();
+        const loadAllData = async () => {
+            setOverallLoading(true);
+            try {
+                await Promise.all([
+                    fetchUsers(),
+                    fetchArtikels(),
+                    fetchLaporan()
+                ]);
+            } catch (error) {
+                console.error("Error loading all data:", error);
+            } finally {
+                setOverallLoading(false);
+            }
+        };
+
+        loadAllData();
     }, []);
 
     const bulanOptions = [
@@ -289,7 +358,7 @@ export default function CardSection() {
         },
         {
             name: 'Tanggal',
-            selector: (row: Artikel) => formatTanggal(row.tanggal) // Format tanggal di sini
+            selector: (row: Artikel) => formatTanggal(row.tanggal)
         },
         {
             name: 'Aksi',
@@ -302,7 +371,6 @@ export default function CardSection() {
         },
     ];
 
-    // Kolom untuk laporan - TANPA kolom Aksi
     const laporanColumns = [
         {
             name: 'Nama',
@@ -328,7 +396,6 @@ export default function CardSection() {
             selector: (row: Laporan) => `${row.nilaiEvaluasi}`,
             sortable: true
         }
-        // Kolom Aksi dihapus dari sini
     ];
 
     const userColumns = [
@@ -346,44 +413,59 @@ export default function CardSection() {
         }
     ];
 
-    if (loading) {
+    // CSS untuk animasi loading bar
+    const loadingBarStyle = `
+        @keyframes loadingBar {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0%); }
+            100% { transform: translateX(100%); }
+        }
+    `;
+
+    if (overallLoading) {
         return (
             <div className="space-y-6">
-                <div className="bg-white rounded-xl shadow-md p-4">
-                    <div className="flex justify-between items-center mb-4">
-                        <h1 className="text-xl font-bold">User</h1>
-                    </div>
-                    <div className="flex justify-center items-center h-32">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600"></div>
-                    </div>
-                </div>
+                <style>{loadingBarStyle}</style>
+                <LoadingBar />
+                <CardLoadingSkeleton title="User" rows={5} />
+                <CardLoadingSkeleton title="Artikel" rows={3} />
+                <CardLoadingSkeleton title="Laporan" rows={5} />
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
+            <style>{loadingBarStyle}</style>
+
             {/* User Card */}
             <section className="bg-white rounded-xl shadow-md p-4">
                 <div className="flex justify-between items-center mb-4">
                     <h1 className="text-xl font-bold">User</h1>
                 </div>
-                <DataTable
-                    columns={userColumns}
-                    data={userData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    customStyles={customStyles}
-                />
-                <button
-                    className="mt-4 flex items-center gap-2 border border-black text-black px-4 py-2 rounded-md hover:bg-gray-100"
-                    onClick={() => router.push('/admin/user')}
-                >
-                    <span>Lainnya</span>
-                    <ArrowRight size={16} />
-                </button>
+
+                {userLoading ? (
+                    <LoadingSpinner text="Memuat data user..." />
+                ) : (
+                    <>
+                        <DataTable
+                            columns={userColumns}
+                            data={userData}
+                            pagination
+                            dense
+                            responsive
+                            highlightOnHover
+                            customStyles={customStyles}
+                        />
+                        <button
+                            className="mt-4 flex items-center gap-2 border border-black text-black px-4 py-2 rounded-md hover:bg-gray-100"
+                            onClick={() => router.push('/admin/user')}
+                        >
+                            <span>Lainnya</span>
+                            <ArrowRight size={16} />
+                        </button>
+                    </>
+                )}
             </section>
 
             {/* Artikel Card */}
@@ -391,22 +473,29 @@ export default function CardSection() {
                 <div className="flex justify-between items-center mb-4">
                     <h1 className="text-xl font-bold">Artikel</h1>
                 </div>
-                <DataTable
-                    columns={artikelColumns}
-                    data={artikelData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    customStyles={customStyles}
-                />
-                <button
-                    className="mt-4 flex items-center gap-2 border border-black text-black px-4 py-2 rounded-md hover:bg-gray-100"
-                    onClick={() => router.push('/admin/artikel')}
-                >
-                    <span>Lainnya</span>
-                    <ArrowRight size={16} />
-                </button>
+
+                {artikelLoading ? (
+                    <LoadingSpinner text="Memuat data artikel..." />
+                ) : (
+                    <>
+                        <DataTable
+                            columns={artikelColumns}
+                            data={artikelData}
+                            pagination
+                            dense
+                            responsive
+                            highlightOnHover
+                            customStyles={customStyles}
+                        />
+                        <button
+                            className="mt-4 flex items-center gap-2 border border-black text-black px-4 py-2 rounded-md hover:bg-gray-100"
+                            onClick={() => router.push('/admin/artikel')}
+                        >
+                            <span>Lainnya</span>
+                            <ArrowRight size={16} />
+                        </button>
+                    </>
+                )}
             </section>
 
             {/* Laporan Card */}
@@ -414,11 +503,9 @@ export default function CardSection() {
                 <div className="flex justify-between items-center mb-4">
                     <h1 className="text-xl font-bold">Laporan</h1>
                 </div>
+
                 {laporanLoading ? (
-                    <div className="flex justify-center items-center h-32">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600"></div>
-                        <span className="ml-2 text-gray-600">Memuat data laporan...</span>
-                    </div>
+                    <LoadingSpinner text="Memuat data laporan..." />
                 ) : (
                     <>
                         <DataTable
@@ -433,15 +520,15 @@ export default function CardSection() {
                         <div className="mt-3 text-sm text-gray-600">
                             Menampilkan {laporanData.length} data evaluasi terbaru
                         </div>
+                        <button
+                            className="mt-4 flex items-center gap-2 border border-black text-black px-4 py-2 rounded-md hover:bg-gray-100"
+                            onClick={() => router.push('/admin/laporan')}
+                        >
+                            <span>Lainnya</span>
+                            <ArrowRight size={16} />
+                        </button>
                     </>
                 )}
-                <button
-                    className="mt-4 flex items-center gap-2 border border-black text-black px-4 py-2 rounded-md hover:bg-gray-100"
-                    onClick={() => router.push('/admin/laporan')}
-                >
-                    <span>Lainnya</span>
-                    <ArrowRight size={16} />
-                </button>
             </section>
 
             {/* Modal Konfirmasi Hapus */}
