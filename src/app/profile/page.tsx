@@ -29,7 +29,8 @@ interface KelompokData {
 
 const ProfilePage: React.FC = () => {
     const router = useRouter();
-    const { userId, token, loading: authLoading, logout } = useAuth();
+    const { user, token, loading: authLoading, logout } = useAuth();
+    const userId = user?._id; // ambil id user dari objek user
     const [userData, setUserData] = useState<UserData | null>(null);
     const [dataLoading, setDataLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);

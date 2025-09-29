@@ -275,7 +275,8 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
             alt="Foto Profil"
             width={32}
             height={32}
-            className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 cursor-pointer"
+            className="w-8 h-8 md:w-10 md:h-10 object-cover border-2 cursor-pointer"
+            style={{ borderRadius: '50%' }}
             onError={() => setProfileImageError(true)}
             unoptimized
           />

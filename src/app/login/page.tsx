@@ -27,20 +27,30 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            // Cek jika kredensial admin
+            // Cek jika kredensial admin hardcode
             if (username === adminCredentials.username && password === adminCredentials.password) {
-                // Simulasi login admin berhasil
-                const mockAdminUser = {
-                    _id: 'admin-001',
+                console.log('🔐 Login dengan admin hardcode');
+                
+                // Buat user object untuk admin hardcode
+                const hardcodeAdminUser = {
+                    _id: 'admin-hardcode-id',
+                    nama: 'Administrator System',
                     username: 'admin',
-                    email: 'admin@sima.com',
+                    email: 'admin@sistem-peternakan.com',
                     role: 'admin',
-                    name: 'Administrator'
+                    status: 'Aktif',
+                    kelompok: 'Administrator',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    isHardcode: true
                 };
 
-                // Simpan ke sessionStorage dan localStorage
-                sessionStorage.setItem('userId', mockAdminUser._id);
-                localStorage.setItem('userData', JSON.stringify(mockAdminUser));
+                // Simpan ke sessionStorage dan localStorage dengan flag hardcode
+                sessionStorage.setItem('userId', hardcodeAdminUser._id);
+                sessionStorage.setItem('isHardcodeAdmin', 'true');
+                localStorage.setItem('userData', JSON.stringify(hardcodeAdminUser));
+
+                console.log('✅ Admin hardcode login berhasil');
 
                 // Redirect ke dashboard admin
                 router.push('/dashboard/admin');

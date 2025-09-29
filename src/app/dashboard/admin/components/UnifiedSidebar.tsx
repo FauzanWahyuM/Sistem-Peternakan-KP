@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { LogOut, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../../hooks/useAuth';
 
 interface SidebarProps {
   userType: 'admin' | 'penyuluh' | 'peternak';
@@ -19,6 +20,7 @@ interface UserProfile {
   role: string;
   status: string;
   profileImage?: string;
+  isHardcode?: boolean;
 }
 
 interface NavItem {
@@ -48,7 +50,6 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
     const checkIfMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Auto collapse sidebar di mobile
       if (mobile) {
         setIsCollapsed(true);
       }
@@ -62,29 +63,34 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
     };
   }, []);
 
-  // Fungsi untuk mendapatkan URL gambar profil yang valid
+  // Fungsi untuk mendapatkan URL gambar profil yang valid - DIPERBAIKI
   const getProfileImageUrl = () => {
-    if (!userProfile?.profileImage || profileImageError) {
+    // 1. Jika admin hardcode, SELALU gunakan Vector.svg
+    if (userProfile?.isHardcode) {
       return '/Vector.svg';
     }
 
-    const profileImage = userProfile.profileImage;
-
-    // Jika sudah URL lengkap
-    if (profileImage.startsWith('http')) {
-      return profileImage;
+    // 2. Jika ada error, gunakan Vector.svg
+    if (profileImageError) {
+      return '/Vector.svg';
     }
 
-    // Jika path absolute
-    if (profileImage.startsWith('/')) {
-      return profileImage;
+    // 3. Jika userProfile ada dan punya profileImage yang valid
+    if (userProfile?.profileImage && userProfile.profileImage.trim() !== '') {
+      const profileImage = userProfile.profileImage;
+
+      // Jika sudah URL lengkap (http, https, atau path absolute)
+      if (profileImage.startsWith('http') || profileImage.startsWith('/')) {
+        return profileImage;
+      }
+
+      // Jika object ID MongoDB (24 karakter hex), gunakan API
+      if (profileImage.length === 24 && /^[0-9a-fA-F]{24}$/.test(profileImage)) {
+        return `/api/auth/profile/image/${profileImage}`;
+      }
     }
 
-    // Jika ID GridFS, return URL API yang lengkap
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/api/auth/profile/image/${profileImage}`;
-    }
-
+    // 4. Default fallback ke Vector.svg
     return '/Vector.svg';
   };
 
@@ -94,25 +100,84 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
         setLoading(true);
         console.log('🔄 Fetching user profile...');
 
-        const savedUserData = localStorage.getItem('userData');
-        if (savedUserData) {
-          const userData = JSON.parse(savedUserData);
-          console.log('📦 Using cached user data:', userData);
-          setUserProfile(userData);
+        // Cek jika ini admin hardcode dari sessionStorage
+        const isHardcodeAdmin = sessionStorage.getItem('isHardcodeAdmin');
+        if (isHardcodeAdmin === 'true') {
+          console.log('🔐 Using hardcode admin profile');
+          setUserProfile({
+            _id: 'admin-hardcode-id',
+            nama: 'Administrator System',
+            username: 'admin',
+            email: 'admin@sistem-peternakan.com',
+            kelompok: 'Administrator',
+            role: 'admin',
+            status: 'Aktif',
+            isHardcode: true
+          });
           setLoading(false);
           return;
         }
 
+        // Untuk user biasa, ambil data dari API /api/auth/me
         console.log('🌐 Fetching from API...');
-        const response = await fetch('/api/auth/me');
+        const response = await fetch('/api/auth/me', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
         if (response.ok) {
           const data = await response.json();
-          console.log('✅ API response:', data);
-          setUserProfile(data.user);
-          localStorage.setItem('userData', JSON.stringify(data.user));
+          console.log('✅ API response received:', data);
+
+          if (data.user) {
+            console.log('👤 User data from API:', data.user);
+            console.log('📸 Profile image from API:', data.user.profileImage);
+
+            setUserProfile(data.user);
+            localStorage.setItem('userData', JSON.stringify(data.user));
+          } else {
+            console.error('❌ No user data in response');
+            // Fallback ke data dari localStorage
+            const savedUserData = localStorage.getItem('userData');
+            if (savedUserData) {
+              const userData = JSON.parse(savedUserData);
+              console.log('📦 Fallback to cached user data:', userData);
+              setUserProfile(userData);
+            }
+          }
         } else {
-          console.error('❌ API failed, using fallback');
+          console.error('❌ API failed, status:', response.status);
+          // Fallback ke data dari localStorage
+          const savedUserData = localStorage.getItem('userData');
+          if (savedUserData) {
+            const userData = JSON.parse(savedUserData);
+            console.log('📦 Fallback to cached user data:', userData);
+            setUserProfile(userData);
+          } else {
+            // Ultimate fallback
+            setUserProfile({
+              _id: 'fallback-id',
+              nama: userType,
+              username: userType,
+              email: `${userType}@example.com`,
+              kelompok: 'A',
+              role: userType,
+              status: 'Aktif'
+            } as UserProfile);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error fetching user profile:', error);
+        // Fallback ke data dari localStorage
+        const savedUserData = localStorage.getItem('userData');
+        if (savedUserData) {
+          const userData = JSON.parse(savedUserData);
+          console.log('📦 Fallback to cached user data after error:', userData);
+          setUserProfile(userData);
+        } else {
           setUserProfile({
             _id: 'fallback-id',
             nama: userType,
@@ -123,17 +188,6 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
             status: 'Aktif'
           } as UserProfile);
         }
-      } catch (error) {
-        console.error('❌ Error fetching user profile:', error);
-        setUserProfile({
-          _id: 'fallback-id',
-          nama: userType,
-          username: userType,
-          email: `${userType}@example.com`,
-          kelompok: 'A',
-          role: userType,
-          status: 'Aktif'
-        } as UserProfile);
       } finally {
         setLoading(false);
       }
@@ -143,22 +197,29 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
   }, [userType]);
 
   const handleLogout = () => {
+    // Hapus semua session dan local storage
     sessionStorage.removeItem('userId');
     sessionStorage.removeItem('userToken');
+    sessionStorage.removeItem('isHardcodeAdmin');
     localStorage.removeItem('userId');
     localStorage.removeItem('userToken');
     localStorage.removeItem('userData');
     router.push('/login');
   };
 
+  // Handle profile click berdasarkan user type
   const handleProfileClick = () => {
-    router.push('/profile');
-    setIsMobileOpen(false); // Tutup sidebar setelah navigasi di mobile
+    if (userType === 'admin') {
+      router.push('/profile/profile-admin');
+    } else {
+      router.push('/profile');
+    }
+    setIsMobileOpen(false);
   };
 
   const handleNavClick = (href: string) => {
     router.push(href);
-    setIsMobileOpen(false); // Tutup sidebar setelah navigasi di mobile
+    setIsMobileOpen(false);
   };
 
   const getNavItems = (): NavItem[] => {
@@ -254,54 +315,79 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
     </>
   );
 
-  // Komponen profil dan logout (ditempatkan di bagian bawah)
-  const ProfileSection = ({ isCollapsed = false }) => (
-    <div className="mt-auto pt-4 border-t border-green-500">
-      <div
-        onClick={handleProfileClick}
-        className={`flex items-center gap-3 mb-4 cursor-pointer hover:opacity-80 transition-opacity ${isCollapsed ? 'justify-center' : 'ml-2 md:ml-4'}`}
-      >
-        <div className="relative">
-          <Image
-            src={getProfileImageUrl()}
-            alt="Foto Profil"
-            width={32}
-            height={32}
-            className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 cursor-pointer"
-            onError={() => setProfileImageError(true)}
-            unoptimized
-          />
+  // Komponen profil dan logout
+  const ProfileSection = ({ isCollapsed = false }) => {
+    const profileImageUrl = getProfileImageUrl();
+
+    return (
+      <div className="mt-auto pt-4 border-t border-green-500">
+        <div
+          onClick={handleProfileClick}
+          className={`flex items-center gap-3 mb-4 cursor-pointer hover:opacity-80 transition-opacity ${isCollapsed ? 'justify-center' : 'ml-2 md:ml-4'}`}
+        >
+          <div className="relative">
+            <Image
+              src={profileImageUrl}
+              alt="Foto Profil"
+              width={32}
+              height={32}
+              className="w-8 h-8 md:w-10 md:h-10 object-cover border-2 cursor-pointer"
+              style={{ borderRadius: '50%' }}
+              onError={() => {
+                console.log('🚨 Image load error for URL:', profileImageUrl);
+                console.log('👤 User profile:', userProfile);
+                setProfileImageError(true);
+              }}
+              onLoad={() => {
+                console.log('✅ Image loaded successfully:', profileImageUrl);
+              }}
+              unoptimized
+            />
+            {/* Badge untuk admin hardcode */}
+            {userProfile?.isHardcode && (
+              <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                ★
+              </div>
+            )}
+          </div>
+          {!isCollapsed && (
+            loading ? (
+              <p className="font-[Judson] text-sm md:text-base">Loading...</p>
+            ) : (
+              <div>
+                <p className="font-[Judson] text-sm md:text-base truncate max-w-[120px]">
+                  Hi, {userProfile?.nama || userType}
+                </p>
+                {userProfile?.isHardcode && (
+                  <p className="text-xs text-yellow-300">Hardcode Admin</p>
+                )}
+              </div>
+            )
+          )}
         </div>
-        {!isCollapsed && (
-          loading ? (
-            <p className="font-[Judson] text-sm md:text-base">Loading...</p>
-          ) : (
-            <p className="font-[Judson] text-sm md:text-base truncate max-w-[120px]">Hi, {userProfile?.nama || userType}</p>
-          )
+
+        <button
+          onClick={handleLogout}
+          className={`bg-red-500 hover:bg-red-800 w-full text-white py-1.5 md:py-2 rounded flex items-center justify-center space-x-2 ${isCollapsed ? 'px-2' : ''}`}
+          title={isCollapsed ? "Logout" : ""}
+        >
+          <LogOut size={14} className="w-3.5 h-3.5 md:w-4 md:h-4" />
+          {!isCollapsed && <span className="text-sm md:text-base">Logout</span>}
+        </button>
+
+        {/* Tombol collapse untuk desktop */}
+        {!isMobile && (
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="mt-3 md:mt-4 w-full bg-green-700 hover:bg-green-800 text-white py-1.5 md:py-2 rounded flex items-center justify-center"
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? <ChevronRight size={14} className="w-3.5 h-3.5 md:w-4 md:h-4" /> : <ChevronLeft size={14} className="w-3.5 h-3.5 md:w-4 md:h-4" />}
+          </button>
         )}
       </div>
-
-      <button
-        onClick={handleLogout}
-        className={`bg-red-500 hover:bg-red-800 w-full text-white py-1.5 md:py-2 rounded flex items-center justify-center space-x-2 ${isCollapsed ? 'px-2' : ''}`}
-        title={isCollapsed ? "Logout" : ""}
-      >
-        <LogOut size={14} className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        {!isCollapsed && <span className="text-sm md:text-base">Logout</span>}
-      </button>
-
-      {/* Tombol collapse untuk desktop */}
-      {!isMobile && (
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="mt-3 md:mt-4 w-full bg-green-700 hover:bg-green-800 text-white py-1.5 md:py-2 rounded flex items-center justify-center"
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {isCollapsed ? <ChevronRight size={14} className="w-3.5 h-3.5 md:w-4 md:h-4" /> : <ChevronLeft size={14} className="w-3.5 h-3.5 md:w-4 md:h-4" />}
-        </button>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <>
