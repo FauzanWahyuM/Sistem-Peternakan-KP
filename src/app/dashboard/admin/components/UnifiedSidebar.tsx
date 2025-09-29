@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { Home, Users, FileText, LogOut, Newspaper, BookOpen, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 

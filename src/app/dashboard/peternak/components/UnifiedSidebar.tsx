@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { Home, Users, FileText, LogOut, Newspaper, BookOpen, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
@@ -42,7 +42,7 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
       onCollapseChange(isCollapsed);
     }
   }, [isCollapsed, onCollapseChange]);
-  
+
   // Deteksi ukuran layar
   useEffect(() => {
     const checkIfMobile = () => {
@@ -223,34 +223,34 @@ export default function UnifiedSidebar({ userType, onCollapseChange }: SidebarPr
       )}
 
       <nav className="space-y-2 sm:space-y-3 md:space-y-4">
-              {navItems.map((item: NavItem, index: number) => {
-                const active = isActive(item.href);
-                return (
-                  <a
-                    key={index}
-                    href={item.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleNavClick(item.href);
-                    }}
-                    className={`flex items-center gap-3 font-[Judson] text-lg md:text-xl transition-colors ${active
-                        ? 'text-black bg-white px-4 py-2 md:px-5 md:py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
-                        : 'text-white hover:bg-green-700 px-2 py-1 md:px-3 md:py-2 rounded'
-                      } ${isCollapsed ? 'justify-center' : ''}`}
-                    title={isCollapsed ? item.label : ''}
-                  >
-                    <Image
-                      src={item.icon as string}
-                      alt={item.label}
-                      width={20}
-                      height={20}
-                      className="w-5 h-5 md:w-6 md:h-6"
-                    />
-                    {!isCollapsed && <span className="text-sm md:text-base">{item.label}</span>}
-                  </a>
-                );
-              })}
-            </nav>
+        {navItems.map((item: NavItem, index: number) => {
+          const active = isActive(item.href);
+          return (
+            <a
+              key={index}
+              href={item.href}
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavClick(item.href);
+              }}
+              className={`flex items-center gap-3 font-[Judson] text-lg md:text-xl transition-colors ${active
+                ? 'text-black bg-white px-4 py-2 md:px-5 md:py-2 rounded-l-full -mr-4 -ml-2 shadow-sm'
+                : 'text-white hover:bg-green-700 px-2 py-1 md:px-3 md:py-2 rounded'
+                } ${isCollapsed ? 'justify-center' : ''}`}
+              title={isCollapsed ? item.label : ''}
+            >
+              <Image
+                src={item.icon as string}
+                alt={item.label}
+                width={20}
+                height={20}
+                className="w-5 h-5 md:w-6 md:h-6"
+              />
+              {!isCollapsed && <span className="text-sm md:text-base">{item.label}</span>}
+            </a>
+          );
+        })}
+      </nav>
     </>
   );
 
