@@ -32,7 +32,7 @@ function HasilEvaluasiContent() {
                 console.log('Fetching all data from /api/hasil...');
 
                 // TAMBAHKAN PARAMETER UNTUK MENDAPATKAN SEMUA DATA
-                const res = await fetch('/api/hasil?all=true', {
+                const res = await fetch('/api/hasil-admin?all=true', {
                     cache: "no-store",
                     credentials: 'include',
                     headers: {

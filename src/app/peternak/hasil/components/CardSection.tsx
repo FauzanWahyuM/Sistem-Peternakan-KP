@@ -19,13 +19,13 @@ function HasilEvaluasiContent() {
         'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
 
-    // Ambil data dari API
+    // Ambil data dari API - TANPA parameter all=true, biarkan API handle berdasarkan session
     useEffect(() => {
         const loadData = async () => {
             try {
                 const res = await fetch('/api/hasil', {
                     cache: "no-store",
-                    credentials: 'include' // Pastikan credentials include
+                    credentials: 'include'
                 });
 
                 if (!res.ok) {
@@ -37,6 +37,7 @@ function HasilEvaluasiContent() {
                 }
 
                 const result = await res.json();
+                console.log('Data evaluasi user:', result);
                 setDataEvaluasi(result);
                 setFilteredData(result);
             } catch (err) {
@@ -83,7 +84,14 @@ function HasilEvaluasiContent() {
     };
 
     if (loading) {
-        return <div className="p-6">Memuat data...</div>;
+        return (
+            <div className="min-h-screen bg-gray-100 p-6 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                    <p className="mt-4 font-[Judson] text-gray-600">Memuat data evaluasi...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -91,8 +99,6 @@ function HasilEvaluasiContent() {
             {/* Filters */}
             <div className="flex justify-center">
                 <div className="bg-white rounded-lg shadow p-6 mb-6 max-w-6xl w-full mx-auto">
-
-                    {/* Ganti grid -> flex agar dropdown rata penuh */}
                     <div className="flex gap-4 mb-4">
                         {/* Bulan */}
                         <div className="flex-1">
@@ -141,13 +147,27 @@ function HasilEvaluasiContent() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Search */}
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
+                                Cari
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Cari nama atau nilai..."
+                                value={filters.search}
+                                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                                className="w-full p-3 border border-gray-300 rounded-lg font-[Judson] focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
                     </div>
 
                     {/* Reset Button */}
                     <div className="flex justify-center">
                         <button
                             onClick={clearFilters}
-                            className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-[Judson]"
+                            className="px-4 py-2 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-[Judson] transition-colors"
                         >
                             Reset Filter
                         </button>
@@ -161,27 +181,46 @@ function HasilEvaluasiContent() {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">No</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Nama Kuesioner</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Bulan</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Tahun</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Nilai Evaluasi</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Status</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {filteredData.length > 0 ? (
                             filteredData.map((item, idx) => (
                                 <tr key={item._id ?? idx} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 font-[Judson]">{String(item.id).padStart(2, '0')}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{item.nama}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{bulanOptions[item.bulan - 1] || item.bulan}</td>
+                                    <td className="px-6 py-4 font-[Judson] whitespace-nowrap">{idx + 1}</td>
+                                    <td className="px-6 py-4 font-[Judson] whitespace-nowrap">
+                                        {bulanOptions[item.bulan - 1] || `Bulan ${item.bulan}`}
+                                    </td>
                                     <td className="px-6 py-4 font-[Judson]">{item.tahun}</td>
-                                    <td className="px-6 py-4 font-[Judson]">{item.nilaiEvaluasi}</td>
+                                    <td className="px-6 py-4 font-[Judson] font-semibold">
+                                        <span className={`px-3 py-1 rounded-full text-sm ${item.nilaiEvaluasi >= 80 ? 'bg-green-100 text-green-800' :
+                                                item.nilaiEvaluasi >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-red-100 text-red-800'
+                                            }`}>
+                                            {item.nilaiEvaluasi}%
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 font-[Judson]">
+                                        <span className={`px-2 py-1 rounded text-xs ${item.nilaiEvaluasi >= 80 ? 'bg-green-50 text-green-700' :
+                                                item.nilaiEvaluasi >= 60 ? 'bg-yellow-50 text-yellow-700' :
+                                                    'bg-red-50 text-red-700'
+                                            }`}>
+                                            {item.nilaiEvaluasi >= 80 ? 'Sangat Baik' :
+                                                item.nilaiEvaluasi >= 60 ? 'Baik' : 'Perlu Perbaikan'}
+                                        </span>
+                                    </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={5} className="text-center py-4 text-gray-500 font-[Judson]">
-                                    {loading ? 'Memuat data...' : 'Tidak ada data hasil evaluasi.'}
+                                <td colSpan={5} className="text-center py-8 text-gray-500 font-[Judson]">
+                                    {dataEvaluasi.length === 0
+                                        ? 'Belum ada data hasil evaluasi. Silakan isi kuesioner terlebih dahulu.'
+                                        : 'Data tidak ditemukan dengan filter yang dipilih.'}
                                 </td>
                             </tr>
                         )}
@@ -201,7 +240,14 @@ function HasilEvaluasiContent() {
 
 export default function HasilEvaluasiPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                    <p className="mt-4 font-[Judson] text-gray-600">Memuat halaman...</p>
+                </div>
+            </div>
+        }>
             <HasilEvaluasiContent />
         </Suspense>
     );

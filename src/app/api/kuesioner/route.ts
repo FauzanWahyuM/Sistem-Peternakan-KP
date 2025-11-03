@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "../../../lib/dbConnect";
-import QuestionnaireResponse from "../../../models/Kuesioner";
+import Kuesioner from "../../../models/Kuesioner"; // 👈 Import model yang benar
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../../lib/authOptions"; 
+import { authOptions } from "../../../lib/authOptions";
+import mongoose from "mongoose";
 
-const bulanOptions = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-];
+const periodMonths = {
+    'jan-jun': [1, 2, 3, 4, 5, 6],
+    'jul-des': [7, 8, 9, 10, 11, 12]
+};
 
 export async function POST(req: NextRequest) {
     await connectDB();
@@ -18,17 +19,56 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        let { questionnaireId, formData, month, year } = body;
+        let { questionnaireId, formData, period, year } = body;
+
+        console.log("Received data:", { questionnaireId, period, year, formData });
 
         if (typeof questionnaireId === "string" && questionnaireId.length > 0) {
             questionnaireId = questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
         }
 
-        const response = new QuestionnaireResponse({
+        // Validasi periode
+        if (!period || !periodMonths[period as keyof typeof periodMonths]) {
+            return NextResponse.json(
+                { error: "Periode tidak valid" },
+                { status: 400 }
+            );
+        }
+
+        const months = periodMonths[period as keyof typeof periodMonths];
+
+        // Untuk kompatibilitas, gunakan bulan pertama dari periode sebagai nilai bulan
+        const firstMonthOfPeriod = months[0];
+
+        // Convert userId string to ObjectId
+        const userId = new mongoose.Types.ObjectId(session.user.id);
+
+        // Cek apakah sudah ada response untuk periode dan tahun ini
+        try {
+            const existingResponse = await Kuesioner.findOne({
+                questionnaireId,
+                userId: userId,
+                periode: period,
+                tahun: Number(year)
+            });
+
+            if (existingResponse) {
+                return NextResponse.json(
+                    { error: "Anda sudah mengisi kuesioner untuk periode ini" },
+                    { status: 400 }
+                );
+            }
+        } catch (error) {
+            console.log("Skip duplicate check due to error:", error);
+            // Lanjutkan tanpa pengecekan duplikat jika ada error
+        }
+
+        const response = new Kuesioner({
             questionnaireId,
-            userId: session.user.id, // ambil dari session
-            bulan: month,
-            tahun: year,
+            userId: userId, // 👈 Gunakan ObjectId
+            periode: period, // Field baru untuk sistem periode
+            bulan: firstMonthOfPeriod, // Simpan sebagai number sesuai model
+            tahun: Number(year),
             answers: Object.entries(formData).map(([questionId, answer]) => ({
                 questionId,
                 answer: String(answer),
@@ -41,10 +81,10 @@ export async function POST(req: NextRequest) {
             { message: "Jawaban berhasil disimpan", response },
             { status: 201 }
         );
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error saving response:", err);
         return NextResponse.json(
-            { error: "Gagal menyimpan jawaban" },
+            { error: "Gagal menyimpan jawaban", details: err.message },
             { status: 500 }
         );
     }
@@ -66,7 +106,7 @@ export async function GET(req: NextRequest) {
 
         const { searchParams } = new URL(req.url);
         let questionnaireId = searchParams.get("questionnaireId");
-        const month = searchParams.get("month");
+        const period = searchParams.get("period");
         const year = searchParams.get("year");
         const detail = searchParams.get("detail");
         const count = searchParams.get("count");
@@ -75,14 +115,17 @@ export async function GET(req: NextRequest) {
             questionnaireId = questionnaireId.charAt(0).toUpperCase() + questionnaireId.slice(1);
         }
 
+        // Convert userId string to ObjectId
+        const userId = new mongoose.Types.ObjectId(session.user.id);
+
         // === MODE COUNT (dashboard) ===
         if (count === "true") {
-            const query: any = { userId: session.user.id };
+            const query: any = { userId: userId };
             if (questionnaireId) query.questionnaireId = questionnaireId;
-            if (month) query.bulan = Number(month);
+            if (period) query.periode = period;
             if (year) query.tahun = Number(year);
 
-            const total = await QuestionnaireResponse.countDocuments(query);
+            const total = await Kuesioner.countDocuments(query);
             return NextResponse.json({ total }, { status: 200 });
         }
 
@@ -94,18 +137,22 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const query: any = { questionnaireId, userId: session.user.id };
-        if (month) query.bulan = Number(month);
+        const query: any = {
+            questionnaireId,
+            userId: userId
+        };
+
+        if (period) query.periode = period;
         if (year) query.tahun = Number(year);
 
-        const response = await QuestionnaireResponse.findOne(query);
+        const response = await Kuesioner.findOne(query);
 
         if (detail === "true") {
             return NextResponse.json(response, { status: 200 });
         }
 
         return NextResponse.json({ status: !!response }, { status: 200 });
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error getting response:", err);
         return NextResponse.json(
             { error: "Gagal mengambil jawaban", details: err.message },

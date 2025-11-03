@@ -1,5 +1,6 @@
 // app/api/hasil/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import connectDB from "../../../lib/dbConnect";
 import QuestionnaireResponse from "../../../models/Kuesioner";
 import User from "../../../models/User";
@@ -8,24 +9,62 @@ import mongoose from "mongoose";
 export async function GET(req: NextRequest) {
     await connectDB();
     try {
-        const { searchParams } = new URL(req.url);
-        const all = searchParams.get("all"); // PARAMETER UNTUK MENDAPATKAN SEMUA DATA
+        // Dapatkan session user yang sedang login
+        const session = await getServerSession();
 
-        console.log('API Hit dengan parameters:', { all });
-
-        // Query untuk mengambil data
-        const query: any = {};
-
-        // Jika parameter all=true, ambil semua data tanpa filter user
-        if (all === 'true') {
-            // Tidak ada filter userId - ambil semua data
-            console.log('Mengambil semua data tanpa filter user');
-        } else {
-            // Jika tidak ada parameter all, return error atau data kosong
-            return NextResponse.json([], { status: 200 });
+        if (!session || !session.user) {
+            console.log('❌ Tidak ada session user');
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
-        // Terapkan filter lainnya jika ada (opsional)
+        console.log('🔍 Session user:', session.user);
+
+        const { searchParams } = new URL(req.url);
+        const all = searchParams.get("all");
+
+        console.log('📝 API /api/hasil dipanggil oleh:', session.user.email, 'all=', all);
+
+        // Cari user berdasarkan email dari session
+        const currentUser = await User.findOne({
+            email: session.user.email
+        }).select('_id username nama role').lean();
+
+        if (!currentUser) {
+            console.log('❌ User tidak ditemukan di database');
+            return NextResponse.json(
+                { error: "User tidak ditemukan" },
+                { status: 404 }
+            );
+        }
+
+        console.log('✅ User ditemukan:', currentUser);
+
+        // Tentukan query berdasarkan role dan parameter all
+        let query: any = {};
+        let isAdminMode = false;
+
+        // Jika parameter all=true dan user adalah admin, ambil semua data
+        if (all === 'true') {
+            // Cek apakah user adalah admin
+            const isAdmin = currentUser.role === 'admin'; // Sesuaikan dengan field role Anda
+            if (isAdmin) {
+                console.log('👨‍💼 Admin mode: mengambil semua data');
+                isAdminMode = true;
+                // TIDAK ADA filter userId - ambil semua data
+                // Biarkan query kosong untuk mengambil semua data
+            } else {
+                console.log('⚠️ User bukan admin, hanya mengambil data sendiri');
+                query.userId = currentUser._id.toString();
+            }
+        } else {
+            // Mode normal: hanya data user sendiri
+            query.userId = currentUser._id.toString();
+        }
+
+        // Filter tambahan (opsional)
         const bulan = searchParams.get("bulan");
         const tahun = searchParams.get("tahun");
         const questionnaireId = searchParams.get("questionnaireId");
@@ -34,84 +73,115 @@ export async function GET(req: NextRequest) {
         if (tahun) query.tahun = Number(tahun);
         if (questionnaireId) query.questionnaireId = questionnaireId;
 
-        console.log('Final query:', query);
+        console.log('📋 Query database:', query);
 
-        // Temukan semua response yang sesuai
+        // Ambil data dari database
         const responses = await QuestionnaireResponse.find(query)
             .sort({ tahun: -1, bulan: -1, createdAt: -1 })
             .lean();
 
-        console.log('Total responses found:', responses.length);
+        console.log(`📊 Ditemukan ${responses.length} response kuesioner`);
 
-        // Jika tidak ada data, return array kosong
         if (responses.length === 0) {
-            console.log('Tidak ada data yang ditemukan');
+            console.log('ℹ️ Tidak ada data response kuesioner');
             return NextResponse.json([], { status: 200 });
         }
 
-        // Dapatkan semua user IDs dari responses
-        const userIds = responses.map(response => response.userId).filter(id => id);
-        const uniqueUserIds = [...new Set(userIds)];
+        // Jika admin mode, kita perlu mengambil data semua user
+        if (isAdminMode) {
+            console.log('🔄 Admin mode: mengambil data semua user');
 
-        console.log('Unique user IDs to fetch:', uniqueUserIds);
+            // Dapatkan semua user IDs dari responses
+            const userIds = responses.map(response => response.userId).filter(id => id);
+            const uniqueUserIds = [...new Set(userIds)];
 
-        // Temukan semua user data sekaligus
-        const users = await User.find({
-            _id: {
-                $in: uniqueUserIds
-                    .filter(id => mongoose.Types.ObjectId.isValid(id))
-                    .map(id => new mongoose.Types.ObjectId(id))
-            }
-        }).select('username nama _id').lean();
+            console.log('👥 User IDs yang ditemukan:', uniqueUserIds);
 
-        console.log('Users found:', users.length);
-
-        // Buat mapping user by ID
-        const userMap = new Map();
-        users.forEach(user => {
-            userMap.set(user._id.toString(), user);
-        });
-
-        // Format data untuk frontend
-        const formattedData = responses.map((item: any, index: number) => {
-            let userName = 'Unknown User';
-            let userUsername = '';
-
-            if (item.userId) {
-                const userData = userMap.get(item.userId.toString());
-                if (userData) {
-                    userName = userData.nama || userData.username || `User ${item.userId}`;
-                    userUsername = userData.username || '';
-                } else {
-                    userName = `User ${item.userId}`;
-                    userUsername = '';
+            // Temukan semua user data sekaligus
+            const users = await User.find({
+                _id: {
+                    $in: uniqueUserIds
+                        .filter(id => mongoose.Types.ObjectId.isValid(id))
+                        .map(id => new mongoose.Types.ObjectId(id))
                 }
-            }
+            }).select('username nama _id').lean();
 
-            // Hitung nilai evaluasi
-            const nilaiEvaluasi = calculateEvaluationScore(item.answers);
+            console.log('✅ Data user berhasil diambil:', users.length);
 
-            return {
-                _id: item._id?.toString(),
-                id: index + 1,
-                nama: userName,
-                username: userUsername,
-                bulan: item.bulan,
-                tahun: item.tahun,
-                nilaiEvaluasi: nilaiEvaluasi,
-                questionnaireId: item.questionnaireId,
-                userId: item.userId,
-                createdAt: item.createdAt
-            };
-        });
+            // Buat mapping user by ID
+            const userMap = new Map();
+            users.forEach(user => {
+                userMap.set(user._id.toString(), user);
+            });
 
-        console.log('Formatted data length:', formattedData.length);
-        console.log('Sample formatted data:', formattedData.slice(0, 2));
+            // Format data untuk admin (dengan nama user yang benar)
+            const formattedData = responses.map((item: any, index: number) => {
+                let userName = 'Unknown User';
+                let userUsername = '';
 
-        return NextResponse.json(formattedData, { status: 200 });
+                if (item.userId) {
+                    const userData = userMap.get(item.userId.toString());
+                    if (userData) {
+                        userName = userData.nama || userData.username || `User ${item.userId}`;
+                        userUsername = userData.username || '';
+                    } else {
+                        userName = `User ${item.userId}`;
+                        userUsername = '';
+                    }
+                }
+
+                const nilaiEvaluasi = calculateEvaluationScore(item.answers);
+
+                console.log(`📝 Response ${index + 1}: ${userName}, Nilai: ${nilaiEvaluasi}`);
+
+                return {
+                    _id: item._id?.toString(),
+                    id: index + 1,
+                    nama: userName,
+                    username: userUsername,
+                    bulan: item.bulan,
+                    tahun: item.tahun,
+                    nilaiEvaluasi: nilaiEvaluasi,
+                    questionnaireId: item.questionnaireId,
+                    userId: item.userId,
+                    createdAt: item.createdAt,
+                    totalAnswers: item.answers?.length || 0
+                };
+            });
+
+            console.log(`🎉 Data admin berhasil diformat: ${formattedData.length} items`);
+            return NextResponse.json(formattedData, { status: 200 });
+
+        } else {
+            // Format data untuk user biasa (hanya data sendiri)
+            console.log('👤 Mode user biasa: hanya data sendiri');
+
+            const formattedData = responses.map((item: any, index: number) => {
+                const nilaiEvaluasi = calculateEvaluationScore(item.answers);
+
+                console.log(`📝 Response ${index + 1}: Bulan ${item.bulan}, Tahun ${item.tahun}, Nilai: ${nilaiEvaluasi}`);
+
+                return {
+                    _id: item._id?.toString(),
+                    id: index + 1,
+                    nama: currentUser.nama || currentUser.username || 'User',
+                    username: currentUser.username || '',
+                    bulan: item.bulan,
+                    tahun: item.tahun,
+                    nilaiEvaluasi: nilaiEvaluasi,
+                    questionnaireId: item.questionnaireId,
+                    userId: item.userId,
+                    createdAt: item.createdAt,
+                    totalAnswers: item.answers?.length || 0
+                };
+            });
+
+            console.log(`🎉 Data user biasa berhasil diformat: ${formattedData.length} items`);
+            return NextResponse.json(formattedData, { status: 200 });
+        }
 
     } catch (err) {
-        console.error("Error getting evaluation results:", err);
+        console.error("❌ Error getting evaluation results:", err);
         return NextResponse.json(
             { error: "Gagal mengambil hasil evaluasi" },
             { status: 500 }
@@ -121,27 +191,40 @@ export async function GET(req: NextRequest) {
 
 // Fungsi untuk menghitung nilai evaluasi dari answers (skala 1-100)
 function calculateEvaluationScore(answers: any[]): number {
-    if (!answers || answers.length === 0) return 0;
+    if (!answers || answers.length === 0) {
+        console.log('⚠️ Tidak ada answers untuk dihitung');
+        return 0;
+    }
 
     let totalSkor = 0;
     let soalTerjawab = 0;
 
-    answers.forEach(answer => {
-        if (answer && answer.answer) {
+    answers.forEach((answer, index) => {
+        if (answer && answer.answer !== undefined && answer.answer !== null) {
             const numericValue = convertAnswerToNumber(answer.answer);
             if (!isNaN(numericValue) && numericValue >= 1 && numericValue <= 5) {
                 totalSkor += numericValue;
                 soalTerjawab++;
+            } else {
+                console.log(`❌ Jawaban tidak valid: ${answer.answer} (soal ${index + 1})`);
             }
         }
     });
 
-    if (soalTerjawab === 0) return 0;
+    console.log(`📊 Total skor: ${totalSkor}, Soal terjawab: ${soalTerjawab}`);
+
+    if (soalTerjawab === 0) {
+        console.log('⚠️ Tidak ada soal yang terjawab valid');
+        return 0;
+    }
 
     const skorRataRata = totalSkor / soalTerjawab;
     const skala100 = ((skorRataRata - 1) / 4) * 100;
+    const nilaiAkhir = Math.round(skala100);
 
-    return Math.round(skala100);
+    console.log(`✅ Nilai akhir: ${nilaiAkhir}%`);
+
+    return nilaiAkhir;
 }
 
 // Helper function untuk konversi jawaban ke angka
@@ -158,7 +241,12 @@ function convertAnswerToNumber(answer: string | number): number {
         'netral': 3,
         'setuju': 4,
         'sangat setuju': 5,
-        '1': 1, '2': 2, '3': 3, '4': 4, '5': 5
+        '1': 1, '2': 2, '3': 3, '4': 4, '5': 5,
+        'sangat tidak baik': 1,
+        'tidak baik': 2,
+        'cukup': 3,
+        'baik': 4,
+        'sangat baik': 5
     };
 
     const answerLower = answer.toString().toLowerCase().trim();

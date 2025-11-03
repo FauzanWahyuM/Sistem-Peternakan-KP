@@ -1,28 +1,39 @@
-// app/peternak/isiform/page.tsx
+// app/peternak/kuesioner/isiform/page.tsx
 "use client";
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
-import Header from '../components/Header';
 import { ChevronLeft } from 'lucide-react';
 import { questions } from '../pertanyaan/questions';
 import { Suspense } from 'react';
-import '../dashboard.css';
 import { useSession } from "next-auth/react";
-import { useKuesionerStatus } from '../../../hooks/useKuesionerStatus';
 
 function IsiFormContent() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const questionnaireId = searchParams.get('id') || '0';
-    const yearParam = searchParams.get('year');
-    const { updateStatus } = useKuesionerStatus();
+    const period = searchParams.get('period');
+    const year = searchParams.get('year');
 
     const [formData, setFormData] = useState<Record<string, string>>({});
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Map period to questionnaireId
+    const getQuestionnaireId = () => {
+        if (period === 'jan-jun') return 'Januari';
+        if (period === 'jul-des') return 'Juli';
+        return 'Default';
+    };
+
+    // Get period name for display
+    const getPeriodName = () => {
+        if (period === 'jan-jun') return 'Periode Januari-Juni';
+        if (period === 'jul-des') return 'Periode Juli-Desember';
+        return 'Periode';
+    };
 
     const handleChange = (id: string, value: string) => {
         setFormData(prev => ({ ...prev, [id]: value }));
@@ -41,9 +52,13 @@ function IsiFormContent() {
             return;
         }
 
-        const now = new Date();
-        const month = now.getMonth() + 1;
-        const year = yearParam ? parseInt(yearParam) : now.getFullYear();
+        if (!period || !year) {
+            setModalMessage("Data periode tidak valid");
+            setShowModal(true);
+            return;
+        }
+
+        setIsSubmitting(true);
 
         try {
             const res = await fetch("/api/kuesioner", {
@@ -51,34 +66,41 @@ function IsiFormContent() {
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({
-                    questionnaireId,
-                    month,
-                    year,
+                    questionnaireId: getQuestionnaireId(),
+                    period: period,
+                    year: parseInt(year),
                     formData,
                 }),
             });
 
+            const result = await res.json();
+
             if (res.ok) {
-                // OPTIMISTIC UPDATE: langsung update status tanpa delay
-                updateStatus(questionnaireId, true);
                 setModalMessage("Kuesioner berhasil disimpan!");
                 setShowModal(true);
+
+                // REDIRECT DENGAN PARAMETER SEPERTI YANG DULU - INI YANG MEMBUAT BERHASIL
+                setTimeout(() => {
+                    router.push(`/peternak/kuesioner?submitted=${period}&year=${year}`);
+                }, 1500);
             } else {
-                setModalMessage("Gagal menyimpan jawaban");
+                setModalMessage(result.error || "Gagal menyimpan jawaban");
                 setShowModal(true);
             }
         } catch (err) {
             console.error(err);
             setModalMessage("Terjadi error saat menyimpan jawaban");
             setShowModal(true);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const closeModal = () => {
         setShowModal(false);
-        // Jika pesan sukses, redirect ke halaman kuesioner
+        // Jika pesan sukses dan belum redirect, redirect ke halaman kuesioner
         if (modalMessage === "Kuesioner berhasil disimpan!") {
-            router.push('/peternak/kuesioner');
+            router.push(`/peternak/kuesioner`);
         }
     };
 
@@ -96,7 +118,9 @@ function IsiFormContent() {
                     >
                         <ChevronLeft size={24} />
                     </button>
-                    <h1 className="text-4xl font-[Judson] font-bold text-gray-800 ml-75">Kuesioner</h1>
+                    <h1 className="text-4xl font-[Judson] font-bold text-gray-800 ml-5">
+                        Kuesioner {getPeriodName()} {year}
+                    </h1>
                 </div>
 
                 <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border border-gray-300 mb-6">
@@ -129,9 +153,13 @@ function IsiFormContent() {
                 <div className="max-w-4xl mx-auto p-6 mb-4">
                     <button
                         onClick={handleSubmit}
-                        className="w-full bg-green-500 hover:bg-green-600 text-nigga px-6 py-3 rounded-md font-bold font-[Judson] text-2xl text-center"
+                        disabled={isSubmitting}
+                        className={`w-full px-6 py-3 rounded-md font-bold font-[Judson] text-2xl text-center ${isSubmitting
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-green-500 hover:bg-green-600 text-white'
+                            }`}
                     >
-                        Kirim
+                        {isSubmitting ? 'Menyimpan...' : 'Kirim'}
                     </button>
                 </div>
 
