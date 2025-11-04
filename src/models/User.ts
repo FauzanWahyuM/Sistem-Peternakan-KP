@@ -5,10 +5,13 @@ export interface IUser extends Document {
     username: string;
     email: string;
     password: string;
+    phoneNumber: string; // Tambahan
+    village: string; // Tambahan
+    district: string; // Tambahan
     kelompok: string;
     tempatLahir?: string;
-    tanggalLahir?: Date;  
-    umur?: number;        
+    tanggalLahir?: Date;
+    umur?: number;
     role: string;
     status: string;
     profileImage?: string;
@@ -23,6 +26,9 @@ const UserSchema = new Schema<IUser>(
         username: { type: String, required: true, unique: true },
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
+        phoneNumber: { type: String, default: '' }, // Tambahan
+        village: { type: String, default: '' }, // Tambahan
+        district: { type: String, default: '' }, // Tambahan
         kelompok: { type: String, required: true },
         tempatLahir: { type: String, default: null },
         tanggalLahir: { type: Date, default: null },

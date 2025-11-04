@@ -14,6 +14,9 @@ export async function POST(req: Request) {
             username,
             email,
             password,
+            phoneNumber, // Tambahan: Nomor HP
+            village, // Tambahan: Desa
+            district, // Tambahan: Kecamatan
             kelompokId, // untuk peternak
             wilayahBinaan, // untuk penyuluh
             tempatLahir,
@@ -51,9 +54,12 @@ export async function POST(req: Request) {
             username,
             email,
             password: hashedPassword,
+            phoneNumber: phoneNumber || '', // Tambahan: Default empty string jika tidak diisi
+            village: village || '', // Tambahan: Default empty string jika tidak diisi
+            district: district || '', // Tambahan: Default empty string jika tidak diisi
             kelompok,
             role,
-            status,
+            status: status || 'Aktif',
         };
 
         // Tambahkan field khusus peternak
@@ -74,6 +80,9 @@ export async function POST(req: Request) {
             nama: newUser.nama,
             username: newUser.username,
             email: newUser.email,
+            phoneNumber: newUser.phoneNumber, // Tambahan
+            village: newUser.village, // Tambahan
+            district: newUser.district, // Tambahan
             kelompok: newUser.kelompok,
             role: newUser.role,
             status: newUser.status,

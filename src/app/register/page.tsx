@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Calendar, MapPin, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, Calendar, MapPin, ChevronDown, Phone, Home, Navigation } from 'lucide-react';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -15,6 +15,9 @@ export default function RegisterPage() {
         username: '',
         email: '',
         password: '',
+        phoneNumber: '', // Tambahan: Nomor HP
+        village: '', // Tambahan: Desa
+        district: '', // Tambahan: Kecamatan
         kelompok: '',
         tempatLahir: '',
         tanggalLahir: '',
@@ -124,12 +127,21 @@ export default function RegisterPage() {
             return;
         }
 
+        // Validasi nomor HP (opsional, tapi jika diisi harus valid)
+        if (form.phoneNumber && !/^[0-9+\-\s()]{10,15}$/.test(form.phoneNumber)) {
+            setMessage('❌ Format nomor HP tidak valid');
+            return;
+        }
+
         // Hapus data lahir jika userType adalah penyuluh
         const submitData = userType === 'penyuluh' ? {
             nama: form.name,
             username: form.username,
             email: form.email,
             password: form.password,
+            phoneNumber: form.phoneNumber, // Tambahan
+            village: form.village, // Tambahan
+            district: form.district, // Tambahan
             wilayahBinaan: form.kelompok, // Untuk penyuluh, kelompok adalah wilayah binaan
             role: userType,
             status: 'Aktif',
@@ -138,6 +150,9 @@ export default function RegisterPage() {
             username: form.username,
             email: form.email,
             password: form.password,
+            phoneNumber: form.phoneNumber, // Tambahan
+            village: form.village, // Tambahan
+            district: form.district, // Tambahan
             kelompokId: form.kelompok, // Untuk peternak, simpan ID kelompok
             tempatLahir: form.tempatLahir,
             tanggalLahir: form.tanggalLahir,
@@ -260,6 +275,60 @@ export default function RegisterPage() {
                         {passwordError && (
                             <p className="text-red-600 text-xs mt-1">{passwordError}</p>
                         )}
+                    </div>
+
+                    {/* Field Tambahan: Nomor HP, Desa, Kecamatan */}
+                    <div className="space-y-4 pt-2 border-t border-gray-200">
+                        <div>
+                            <label className="text-sm font-medium text-gray-700 block mb-1">
+                                Nomor HP
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="tel"
+                                    name="phoneNumber"
+                                    placeholder="Contoh: 081234567890"
+                                    value={form.phoneNumber}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 rounded-lg pl-10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black transition-colors"
+                                />
+                                <Phone size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium text-gray-700 block mb-1">
+                                Desa
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    name="village"
+                                    placeholder="Masukkan nama desa"
+                                    value={form.village}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 rounded-lg pl-10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black transition-colors"
+                                />
+                                <Home size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium text-gray-700 block mb-1">
+                                Kecamatan
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    name="district"
+                                    placeholder="Masukkan nama kecamatan"
+                                    value={form.district}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 rounded-lg pl-10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black transition-colors"
+                                />
+                                <Navigation size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                            </div>
+                        </div>
                     </div>
 
                     {/* Hanya tampilkan field lahir untuk peternak */}

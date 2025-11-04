@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../components/UnifiedSidebar';
 import { ChevronLeft } from 'lucide-react';
 import { questions } from '../pertanyaan/questions';
-import '../../dashboard.css';
+// Hapus import dashboard.css yang error
 
 function LihatFormContent() {
     const router = useRouter();
@@ -83,7 +83,7 @@ function LihatFormContent() {
                 <aside className="fixed w-56 h-screen bg-green-700 text-white z-50">
                     <Sidebar userType="peternak" />
                 </aside>
-                <main className="ml-65 w-full p-6 bg-gray-100 min-h-screen flex items-center justify-center">
+                <main className="ml-56 w-full p-6 bg-gray-100 min-h-screen flex items-center justify-center">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
                         <p className="mt-4 text-gray-600">Memuat data...</p>
@@ -99,7 +99,7 @@ function LihatFormContent() {
                 <aside className="fixed w-56 h-screen bg-green-700 text-white z-50">
                     <Sidebar userType="peternak" />
                 </aside>
-                <main className="ml-65 w-full p-6 bg-gray-100 min-h-screen">
+                <main className="ml-56 w-full p-6 bg-gray-100 min-h-screen">
                     <div className="flex items-center mb-8 max-w-4xl mx-auto">
                         <button
                             onClick={() => router.push('/peternak/kuesioner')}
@@ -123,7 +123,7 @@ function LihatFormContent() {
                 <aside className="fixed w-56 h-screen bg-green-700 text-white z-50">
                     <Sidebar userType="peternak" />
                 </aside>
-                <main className="ml-65 w-full p-6 bg-gray-100 min-h-screen">
+                <main className="ml-56 w-full p-6 bg-gray-100 min-h-screen">
                     <div className="flex items-center mb-8 max-w-4xl mx-auto">
                         <button
                             onClick={() => router.push('/peternak/kuesioner')}
@@ -147,7 +147,7 @@ function LihatFormContent() {
                 <Sidebar userType="peternak" />
             </aside>
 
-            <main className="ml-65 w-full p-6 bg-gray-100 min-h-screen">
+            <main className="ml-56 w-full p-6 bg-gray-100 min-h-screen">
                 <div className="flex items-center mb-8 max-w-4xl mx-auto">
                     <button
                         onClick={() => router.push('/peternak/kuesioner')}

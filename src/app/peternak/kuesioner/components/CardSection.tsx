@@ -2,16 +2,24 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Edit, Eye } from 'lucide-react';
 
 const periods = [
-    { id: 'jan-jun', name: 'Periode Jan-Jun', months: [1, 2, 3, 4, 5, 6] },
-    { id: 'jul-des', name: 'Periode Jul-Des', months: [7, 8, 9, 10, 11, 12] },
+    { id: 'jan-jun', name: 'Periode Januari-Juni', months: [1, 2, 3, 4, 5, 6] },
+    { id: 'jul-des', name: 'Periode Juli-Desember', months: [7, 8, 9, 10, 11, 12] },
 ];
 
 interface PeriodStatus {
     [key: string]: boolean;
+}
+
+interface PeriodInfo {
+    status: 'completed' | 'available' | 'upcoming' | 'overdue' | 'future' | 'past';
+    message: string;
+    canFill: boolean;
+    canView: boolean;
+    isCurrent: boolean;
 }
 
 export default function CardSection() {
@@ -24,50 +32,44 @@ export default function CardSection() {
     const [availableYears, setAvailableYears] = useState<number[]>([]);
     const [periodStatus, setPeriodStatus] = useState<PeriodStatus>({});
 
-    // Generate available years (current year and previous 2 years)
+    // Generate available years (2 tahun lalu, tahun ini, 2 tahun depan)
     useEffect(() => {
         const currentYear = new Date().getFullYear();
         const years = [];
-        for (let i = currentYear; i >= currentYear - 2; i--) {
+
+        // 2 tahun lalu hingga 2 tahun depan
+        for (let i = currentYear - 2; i <= currentYear + 2; i++) {
             years.push(i);
         }
+
         setAvailableYears(years);
+        setSelectedYear(currentYear);
     }, []);
 
-    // Load data function dengan useCallback - MIRIP DENGAN YANG DULU
+    // Load data function dengan useCallback
     const loadData = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
 
-            // Check if we're returning from a form submission - SAMA SEPERTI DULU
+            // Check if we're returning from a form submission
             const urlParams = new URLSearchParams(window.location.search);
             const submittedPeriod = urlParams.get('submitted');
             const submittedYear = urlParams.get('year');
 
-            console.log('URL Params:', { submittedPeriod, submittedYear });
-
             if (submittedPeriod && submittedYear) {
-                // OPTIMISTIC UPDATE: langsung update status tanpa delay - KEY DI SINI!
                 const submittedKey = `${submittedPeriod}-${submittedYear}`;
-                console.log('Optimistic update for:', submittedKey);
-
-                // Update status optimistically
                 setPeriodStatus(prev => ({
                     ...prev,
                     [submittedKey]: true
                 }));
-
-                // Clean up URL parameter - SAMA SEPERTI DULU
                 const newUrl = window.location.pathname;
                 window.history.replaceState({}, '', newUrl);
             }
 
             // Load actual status from API untuk semua period
-            console.log('Loading actual status for year:', selectedYear);
             const statusPromises = periods.map(async (period) => {
                 const periodKey = `${period.id}-${selectedYear}`;
-
                 try {
                     const questionnaireId = period.id === 'jan-jun' ? 'Januari' : 'Juli';
                     const res = await fetch(
@@ -81,12 +83,9 @@ export default function CardSection() {
                     if (res.ok) {
                         const data = await res.json();
                         return { periodKey, status: data.status };
-                    } else {
-                        console.error(`Failed to fetch status for ${periodKey}`);
-                        return { periodKey, status: false };
                     }
+                    return { periodKey, status: false };
                 } catch (err) {
-                    console.error(`Error fetching status for ${periodKey}:`, err);
                     return { periodKey, status: false };
                 }
             });
@@ -97,13 +96,7 @@ export default function CardSection() {
                 newStatus[result.periodKey] = result.status;
             });
 
-            // Merge dengan optimistic update jika ada
-            setPeriodStatus(prev => {
-                const merged = { ...newStatus, ...prev };
-                console.log('Merged status:', merged);
-                return merged;
-            });
-
+            setPeriodStatus(prev => ({ ...newStatus, ...prev }));
         } catch (err: any) {
             console.error("Error loading data:", err);
             setError(err.message || "Gagal memuat data kuesioner");
@@ -116,28 +109,192 @@ export default function CardSection() {
         loadData();
     }, [loadData, retryCount, selectedYear]);
 
-    const handleRetry = () => {
-        setRetryCount(prev => prev + 1);
-    };
-
-    const isFillFormActive = (periodId: string) => {
+    const getPeriodInfo = (periodId: string, statusNow: boolean): PeriodInfo => {
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth() + 1;
+        const isCurrentYear = selectedYear === currentYear;
+        const isPastYear = selectedYear < currentYear;
+        const isFutureYear = selectedYear > currentYear;
 
-        if (selectedYear < currentYear) {
-            return false;
+        // Tahun mendatang - belum tersedia
+        if (isFutureYear) {
+            return {
+                status: 'upcoming', // Ubah dari 'future' menjadi 'upcoming'
+                message: 'Periode akan datang',
+                canFill: false,
+                canView: false,
+                isCurrent: false
+            };
         }
 
-        if (selectedYear === currentYear) {
-            if (periodId === 'jan-jun') {
-                return currentMonth >= 1 && currentMonth <= 6;
-            } else if (periodId === 'jul-des') {
-                return currentMonth >= 7 && currentMonth <= 12;
+        // Tahun lalu - hanya bisa lihat jika sudah diisi
+        if (isPastYear) {
+            return {
+                status: statusNow ? 'completed' : 'past',
+                message: statusNow ? 'Sudah diisi (masa lalu)' : 'Tidak ada data',
+                canFill: false,
+                canView: statusNow,
+                isCurrent: false
+            };
+        }
+
+        // Tahun berjalan
+        const isJanJun = periodId === 'jan-jun';
+        const isJulDes = periodId === 'jul-des';
+
+        // Periode Jan-Jun
+        if (isJanJun) {
+            if (currentMonth <= 6) {
+                // Masih dalam periode Jan-Jun
+                if (statusNow) {
+                    return {
+                        status: 'completed',
+                        message: 'Sudah diisi',
+                        canFill: false,
+                        canView: true,
+                        isCurrent: true
+                    };
+                } else {
+                    return {
+                        status: 'available',
+                        message: 'Saat ini dapat diisi',
+                        canFill: true,
+                        canView: false,
+                        isCurrent: true
+                    };
+                }
+            } else {
+                // Periode Jan-Jun sudah lewat
+                if (statusNow) {
+                    return {
+                        status: 'completed',
+                        message: 'Sudah diisi',
+                        canFill: false,
+                        canView: true,
+                        isCurrent: false
+                    };
+                } else {
+                    return {
+                        status: 'overdue',
+                        message: 'Terlambat mengisi',
+                        canFill: false,
+                        canView: false,
+                        isCurrent: false
+                    };
+                }
             }
         }
 
-        return false;
+        // Periode Jul-Des
+        if (isJulDes) {
+            if (currentMonth >= 7 && currentMonth <= 12) {
+                // Masih dalam periode Jul-Des
+                if (statusNow) {
+                    return {
+                        status: 'completed',
+                        message: 'Sudah diisi',
+                        canFill: false,
+                        canView: true,
+                        isCurrent: true
+                    };
+                } else {
+                    return {
+                        status: 'available',
+                        message: 'Saat ini dapat diisi',
+                        canFill: true,
+                        canView: false,
+                        isCurrent: true
+                    };
+                }
+            } else if (currentMonth < 7) {
+                // Periode Jul-Des belum dimulai
+                return {
+                    status: 'upcoming',
+                    message: 'Belum saatnya mengisi',
+                    canFill: false,
+                    canView: false,
+                    isCurrent: false
+                };
+            } else {
+                // Periode Jul-Des sudah lewat
+                if (statusNow) {
+                    return {
+                        status: 'completed',
+                        message: 'Sudah diisi',
+                        canFill: false,
+                        canView: true,
+                        isCurrent: false
+                    };
+                } else {
+                    return {
+                        status: 'overdue',
+                        message: 'Terlambat mengisi',
+                        canFill: false,
+                        canView: false,
+                        isCurrent: false
+                    };
+                }
+            }
+        }
+
+        return {
+            status: 'past',
+            message: 'Tidak tersedia',
+            canFill: false,
+            canView: false,
+            isCurrent: false
+        };
+    };
+
+    const getStatusConfig = (status: string) => {
+        const configs = {
+            completed: {
+                icon: CheckCircle,
+                color: 'text-green-600',
+                bgColor: 'bg-green-50',
+                borderColor: 'border-green-200',
+                badgeColor: 'bg-green-100 text-green-800',
+                badgeText: 'Selesai'
+            },
+            available: {
+                icon: Edit,
+                color: 'text-blue-600',
+                bgColor: 'bg-blue-50',
+                borderColor: 'border-blue-200',
+                badgeColor: 'bg-blue-100 text-blue-800',
+                badgeText: 'Dapat Diisi'
+            },
+            upcoming: {
+                icon: Calendar, // Ganti icon menjadi Calendar
+                color: 'text-purple-600', // Warna ungu
+                bgColor: 'bg-purple-50', // Background ungu muda
+                borderColor: 'border-purple-200', // Border ungu
+                badgeColor: 'bg-purple-100 text-purple-800', // Badge ungu
+                badgeText: 'Akan Datang' // Teks badge
+            },
+            overdue: {
+                icon: XCircle,
+                color: 'text-red-600',
+                bgColor: 'bg-red-50',
+                borderColor: 'border-red-200',
+                badgeColor: 'bg-red-100 text-red-800',
+                badgeText: 'Terlambat'
+            },
+            past: {
+                icon: Clock,
+                color: 'text-gray-500',
+                bgColor: 'bg-gray-50',
+                borderColor: 'border-gray-200',
+                badgeColor: 'bg-gray-100 text-gray-600',
+                badgeText: 'Masa Lalu'
+            }
+        };
+        return configs[status as keyof typeof configs] || configs.past;
+    };
+
+    const handleRetry = () => {
+        setRetryCount(prev => prev + 1);
     };
 
     const handleViewForm = (periodId: string) => {
@@ -150,16 +307,10 @@ export default function CardSection() {
 
     const getPeriodDateRange = (periodId: string) => {
         if (periodId === 'jan-jun') {
-            return `1 Januari ${selectedYear} - 30 Juni ${selectedYear}`;
+            return `1 Januari - 30 Juni ${selectedYear}`;
         } else {
-            return `1 Juli ${selectedYear} - 31 Desember ${selectedYear}`;
+            return `1 Juli - 31 Desember ${selectedYear}`;
         }
-    };
-
-    const getCurrentPeriod = () => {
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        return currentMonth <= 6 ? 'jan-jun' : 'jul-des';
     };
 
     if (loading) {
@@ -168,7 +319,7 @@ export default function CardSection() {
                 <div className="flex justify-center items-center h-64">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-                        <p className="mt-4 text-gray-600">Memproses data...</p>
+                        <p className="mt-4 text-gray-600 font-[Judson]">Memproses data kuesioner...</p>
                     </div>
                 </div>
             </div>
@@ -181,16 +332,16 @@ export default function CardSection() {
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
                     <div className="flex">
                         <div className="flex-shrink-0">
-                            <span className="text-red-400 text-xl">⚠️</span>
+                            <AlertCircle className="text-red-400" size={20} />
                         </div>
                         <div className="ml-3">
-                            <p className="text-sm text-red-700">
+                            <p className="text-sm text-red-700 font-[Judson]">
                                 {error}
                             </p>
                             <div className="mt-2">
                                 <button
                                     onClick={handleRetry}
-                                    className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm font-medium"
+                                    className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm font-medium font-[Judson]"
                                 >
                                     Coba Lagi
                                 </button>
@@ -204,102 +355,152 @@ export default function CardSection() {
 
     return (
         <div className="w-full px-4 py-6">
-            {/* Year Selection Dropdown */}
-            <div className="mb-6">
-                <label htmlFor="year-select" className="block text-sm font-[Judson] font-medium text-gray-700 mb-2">
-                    Pilih Tahun:
-                </label>
-                <select
-                    id="year-select"
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="block w-48 px-3 py-2 border border-gray-300 font-[Judson] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                    {availableYears.map(year => (
-                        <option key={year} value={year}>
-                            {year}
-                        </option>
-                    ))}
-                </select>
+            {/* Year Selection Only */}
+            <div className="mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex-1">
+                        <p className="text-gray-600 font-[Judson]">
+                            Pilih tahun untuk melihat dan mengisi kuesioner
+                        </p>
+                    </div>
+
+                    {/* Year Selection */}
+                    <div className="flex items-center gap-3">
+                        <label htmlFor="year-select" className="text-sm font-[Judson] font-medium text-gray-700 whitespace-nowrap">
+                            Tahun:
+                        </label>
+                        <select
+                            id="year-select"
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(Number(e.target.value))}
+                            className="px-4 py-2 border border-gray-300 font-[Judson] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white min-w-[140px]"
+                        >
+                            {availableYears.map(year => (
+                                <option key={year} value={year}>
+                                    {year} {year === new Date().getFullYear() ? '(Tahun Ini)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <div className="space-y-4">
+            {/* Period Cards Grid */}
+            <div className="grid gap-6 md:grid-cols-2">
                 {periods.map((period) => {
-                    const canFillForm = isFillFormActive(period.id);
                     const periodKey = `${period.id}-${selectedYear}`;
                     const statusNow = periodStatus[periodKey] || false;
-                    const currentPeriod = getCurrentPeriod();
-                    const isCurrentPeriod = period.id === currentPeriod && selectedYear === new Date().getFullYear();
-
-                    console.log(`Rendering ${periodKey}:`, statusNow);
+                    const periodInfo = getPeriodInfo(period.id, statusNow);
+                    const config = getStatusConfig(periodInfo.status);
+                    const IconComponent = config.icon;
 
                     return (
                         <div
                             key={period.id}
-                            className={`bg-white w-full shadow-lg rounded-xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border ${isCurrentPeriod ? 'border-green-500 border-2' : 'border-gray-200'
-                                }`}
+                            className={`rounded-xl p-6 border-2 ${config.borderColor} ${config.bgColor} transition-all duration-300 hover:shadow-lg`}
                         >
-                            <div className="flex-1">
-                                <h3 className="text-2xl font-[Judson] font-bold text-gray-800">
-                                    {period.name} {selectedYear}
-                                    {isCurrentPeriod && (
-                                        <span className="ml-2 px-2 py-1 text-xs font-[Judson] bg-green-100 text-green-800 rounded-full">
-                                            Periode Saat Ini
-                                        </span>
-                                    )}
-                                </h3>
-                                <div className="mt-2 flex flex-wrap items-center gap-4">
-                                    {statusNow ? (
-                                        <span className="px-3 py-1 rounded-full text-sm font-[Judson] font-semibold bg-green-100 text-green-800">
-                                            Sudah Diisi
-                                        </span>
-                                    ) : (
-                                        <span className="px-3 py-1 rounded-full text-sm font-[Judson] font-semibold bg-yellow-100 text-yellow-800">
-                                            Belum Diisi
-                                        </span>
-                                    )}
-                                    <p className="text-gray-600 font-[Judson]">
-                                        <span className="font-medium">Tanggal:</span>{" "}
-                                        {getPeriodDateRange(period.id)}
-                                    </p>
-                                    {!canFillForm && !statusNow && (
-                                        <span className="px-2 py-1 text-xs bg-gray-100 font-[Judson] text-gray-600 rounded">
-                                            Belum waktunya mengisi
-                                        </span>
-                                    )}
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <IconComponent className={`${config.color} flex-shrink-0`} size={24} />
+                                    <div>
+                                        <h3 className="text-lg font-[Judson] font-bold text-gray-800">
+                                            {period.name}
+                                        </h3>
+                                        <p className="text-sm text-gray-600 font-[Judson]">
+                                            {getPeriodDateRange(period.id)}
+                                        </p>
+                                    </div>
                                 </div>
+                                <span className={`px-3 py-1 rounded-full text-xs font-[Judson] font-semibold ${config.badgeColor}`}>
+                                    {config.badgeText}
+                                </span>
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                {/* Tombol Lihat Form - selalu aktif jika sudah diisi */}
-                                {statusNow && (
+                            {/* Status Message */}
+                            <div className="mb-6">
+                                <p className={`text-sm font-[Judson] ${config.color} font-medium`}>
+                                    {periodInfo.message}
+                                </p>
+                                {periodInfo.isCurrent && (
+                                    <p className="text-xs text-green-600 font-[Judson] mt-1">
+                                        ⚡ Periode berjalan
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3">
+                                {periodInfo.canFill && (
                                     <button
-                                        onClick={() => handleViewForm(period.id)}
-                                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-[Judson] font-semibold shadow-md transition-colors duration-300 bg-blue-600 hover:bg-blue-700"
+                                        onClick={() => handleFillForm(period.id)}
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white font-[Judson] font-semibold rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md"
                                     >
-                                        <Image src="/view.svg" alt="view" width={20} height={20} />
-                                        <span>Lihat Form</span>
+                                        <Edit size={18} />
+                                        Isi Kuesioner
                                     </button>
                                 )}
 
-                                {/* Tombol Isi Form - hanya aktif jika dalam periode yang sesuai */}
-                                {!statusNow && (
+                                {periodInfo.canView && (
                                     <button
-                                        onClick={() => handleFillForm(period.id)}
-                                        disabled={!canFillForm}
-                                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-[Judson] font-semibold shadow-md transition-colors duration-300 ${canFillForm
-                                            ? "bg-[#60c67a] hover:bg-[#4fae65]"
-                                            : "bg-gray-400 cursor-not-allowed"
-                                            }`}
+                                        onClick={() => handleViewForm(period.id)}
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white font-[Judson] font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md"
                                     >
-                                        <Image src="/edit.svg" alt="edit" width={20} height={20} />
-                                        <span>Isi Form</span>
+                                        <Eye size={18} />
+                                        Lihat Hasil
                                     </button>
+                                )}
+
+                                {!periodInfo.canFill && !periodInfo.canView && (
+                                    <div className="flex-1 text-center py-3 text-gray-500 font-[Judson] text-sm">
+                                        Tidak tersedia aksi
+                                    </div>
                                 )}
                             </div>
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Legend Section */}
+            <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200">
+                <h4 className="font-[Judson] font-semibold text-gray-800 mb-4 text-lg">Keterangan Status:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-[Judson] text-gray-700">Selesai - Sudah diisi</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm font-[Judson] text-gray-700">Dapat Diisi - Saat ini aktif</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <span className="text-sm font-[Judson] text-gray-700">Akan Datang - Belum waktunya</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <span className="text-sm font-[Judson] text-gray-700">Terlambat - Melewati batas waktu</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                        <span className="text-sm font-[Judson] text-gray-700">Masa Lalu - Periode sebelumnya</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Information Section */}
+            <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="text-green-600" size={18} />
+                    <h5 className="font-[Judson] font-semibold text-gray-800">Informasi Penting:</h5>
+                </div>
+                <ul className="text-sm text-gray-600 font-[Judson] space-y-1">
+                    <li>• Hanya periode yang sedang berjalan yang dapat diisi</li>
+                    <li>• Data periode sebelumnya dapat dilihat jika sudah diisi</li>
+                    <li>• Periode yang terlewat tidak dapat diisi kembali</li>
+                    <li>• Pastikan mengisi kuesioner sebelum periode berakhir</li>
+                </ul>
             </div>
         </div>
     );
