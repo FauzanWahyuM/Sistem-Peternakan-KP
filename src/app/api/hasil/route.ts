@@ -49,12 +49,11 @@ export async function GET(req: NextRequest) {
         // Jika parameter all=true dan user adalah admin, ambil semua data
         if (all === 'true') {
             // Cek apakah user adalah admin
-            const isAdmin = currentUser.role === 'admin'; // Sesuaikan dengan field role Anda
+            const isAdmin = currentUser.role === 'admin';
             if (isAdmin) {
                 console.log('👨‍💼 Admin mode: mengambil semua data');
                 isAdminMode = true;
                 // TIDAK ADA filter userId - ambil semua data
-                // Biarkan query kosong untuk mengambil semua data
             } else {
                 console.log('⚠️ User bukan admin, hanya mengambil data sendiri');
                 query.userId = currentUser._id.toString();
@@ -65,11 +64,11 @@ export async function GET(req: NextRequest) {
         }
 
         // Filter tambahan (opsional)
-        const bulan = searchParams.get("bulan");
+        const periode = searchParams.get("periode");
         const tahun = searchParams.get("tahun");
         const questionnaireId = searchParams.get("questionnaireId");
 
-        if (bulan) query.bulan = Number(bulan);
+        if (periode) query.periode = periode;
         if (tahun) query.tahun = Number(tahun);
         if (questionnaireId) query.questionnaireId = questionnaireId;
 
@@ -77,7 +76,7 @@ export async function GET(req: NextRequest) {
 
         // Ambil data dari database
         const responses = await QuestionnaireResponse.find(query)
-            .sort({ tahun: -1, bulan: -1, createdAt: -1 })
+            .sort({ tahun: -1, createdAt: -1 })
             .lean();
 
         console.log(`📊 Ditemukan ${responses.length} response kuesioner`);
@@ -139,7 +138,8 @@ export async function GET(req: NextRequest) {
                     id: index + 1,
                     nama: userName,
                     username: userUsername,
-                    bulan: item.bulan,
+                    periode: item.periode,
+                    namaPeriode: getNamaPeriode(item), // Tambahkan nama periode yang user-friendly
                     tahun: item.tahun,
                     nilaiEvaluasi: nilaiEvaluasi,
                     questionnaireId: item.questionnaireId,
@@ -159,14 +159,15 @@ export async function GET(req: NextRequest) {
             const formattedData = responses.map((item: any, index: number) => {
                 const nilaiEvaluasi = calculateEvaluationScore(item.answers);
 
-                console.log(`📝 Response ${index + 1}: Bulan ${item.bulan}, Tahun ${item.tahun}, Nilai: ${nilaiEvaluasi}`);
+                console.log(`📝 Response ${index + 1}: Periode ${item.periode}, Tahun ${item.tahun}, Nilai: ${nilaiEvaluasi}`);
 
                 return {
                     _id: item._id?.toString(),
                     id: index + 1,
                     nama: currentUser.nama || currentUser.username || 'User',
                     username: currentUser.username || '',
-                    bulan: item.bulan,
+                    periode: item.periode,
+                    namaPeriode: getNamaPeriode(item), // Tambahkan nama periode yang user-friendly
                     tahun: item.tahun,
                     nilaiEvaluasi: nilaiEvaluasi,
                     questionnaireId: item.questionnaireId,
@@ -187,6 +188,28 @@ export async function GET(req: NextRequest) {
             { status: 500 }
         );
     }
+}
+
+// Fungsi untuk mendapatkan nama periode yang user-friendly
+function getNamaPeriode(item: any): string {
+    if (item.namaPeriode) {
+        return item.namaPeriode;
+    }
+
+    // Fallback berdasarkan field periode
+    if (item.periode === 'jan-jun') return 'Januari-Juni';
+    if (item.periode === 'jul-des') return 'Juli-Desember';
+
+    // Fallback untuk data lama yang masih menggunakan bulan
+    if (item.bulan) {
+        const bulanNames = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
+        return bulanNames[item.bulan - 1] || `Bulan ${item.bulan}`;
+    }
+
+    return 'Periode Tidak Diketahui';
 }
 
 // Fungsi untuk menghitung nilai evaluasi dari answers (skala 1-100)

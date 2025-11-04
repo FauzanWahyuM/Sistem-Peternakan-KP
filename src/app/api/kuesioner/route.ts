@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "../../../lib/dbConnect";
-import Kuesioner from "../../../models/Kuesioner"; // 👈 Import model yang benar
+import Kuesioner from "../../../models/Kuesioner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/authOptions";
 import mongoose from "mongoose";
@@ -8,6 +8,11 @@ import mongoose from "mongoose";
 const periodMonths = {
     'jan-jun': [1, 2, 3, 4, 5, 6],
     'jul-des': [7, 8, 9, 10, 11, 12]
+};
+
+const periodNames = {
+    'jan-jun': 'Januari-Juni',
+    'jul-des': 'Juli-Desember'
 };
 
 export async function POST(req: NextRequest) {
@@ -36,9 +41,11 @@ export async function POST(req: NextRequest) {
         }
 
         const months = periodMonths[period as keyof typeof periodMonths];
+        const periodName = periodNames[period as keyof typeof periodNames];
 
         // Untuk kompatibilitas, gunakan bulan pertama dari periode sebagai nilai bulan
         const firstMonthOfPeriod = months[0];
+        const lastMonthOfPeriod = months[months.length - 1];
 
         // Convert userId string to ObjectId
         const userId = new mongoose.Types.ObjectId(session.user.id);
@@ -65,9 +72,13 @@ export async function POST(req: NextRequest) {
 
         const response = new Kuesioner({
             questionnaireId,
-            userId: userId, // 👈 Gunakan ObjectId
-            periode: period, // Field baru untuk sistem periode
-            bulan: firstMonthOfPeriod, // Simpan sebagai number sesuai model
+            userId: userId,
+            periode: period,
+            namaPeriode: periodName, // 👈 Simpan nama periode (Januari-Juni / Juli-Desember)
+            bulan: firstMonthOfPeriod, // Tetap simpan bulan pertama untuk kompatibilitas
+            bulanAwal: firstMonthOfPeriod, // 👈 Simpan bulan awal
+            bulanAkhir: lastMonthOfPeriod, // 👈 Simpan bulan akhir  
+            bulanRange: months, // 👈 Simpan semua bulan dalam periode
             tahun: Number(year),
             answers: Object.entries(formData).map(([questionId, answer]) => ({
                 questionId,
@@ -95,7 +106,6 @@ export async function GET(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
 
-        // DEBUG: Log session information
         console.log("Session user ID:", session?.user?.id);
         console.log("Session user role:", (session?.user as any)?.role);
         console.log("Session user email:", session?.user?.email);

@@ -10,6 +10,8 @@ interface ChartDataItem {
     name: string;
     nilai: number;
     fullName: string;
+    periode: string;
+    tahun: number;
 }
 
 interface TernakData {
@@ -69,6 +71,20 @@ export default function CardSection() {
         };
     }, []);
 
+    // Fungsi untuk mendapatkan nama periode yang singkat untuk chart
+    const getShortPeriodName = (periode: string, tahun: number) => {
+        if (periode === 'jan-jun') return `Jan-Jun\n${tahun}`;
+        if (periode === 'jul-des') return `Jul-Des\n${tahun}`;
+        return periode;
+    };
+
+    // Fungsi untuk mendapatkan nama periode lengkap untuk tooltip
+    const getFullPeriodName = (periode: string, tahun: number) => {
+        if (periode === 'jan-jun') return `Periode Januari-Juni ${tahun}`;
+        if (periode === 'jul-des') return `Periode Juli-Desember ${tahun}`;
+        return `Periode ${periode} ${tahun}`;
+    };
+
     const loadDashboardData = async () => {
         try {
             setDashboardData(prev => ({ ...prev, loading: true, error: null }));
@@ -76,8 +92,7 @@ export default function CardSection() {
             // Data ternak (gunakan endpoint khusus dashboard)
             const ternakRes = await fetch("/api/ternak/dashboard", { credentials: 'include' });
             if (!ternakRes.ok) throw new Error('Gagal mengambil data dashboard ternak');
-            const filteredTernakData: TernakData[] = await ternakRes.json(); // tidak perlu filter manual
-
+            const filteredTernakData: TernakData[] = await ternakRes.json();
 
             // Hitung ternak pribadi dan kelompok
             let jumlahTernakPribadi = 0;
@@ -85,9 +100,9 @@ export default function CardSection() {
 
             filteredTernakData.forEach((ternak) => {
                 if (ternak.tipe === 'pribadi') {
-                    jumlahTernakPribadi += 1; // Setiap dokumen = 1 ekor ternak
+                    jumlahTernakPribadi += 1;
                 } else if (ternak.tipe === 'kelompok') {
-                    jumlahTernakKelompok += 1; // Setiap dokumen = 1 ekor ternak
+                    jumlahTernakKelompok += 1;
                 }
             });
 
@@ -110,7 +125,7 @@ export default function CardSection() {
                 console.warn("Error pada API kuesioner count:", kuesionerError);
             }
 
-            // Data evaluasi
+            // Data evaluasi - ambil data per periode
             let evaluasiValue = 0;
             let chartData: ChartDataItem[] = [];
 
@@ -124,12 +139,31 @@ export default function CardSection() {
                         const latest = hasilData[0];
                         evaluasiValue = latest.nilaiEvaluasi || 0;
 
-                        // Siapkan data chart
-                        chartData = hasilData.map((item: any) => ({
-                            name: item.bulanSingkat || `Bln ${item.bulan}`,
-                            nilai: item.nilaiEvaluasi || 0,
-                            fullName: `Bulan ${item.bulan}`
-                        }));
+                        // Siapkan data chart per periode
+                        chartData = hasilData.map((item: any) => {
+                            const periode = item.periode || 'unknown';
+                            const tahun = item.tahun || new Date().getFullYear();
+
+                            return {
+                                name: getShortPeriodName(periode, tahun),
+                                nilai: item.nilaiEvaluasi || 0,
+                                fullName: getFullPeriodName(periode, tahun),
+                                periode: periode,
+                                tahun: tahun
+                            };
+                        });
+
+                        // Urutkan data chart berdasarkan tahun dan periode (terbaru dulu)
+                        chartData.sort((a, b) => {
+                            if (a.tahun !== b.tahun) {
+                                return b.tahun - a.tahun; // Tahun descending
+                            }
+                            // Jika tahun sama, urutkan berdasarkan periode (jul-des dulu, lalu jan-jun)
+                            return b.periode.localeCompare(a.periode);
+                        });
+
+                        // Balik urutan untuk chart (data terlama di kiri, terbaru di kanan)
+                        chartData.reverse();
                     }
                 } else {
                     console.warn("Gagal mengambil data evaluasi");
@@ -138,16 +172,17 @@ export default function CardSection() {
                 console.warn("Error pada API evaluasi:", evaluasiError);
             }
 
-            // Status kuesioner bulan ini
+            // Status kuesioner periode ini
             let isFilled = false;
             try {
-                const bulanNama = new Date().toLocaleString("id-ID", { month: "long" });
-                const capitalized = bulanNama.charAt(0).toUpperCase() + bulanNama.slice(1);
-                const tahun = new Date().getFullYear();
-                const bulanIndex = new Date().getMonth() + 1;
+                const now = new Date();
+                const currentYear = now.getFullYear();
+                const currentMonth = now.getMonth() + 1;
+                const currentPeriod = currentMonth <= 6 ? 'jan-jun' : 'jul-des';
+                const questionnaireId = currentPeriod === 'jan-jun' ? 'Januari' : 'Juli';
 
                 const checkRes = await fetch(
-                    `/api/kuesioner?questionnaireId=${capitalized}&month=${bulanIndex}&year=${tahun}`,
+                    `/api/kuesioner?questionnaireId=${questionnaireId}&period=${currentPeriod}&year=${currentYear}`,
                     { credentials: 'include' }
                 );
 
@@ -155,7 +190,7 @@ export default function CardSection() {
                     const checkData = await checkRes.json();
                     isFilled = checkData.status === true;
                 } else {
-                    console.warn("Gagal memeriksa status kuesioner bulan ini");
+                    console.warn("Gagal memeriksa status kuesioner periode ini");
                 }
             } catch (statusError) {
                 console.warn("Error memeriksa status kuesioner:", statusError);
@@ -273,7 +308,7 @@ export default function CardSection() {
                 </div>
             )}
 
-            {/* Card Statistik - Perbaikan tata letak untuk mobile */}
+            {/* Card Statistik */}
             <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8 w-full">
                 {cards.map((card, index) => (
                     <div
@@ -288,10 +323,10 @@ export default function CardSection() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 md:mb-8 w-full">
-                {/* Grafik Evaluasi Bulanan */}
+                {/* Grafik Evaluasi Per Periode */}
                 <div className="bg-white rounded-lg sm:rounded-xl shadow-sm sm:shadow p-3 sm:p-4 md:p-6 w-full">
                     <h2 className="text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 text-gray-700">
-                        Performa Evaluasi Bulanan
+                        Performa Evaluasi Per Periode
                     </h2>
                     <div className="h-48 xs:h-56 sm:h-64 md:h-80 w-full">
                         {chartData.length > 0 ? (
@@ -301,6 +336,10 @@ export default function CardSection() {
                                     <XAxis
                                         dataKey="name"
                                         tick={{ fontSize: isMobile ? 8 : 10 }}
+                                        interval={0}
+                                        angle={isMobile ? -45 : 0}
+                                        textAnchor={isMobile ? "end" : "middle"}
+                                        height={isMobile ? 60 : 40}
                                     />
                                     <YAxis
                                         domain={[0, 100]}
@@ -309,7 +348,12 @@ export default function CardSection() {
                                     />
                                     <Tooltip
                                         formatter={(value) => [`${value}%`, 'Nilai Evaluasi']}
-                                        labelFormatter={(label) => `Bulan: ${label}`}
+                                        labelFormatter={(label, payload) => {
+                                            if (payload && payload[0]) {
+                                                return payload[0].payload.fullName;
+                                            }
+                                            return label;
+                                        }}
                                     />
                                     <Line
                                         type="monotone"
@@ -336,14 +380,14 @@ export default function CardSection() {
                 {/* Status Kuesioner */}
                 <div className="bg-white rounded-lg sm:rounded-xl shadow-sm sm:shadow p-3 sm:p-4 md:p-6 w-full">
                     <h2 className="text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 text-gray-700">
-                        Status Kuesioner Bulan Ini
+                        Status Kuesioner Periode Ini
                     </h2>
                     <div className="flex flex-col items-center justify-center h-40 xs:h-48 sm:h-56 md:h-64">
                         <div className={`rounded-full h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 flex items-center justify-center ${isFilled ? 'bg-green-100' : 'bg-yellow-100'}`}>
                             <span className="text-2xl sm:text-3xl md:text-4xl">{isFilled ? '✅' : '⏰'}</span>
                         </div>
                         <p className="mt-3 sm:mt-4 md:mt-6 text-sm sm:text-base md:text-lg font-semibold text-center px-2">
-                            {isFilled ? 'Sudah mengisi kuesioner bulan ini' : 'Belum mengisi kuesioner bulan ini'}
+                            {isFilled ? 'Sudah mengisi kuesioner periode ini' : 'Belum mengisi kuesioner periode ini'}
                         </p>
                         <p className="text-gray-500 mt-1 sm:mt-2 text-center text-xs sm:text-sm px-2">
                             {isFilled

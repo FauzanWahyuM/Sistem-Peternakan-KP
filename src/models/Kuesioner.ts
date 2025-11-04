@@ -4,8 +4,12 @@ import mongoose, { Document, Schema, Model, Types } from "mongoose";
 export interface IKuesioner extends Document {
     questionnaireId: string;
     userId: Types.ObjectId;
-    periode?: string; // 👈 Tambahkan field periode (opsional untuk kompatibilitas)
+    periode?: string;
+    namaPeriode?: string; // 👈 Tambahkan field namaPeriode
     bulan: number;
+    bulanAwal?: number; // 👈 Tambahkan field bulanAwal
+    bulanAkhir?: number; // 👈 Tambahkan field bulanAkhir
+    bulanRange?: number[]; // 👈 Tambahkan field bulanRange
     tahun: number;
     answers: {
         questionId: string;
@@ -24,9 +28,16 @@ const KuesionerSchema: Schema<IKuesioner> = new Schema(
         },
         periode: {
             type: String,
-            enum: ['jan-jun', 'jul-des'] // 👈 Tambahkan field periode
+            enum: ['jan-jun', 'jul-des']
+        },
+        namaPeriode: { // 👈 Tambahkan field namaPeriode
+            type: String,
+            enum: ['Januari-Juni', 'Juli-Desember']
         },
         bulan: { type: Number, required: true },
+        bulanAwal: { type: Number }, // 👈 Tambahkan field bulanAwal
+        bulanAkhir: { type: Number }, // 👈 Tambahkan field bulanAkhir
+        bulanRange: [{ type: Number }], // 👈 Tambahkan field bulanRange
         tahun: { type: Number, required: true },
         answers: [
             {
@@ -39,7 +50,6 @@ const KuesionerSchema: Schema<IKuesioner> = new Schema(
     { collection: "kuesioner" }
 );
 
-// ✅ pakai model name "Kuesioner", jangan campur dengan QuestionnaireResponse
 const Kuesioner: Model<IKuesioner> =
     mongoose.models.Kuesioner as Model<IKuesioner> ||
     mongoose.model<IKuesioner>("Kuesioner", KuesionerSchema, "kuesioner");

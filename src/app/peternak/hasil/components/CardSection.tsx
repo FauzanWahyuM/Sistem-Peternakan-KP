@@ -1,3 +1,4 @@
+// app/peternak/hasil-evaluasi/page.tsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -9,17 +10,19 @@ function HasilEvaluasiContent() {
     const [filteredData, setFilteredData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
-        bulan: '',
+        periode: '',
         tahun: '',
         search: ''
     });
+    const [availableYears, setAvailableYears] = useState<number[]>([]);
 
-    const bulanOptions = [
-        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    const periodeOptions = [
+        { value: '', label: 'Semua Periode' },
+        { value: 'jan-jun', label: 'Periode Januari-Juni' },
+        { value: 'jul-des', label: 'Periode Juli-Desember' }
     ];
 
-    // Ambil data dari API - TANPA parameter all=true, biarkan API handle berdasarkan session
+    // Ambil data dari API
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -40,6 +43,11 @@ function HasilEvaluasiContent() {
                 console.log('Data evaluasi user:', result);
                 setDataEvaluasi(result);
                 setFilteredData(result);
+
+                // Generate available years dari data
+                const years = extractAvailableYears(result);
+                setAvailableYears(years);
+
             } catch (err) {
                 console.error('Error loading data:', err);
             } finally {
@@ -50,14 +58,41 @@ function HasilEvaluasiContent() {
         loadData();
     }, [router]);
 
+    // Fungsi untuk extract tahun dari data
+    const extractAvailableYears = (data: any[]) => {
+        if (!data || data.length === 0) {
+            // Jika tidak ada data, tampilkan tahun berjalan dan beberapa tahun ke depan
+            const currentYear = new Date().getFullYear();
+            return [currentYear - 1, currentYear, currentYear + 1];
+        }
+
+        // Ambil semua tahun unik dari data
+        const uniqueYears = [...new Set(data.map(item => item.tahun))] as number[];
+
+        // Urutkan descending (tahun terbaru dulu)
+        uniqueYears.sort((a, b) => b - a);
+
+        // Tambahkan tahun berjalan jika belum ada
+        const currentYear = new Date().getFullYear();
+        if (!uniqueYears.includes(currentYear)) {
+            uniqueYears.unshift(currentYear);
+        }
+
+        // Tambahkan tahun depan untuk antisipasi
+        const nextYear = currentYear + 1;
+        if (!uniqueYears.includes(nextYear)) {
+            uniqueYears.unshift(nextYear);
+        }
+
+        return uniqueYears;
+    };
+
     // Terapkan filter
     useEffect(() => {
         let filtered = [...dataEvaluasi];
 
-        if (filters.bulan) {
-            filtered = filtered.filter(item =>
-                item.bulan === (bulanOptions.indexOf(filters.bulan) + 1)
-            );
+        if (filters.periode) {
+            filtered = filtered.filter(item => item.periode === filters.periode);
         }
 
         if (filters.tahun) {
@@ -68,7 +103,8 @@ function HasilEvaluasiContent() {
             const searchLower = filters.search.toLowerCase();
             filtered = filtered.filter(item =>
                 item.nama.toLowerCase().includes(searchLower) ||
-                String(item.nilaiEvaluasi).includes(searchLower)
+                String(item.nilaiEvaluasi).includes(searchLower) ||
+                (item.namaPeriode && item.namaPeriode.toLowerCase().includes(searchLower))
             );
         }
 
@@ -80,7 +116,18 @@ function HasilEvaluasiContent() {
     };
 
     const clearFilters = () => {
-        setFilters({ bulan: '', tahun: '', search: '' });
+        setFilters({ periode: '', tahun: '', search: '' });
+    };
+
+    // Fungsi untuk menampilkan nama periode yang lebih user-friendly
+    const getNamaPeriode = (item: any) => {
+        if (item.namaPeriode) {
+            return item.namaPeriode;
+        }
+        // Fallback untuk data lama
+        if (item.periode === 'jan-jun') return 'Januari-Juni';
+        if (item.periode === 'jul-des') return 'Juli-Desember';
+        return `Periode ${item.bulan}`;
     };
 
     if (loading) {
@@ -100,20 +147,21 @@ function HasilEvaluasiContent() {
             <div className="flex justify-center">
                 <div className="bg-white rounded-lg shadow p-6 mb-6 max-w-6xl w-full mx-auto">
                     <div className="flex gap-4 mb-4">
-                        {/* Bulan */}
+                        {/* Periode */}
                         <div className="flex-1">
                             <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
-                                Bulan
+                                Periode
                             </label>
                             <div className="relative">
                                 <select
-                                    value={filters.bulan}
-                                    onChange={(e) => setFilters({ ...filters, bulan: e.target.value })}
+                                    value={filters.periode}
+                                    onChange={(e) => setFilters({ ...filters, periode: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
                                 >
-                                    <option value="">Semua Bulan</option>
-                                    {bulanOptions.map((b) => (
-                                        <option key={b} value={b}>{b}</option>
+                                    {periodeOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
                                     ))}
                                 </select>
                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -124,7 +172,7 @@ function HasilEvaluasiContent() {
                             </div>
                         </div>
 
-                        {/* Tahun */}
+                        {/* Tahun - OTOMATIS */}
                         <div className="flex-1">
                             <label className="block text-sm font-medium font-[Judson] text-gray-700 mb-2">
                                 Tahun
@@ -136,8 +184,10 @@ function HasilEvaluasiContent() {
                                     className="w-full p-3 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
                                 >
                                     <option value="">Semua Tahun</option>
-                                    {[2020, 2021, 2022, 2023, 2024, 2025].map((tahun) => (
-                                        <option key={tahun} value={tahun}>{tahun}</option>
+                                    {availableYears.map((tahun) => (
+                                        <option key={tahun} value={tahun}>
+                                            {tahun}
+                                        </option>
                                     ))}
                                 </select>
                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -155,7 +205,7 @@ function HasilEvaluasiContent() {
                             </label>
                             <input
                                 type="text"
-                                placeholder="Cari nama atau nilai..."
+                                placeholder="Cari nama, nilai, atau periode..."
                                 value={filters.search}
                                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                                 className="w-full p-3 border border-gray-300 rounded-lg font-[Judson] focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -181,7 +231,7 @@ function HasilEvaluasiContent() {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">No</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Bulan</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Periode</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Tahun</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Nilai Evaluasi</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase font-[Judson]">Status</th>
@@ -193,21 +243,21 @@ function HasilEvaluasiContent() {
                                 <tr key={item._id ?? idx} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 font-[Judson] whitespace-nowrap">{idx + 1}</td>
                                     <td className="px-6 py-4 font-[Judson] whitespace-nowrap">
-                                        {bulanOptions[item.bulan - 1] || `Bulan ${item.bulan}`}
+                                        {getNamaPeriode(item)}
                                     </td>
                                     <td className="px-6 py-4 font-[Judson]">{item.tahun}</td>
                                     <td className="px-6 py-4 font-[Judson] font-semibold">
                                         <span className={`px-3 py-1 rounded-full text-sm ${item.nilaiEvaluasi >= 80 ? 'bg-green-100 text-green-800' :
-                                                item.nilaiEvaluasi >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-red-100 text-red-800'
+                                            item.nilaiEvaluasi >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-red-100 text-red-800'
                                             }`}>
                                             {item.nilaiEvaluasi}%
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 font-[Judson]">
                                         <span className={`px-2 py-1 rounded text-xs ${item.nilaiEvaluasi >= 80 ? 'bg-green-50 text-green-700' :
-                                                item.nilaiEvaluasi >= 60 ? 'bg-yellow-50 text-yellow-700' :
-                                                    'bg-red-50 text-red-700'
+                                            item.nilaiEvaluasi >= 60 ? 'bg-yellow-50 text-yellow-700' :
+                                                'bg-red-50 text-red-700'
                                             }`}>
                                             {item.nilaiEvaluasi >= 80 ? 'Sangat Baik' :
                                                 item.nilaiEvaluasi >= 60 ? 'Baik' : 'Perlu Perbaikan'}
