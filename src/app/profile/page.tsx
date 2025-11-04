@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Camera, Save, Edit2, User, Shield, X, MapPin, Calendar, Cake } from 'lucide-react';
+import { ArrowLeft, Camera, Save, Edit2, User, Shield, X, MapPin, Calendar, Cake, Phone, Home, Navigation } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '../hooks/useAuth';
 
@@ -20,6 +20,9 @@ interface UserData {
     tempatLahir?: string;
     tanggalLahir?: string;
     umur?: number;
+    phoneNumber?: string; // Tambahan
+    village?: string; // Tambahan
+    district?: string; // Tambahan
 }
 
 interface KelompokData {
@@ -40,6 +43,9 @@ const ProfilePage: React.FC = () => {
         kelompok: '',
         tempatLahir: '',
         tanggalLahir: '',
+        phoneNumber: '', // Tambahan
+        village: '', // Tambahan
+        district: '', // Tambahan
     });
     const [profileImage, setProfileImage] = useState('/Vector.svg');
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -89,6 +95,9 @@ const ProfilePage: React.FC = () => {
             kelompok: '',
             tempatLahir: '',
             tanggalLahir: '',
+            phoneNumber: '', // Tambahan
+            village: '', // Tambahan
+            district: '', // Tambahan
         });
         setProfileImage('/Vector.svg');
     }, []);
@@ -184,7 +193,6 @@ const ProfilePage: React.FC = () => {
                 console.warn('⚠️ User ID belum tersedia dari useAuth, tetap lanjut ambil data dari API');
             }
 
-
             // 1. Coba ambil dari localStorage dulu
             const savedUserData = localStorage.getItem('userData');
             if (savedUserData) {
@@ -199,6 +207,9 @@ const ProfilePage: React.FC = () => {
                             kelompok: cachedUserData.kelompok || '',
                             tempatLahir: cachedUserData.tempatLahir || '',
                             tanggalLahir: cachedUserData.tanggalLahir || '',
+                            phoneNumber: cachedUserData.phoneNumber || '', // Tambahan
+                            village: cachedUserData.village || '', // Tambahan
+                            district: cachedUserData.district || '', // Tambahan
                         });
                         if (cachedUserData.profileImage) {
                             setProfileImage(getProfileImageUrl(cachedUserData.profileImage));
@@ -235,6 +246,9 @@ const ProfilePage: React.FC = () => {
                         kelompok: data.user.kelompok || '',
                         tempatLahir: data.user.tempatLahir || '',
                         tanggalLahir: data.user.tanggalLahir || '',
+                        phoneNumber: data.user.phoneNumber || '', // Tambahan
+                        village: data.user.village || '', // Tambahan
+                        district: data.user.district || '', // Tambahan
                     });
                     if (data.user.profileImage) {
                         setProfileImage(getProfileImageUrl(data.user.profileImage));
@@ -634,66 +648,83 @@ const ProfilePage: React.FC = () => {
                                         )}
                                     </div>
 
-                                    {isPeternak && (
-                                        <div>
-                                            <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
-                                                <MapPin size={14} />
-                                                Tempat Lahir
-                                            </label>
-                                            {isEditing ? (
-                                                <input
-                                                    type="text"
-                                                    value={editData.tempatLahir}
-                                                    onChange={(e) => setEditData({ ...editData, tempatLahir: e.target.value })}
-                                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                                />
-                                            ) : (
-                                                <p className="text-gray-800">{userData?.tempatLahir || 'Tidak tersedia'}</p>
-                                            )}
-                                        </div>
-                                    )}
+                                    {/* Phone Number Field */}
+                                    <div>
+                                        <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                            <Phone size={14} />
+                                            Nomor HP
+                                        </label>
+                                        {isEditing ? (
+                                            <input
+                                                type="tel"
+                                                value={editData.phoneNumber}
+                                                onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                placeholder="Contoh: 081234567890"
+                                            />
+                                        ) : (
+                                            <p className="text-gray-800">{userData?.phoneNumber || 'Tidak tersedia'}</p>
+                                        )}
+                                    </div>
 
                                     {isPeternak && (
-                                        <div>
-                                            <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
-                                                <Calendar size={14} />
-                                                Tanggal Lahir
-                                            </label>
-                                            {isEditing ? (
-                                                <input
-                                                    type="date"
-                                                    value={editData.tanggalLahir}
-                                                    onChange={(e) => setEditData({ ...editData, tanggalLahir: e.target.value })}
-                                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                                />
-                                            ) : (
+                                        <>
+                                            <div>
+                                                <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                                    <MapPin size={14} />
+                                                    Tempat Lahir
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editData.tempatLahir}
+                                                        onChange={(e) => setEditData({ ...editData, tempatLahir: e.target.value })}
+                                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                    />
+                                                ) : (
+                                                    <p className="text-gray-800">{userData?.tempatLahir || 'Tidak tersedia'}</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                                    <Calendar size={14} />
+                                                    Tanggal Lahir
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="date"
+                                                        value={editData.tanggalLahir}
+                                                        onChange={(e) => setEditData({ ...editData, tanggalLahir: e.target.value })}
+                                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                    />
+                                                ) : (
+                                                    <p className="text-gray-800">
+                                                        {userData?.tanggalLahir
+                                                            ? new Date(userData.tanggalLahir).toLocaleDateString('id-ID', {
+                                                                year: 'numeric',
+                                                                month: 'long',
+                                                                day: 'numeric'
+                                                            })
+                                                            : 'Tidak tersedia'
+                                                        }
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                                    <Cake size={14} />
+                                                    Umur
+                                                </label>
                                                 <p className="text-gray-800">
                                                     {userData?.tanggalLahir
-                                                        ? new Date(userData.tanggalLahir).toLocaleDateString('id-ID', {
-                                                            year: 'numeric',
-                                                            month: 'long',
-                                                            day: 'numeric'
-                                                        })
+                                                        ? `${calculateAge(userData.tanggalLahir)} tahun`
                                                         : 'Tidak tersedia'
                                                     }
                                                 </p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {isPeternak && (
-                                        <div>
-                                            <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
-                                                <Cake size={14} />
-                                                Umur
-                                            </label>
-                                            <p className="text-gray-800">
-                                                {userData?.tanggalLahir
-                                                    ? `${calculateAge(userData.tanggalLahir)} tahun`
-                                                    : 'Tidak tersedia'
-                                                }
-                                            </p>
-                                        </div>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -702,7 +733,7 @@ const ProfilePage: React.FC = () => {
                             <div className="bg-gray-50 p-6 rounded-lg">
                                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                                     <Shield size={20} />
-                                    Informasi Akun
+                                    Informasi Akun & Lokasi
                                 </h3>
 
                                 <div className="space-y-4">
@@ -717,7 +748,7 @@ const ProfilePage: React.FC = () => {
                                             >
                                                 <option value="">Pilih Kelompok</option>
                                                 {kelompokList.map((kelompok) => (
-                                                    <option key={kelompok._id} value={kelompok._id}> {/* Gunakan _id sebagai value */}
+                                                    <option key={kelompok._id} value={kelompok._id}>
                                                         {kelompok.nama}
                                                     </option>
                                                 ))}
@@ -726,6 +757,44 @@ const ProfilePage: React.FC = () => {
                                             <p className="text-gray-800">
                                                 {kelompokList.find(k => k._id === userData?.kelompok)?.nama || userData?.kelompok || 'Tidak tersedia'}
                                             </p>
+                                        )}
+                                    </div>
+
+                                    {/* Village Field */}
+                                    <div>
+                                        <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                            <Home size={14} />
+                                            Desa
+                                        </label>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                value={editData.village}
+                                                onChange={(e) => setEditData({ ...editData, village: e.target.value })}
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                placeholder="Masukkan nama desa"
+                                            />
+                                        ) : (
+                                            <p className="text-gray-800">{userData?.village || 'Tidak tersedia'}</p>
+                                        )}
+                                    </div>
+
+                                    {/* District Field */}
+                                    <div>
+                                        <label className="flex items-center gap-1 text-sm font-medium text-gray-600 mb-1">
+                                            <Navigation size={14} />
+                                            Kecamatan
+                                        </label>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                value={editData.district}
+                                                onChange={(e) => setEditData({ ...editData, district: e.target.value })}
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                placeholder="Masukkan nama kecamatan"
+                                            />
+                                        ) : (
+                                            <p className="text-gray-800">{userData?.district || 'Tidak tersedia'}</p>
                                         )}
                                     </div>
 

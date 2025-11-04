@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Edit, Eye } from 'lucide-react';
 
 const periods = [
@@ -24,7 +24,6 @@ interface PeriodInfo {
 
 export default function CardSection() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
@@ -53,6 +52,7 @@ export default function CardSection() {
             setError(null);
 
             // Check if we're returning from a form submission
+            // Gunakan URLSearchParams dari window, bukan dari next/navigation
             const urlParams = new URLSearchParams(window.location.search);
             const submittedPeriod = urlParams.get('submitted');
             const submittedYear = urlParams.get('year');
@@ -109,7 +109,7 @@ export default function CardSection() {
         loadData();
     }, [loadData, retryCount, selectedYear]);
 
-    const getPeriodInfo = (periodId: string, statusNow: boolean): PeriodInfo => {
+    const getPeriodInfo = useCallback((periodId: string, statusNow: boolean): PeriodInfo => {
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth() + 1;
@@ -120,7 +120,7 @@ export default function CardSection() {
         // Tahun mendatang - belum tersedia
         if (isFutureYear) {
             return {
-                status: 'upcoming', // Ubah dari 'future' menjadi 'upcoming'
+                status: 'upcoming',
                 message: 'Periode akan datang',
                 canFill: false,
                 canView: false,
@@ -245,9 +245,9 @@ export default function CardSection() {
             canView: false,
             isCurrent: false
         };
-    };
+    }, [selectedYear]);
 
-    const getStatusConfig = (status: string) => {
+    const getStatusConfig = useCallback((status: string) => {
         const configs = {
             completed: {
                 icon: CheckCircle,
@@ -266,12 +266,12 @@ export default function CardSection() {
                 badgeText: 'Dapat Diisi'
             },
             upcoming: {
-                icon: Calendar, // Ganti icon menjadi Calendar
-                color: 'text-purple-600', // Warna ungu
-                bgColor: 'bg-purple-50', // Background ungu muda
-                borderColor: 'border-purple-200', // Border ungu
-                badgeColor: 'bg-purple-100 text-purple-800', // Badge ungu
-                badgeText: 'Akan Datang' // Teks badge
+                icon: Calendar,
+                color: 'text-purple-600',
+                bgColor: 'bg-purple-50',
+                borderColor: 'border-purple-200',
+                badgeColor: 'bg-purple-100 text-purple-800',
+                badgeText: 'Akan Datang'
             },
             overdue: {
                 icon: XCircle,
@@ -291,7 +291,7 @@ export default function CardSection() {
             }
         };
         return configs[status as keyof typeof configs] || configs.past;
-    };
+    }, []);
 
     const handleRetry = () => {
         setRetryCount(prev => prev + 1);
@@ -305,13 +305,13 @@ export default function CardSection() {
         router.push(`/peternak/kuesioner/isiform?period=${periodId}&year=${selectedYear}`);
     };
 
-    const getPeriodDateRange = (periodId: string) => {
+    const getPeriodDateRange = useCallback((periodId: string) => {
         if (periodId === 'jan-jun') {
             return `1 Januari - 30 Juni ${selectedYear}`;
         } else {
             return `1 Juli - 31 Desember ${selectedYear}`;
         }
-    };
+    }, [selectedYear]);
 
     if (loading) {
         return (

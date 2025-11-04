@@ -1,5 +1,7 @@
+// app/peternak/kuesioner/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import Sidebar from './components/UnifiedSidebar';
 import Header from './components/Header';
 import CardSection from './components/CardSection';
@@ -38,7 +40,17 @@ export default function DashboardPage() {
             {/* Konten utama bergeser ke kanan */}
             <main className={`w-full p-6 bg-gray-100 min-h-screen transition-all duration-300 ${isSidebarCollapsed && !isMobile ? 'ml-20' : 'ml-64'}`}>
                 <Header />
-                <CardSection />
+                {/* Tambahkan Suspense boundary di sini */}
+                <Suspense fallback={
+                    <div className="flex justify-center items-center h-64">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                            <p className="mt-4 text-gray-600">Memuat data kuesioner...</p>
+                        </div>
+                    </div>
+                }>
+                    <CardSection />
+                </Suspense>
             </main>
         </div>
     );

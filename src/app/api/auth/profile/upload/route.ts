@@ -67,11 +67,15 @@ export async function POST(request: NextRequest) {
         user.profileImage = fileId;
         await user.save();
 
-        const updatedUser = {
+        // Siapkan data user yang akan dikembalikan DENGAN FIELD BARU
+        const updatedUser: any = {
             _id: user._id.toString(),
             nama: user.nama,
             username: user.username,
             email: user.email,
+            phoneNumber: user.phoneNumber || '', // TAMBAHKAN
+            village: user.village || '', // TAMBAHKAN
+            district: user.district || '', // TAMBAHKAN
             kelompok: user.kelompok,
             role: user.role,
             status: user.status,
@@ -79,6 +83,13 @@ export async function POST(request: NextRequest) {
             updatedAt: user.updatedAt,
             profileImage: user.profileImage
         };
+
+        // Tambahkan field khusus untuk peternak dalam response
+        if (user.role?.toLowerCase() === 'peternak') {
+            updatedUser.tempatLahir = user.tempatLahir || 'Tidak tersedia';
+            updatedUser.tanggalLahir = user.tanggalLahir || 'Tidak tersedia';
+            updatedUser.umur = user.umur || 0;
+        }
 
         return NextResponse.json({
             user: updatedUser,

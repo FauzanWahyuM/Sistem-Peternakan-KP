@@ -15,7 +15,16 @@ export async function PUT(request: NextRequest) {
         await connectDB();
 
         const body = await request.json();
-        const { nama, email, kelompok, tempatLahir, tanggalLahir } = body;
+        const {
+            nama,
+            email,
+            kelompok,
+            tempatLahir,
+            tanggalLahir,
+            phoneNumber, // Tambahkan
+            village, // Tambahkan
+            district // Tambahkan
+        } = body;
 
         // Cari user by email dari session
         const user = await User.findOne({ email: session.user.email });
@@ -27,6 +36,11 @@ export async function PUT(request: NextRequest) {
         if (nama) user.nama = nama;
         if (email) user.email = email;
         if (kelompok) user.kelompok = kelompok;
+
+        // Update fields baru (untuk semua role)
+        if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+        if (village !== undefined) user.village = village;
+        if (district !== undefined) user.district = district;
 
         // Update fields khusus untuk peternak
         if (user.role?.toLowerCase() === 'peternak') {
@@ -58,6 +72,9 @@ export async function PUT(request: NextRequest) {
             nama: user.nama,
             username: user.username,
             email: user.email,
+            phoneNumber: user.phoneNumber || '', // Tambahkan
+            village: user.village || '', // Tambahkan
+            district: user.district || '', // Tambahkan
             kelompok: user.kelompok,
             role: user.role,
             status: user.status,

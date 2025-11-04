@@ -69,20 +69,24 @@ export async function POST(req: Request) {
             userData.umur = umur;
         }
 
+        // DEBUG: Log data sebelum disimpan
+        console.log("💾 Data to be saved:", userData);
+
         // simpan user baru
         const newUser = await User.create(userData);
 
         console.log("✅ New user created:", newUser._id.toString());
+        console.log("📋 Saved user data:", newUser);
 
-        // Siapkan response data
+        // Siapkan response data - PASTIKAN FIELD BARU DIMASUKKAN
         const responseData: any = {
             id: newUser._id,
             nama: newUser.nama,
             username: newUser.username,
             email: newUser.email,
-            phoneNumber: newUser.phoneNumber, // Tambahan
-            village: newUser.village, // Tambahan
-            district: newUser.district, // Tambahan
+            phoneNumber: newUser.phoneNumber || '', // PASTIKAN ADA
+            village: newUser.village || '', // PASTIKAN ADA
+            district: newUser.district || '', // PASTIKAN ADA
             kelompok: newUser.kelompok,
             role: newUser.role,
             status: newUser.status,
@@ -94,6 +98,9 @@ export async function POST(req: Request) {
             responseData.tanggalLahir = newUser.tanggalLahir;
             responseData.umur = newUser.umur;
         }
+
+        // DEBUG: Log response data
+        console.log("📤 Response data:", responseData);
 
         return NextResponse.json(
             {

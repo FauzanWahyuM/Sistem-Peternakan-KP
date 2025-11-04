@@ -90,6 +90,9 @@ export async function GET() {
             nama: userObject.nama || 'Tidak tersedia',
             username: userObject.username || 'Tidak tersedia',
             email: userObject.email || 'Tidak tersedia',
+            phoneNumber: userObject.phoneNumber || 'Tidak tersedia', // Tambahkan
+            village: userObject.village || 'Tidak tersedia', // Tambahkan
+            district: userObject.district || 'Tidak tersedia', // Tambahkan
             kelompok: userObject.kelompok || 'Tidak tersedia',
             role: userObject.role || 'Tidak tersedia',
             status: userObject.status || 'Tidak tersedia',
