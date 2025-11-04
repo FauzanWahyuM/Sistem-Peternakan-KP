@@ -24,21 +24,36 @@ export default function HasilEvaluasiPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [kelompokFilter, setKelompokFilter] = useState('');
+    const [periodeFilter, setPeriodeFilter] = useState('');
+    const [tahunFilter, setTahunFilter] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('/api/hasil-evaluasi');
+
+                // Build query parameters
+                const params = new URLSearchParams();
+                if (periodeFilter) params.append('periode', periodeFilter);
+                if (tahunFilter) params.append('tahun', tahunFilter);
+
+                const queryString = params.toString();
+                const url = queryString ? `/api/hasil-evaluasi?${queryString}` : '/api/hasil-evaluasi';
+
+                console.log('Fetching data from:', url);
+
+                const response = await fetch(url);
 
                 if (!response.ok) {
                     throw new Error('Gagal mengambil data evaluasi');
                 }
 
                 const data = await response.json();
+                console.log('Data received:', data);
                 setEvaluasiData(data);
                 setFilteredData(data);
             } catch (err) {
+                console.error('Error fetching data:', err);
                 setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
             } finally {
                 setLoading(false);
@@ -46,9 +61,9 @@ export default function HasilEvaluasiPage() {
         };
 
         fetchData();
-    }, []);
+    }, [periodeFilter, tahunFilter]);
 
-    // Apply filter
+    // Apply kelompok filter
     useEffect(() => {
         if (kelompokFilter) {
             const filtered = evaluasiData.filter(item =>
@@ -63,12 +78,22 @@ export default function HasilEvaluasiPage() {
     // Get unique filter options from data
     const kelompokOptions = [...new Set(evaluasiData.map(item => item.kelompok))].sort();
 
-    const handleFilterChange = (value: string) => {
+    const handleKelompokFilterChange = (value: string) => {
         setKelompokFilter(value);
+    };
+
+    const handlePeriodeFilterChange = (value: string) => {
+        setPeriodeFilter(value);
+    };
+
+    const handleTahunFilterChange = (value: string) => {
+        setTahunFilter(value);
     };
 
     const clearFilter = () => {
         setKelompokFilter('');
+        setPeriodeFilter('');
+        setTahunFilter('');
     };
 
     const handleKelompokClick = (kelompokId: string) => {
@@ -192,19 +217,66 @@ export default function HasilEvaluasiPage() {
 
                 {/* Filters Section */}
                 <div className="flex justify-center">
-                    <div className="bg-white rounded-lg shadow p-6 mb-6 max-w-2xl w-full">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Filter Kelompok</h3>
+                    <div className="bg-white rounded-lg shadow p-6 mb-6 max-w-4xl w-full">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Filter Data</h3>
 
-                        <div className="flex flex-col md:flex-row gap-4 mb-4 justify-center items-center">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            {/* Periode Filter */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Periode
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={periodeFilter}
+                                        onChange={(e) => handlePeriodeFilterChange(e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    >
+                                        <option value="">Semua Periode</option>
+                                        <option value="jan-jun">Periode Januari-Juni</option>
+                                        <option value="jul-des">Periode Juli-Desember</option>
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tahun Filter */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Tahun
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={tahunFilter}
+                                        onChange={(e) => handleTahunFilterChange(e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    >
+                                        <option value="">Semua Tahun</option>
+                                        {[2023, 2024, 2025].map((tahun) => (
+                                            <option key={tahun} value={tahun}>{tahun}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Kelompok Filter */}
-                            <div className="w-full md:w-2/3">
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Kelompok
                                 </label>
                                 <div className="relative">
                                     <select
                                         value={kelompokFilter}
-                                        onChange={(e) => handleFilterChange(e.target.value)}
+                                        onChange={(e) => handleKelompokFilterChange(e.target.value)}
                                         className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
                                     >
                                         <option value="">Semua Kelompok</option>

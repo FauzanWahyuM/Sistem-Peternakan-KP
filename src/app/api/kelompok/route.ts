@@ -26,6 +26,10 @@ const safeCountDocuments = async (model: any, filter: FilterQuery<any>) => {
     return model.countDocuments(filter).exec();
 };
 
+const safeUpdateMany = async (model: any, filter: FilterQuery<any>, update: any, options?: QueryOptions) => {
+    return model.updateMany(filter, update, options).exec();
+};
+
 export async function GET() {
     try {
         await dbConnect();
@@ -189,20 +193,48 @@ export async function DELETE(request: Request) {
             );
         }
 
-        const filter: FilterQuery<typeof Kelompok> = { kelompokid: id };
+        console.log('🗑️ Attempting to delete kelompok:', id);
 
-        const deletedKelompok = await safeFindOneAndDelete(Kelompok, filter);
-
-        if (!deletedKelompok) {
+        // Cek apakah kelompok exists
+        const kelompok = await safeFindOne(Kelompok, { kelompokid: id });
+        if (!kelompok) {
             return NextResponse.json(
                 { error: 'Kelompok tidak ditemukan' },
                 { status: 404 }
             );
         }
 
+        // Update semua user yang tergabung dalam kelompok ini - hapus field kelompok
+        const updateResult = await safeUpdateMany(
+            User,
+            { kelompok: id },
+            {
+                $unset: { kelompok: "" },
+                $set: { updatedAt: new Date() }
+            }
+        );
+
+        console.log(`✅ Updated ${updateResult.modifiedCount} users from kelompok ${id}`);
+
+        // Hapus kelompok
+        const deletedKelompok = await safeFindOneAndDelete(Kelompok, { kelompokid: id });
+
+        if (!deletedKelompok) {
+            return NextResponse.json(
+                { error: 'Gagal menghapus kelompok' },
+                { status: 500 }
+            );
+        }
+
+        console.log(`✅ Successfully deleted kelompok ${id}`);
+
         return NextResponse.json({
             message: 'Kelompok berhasil dihapus',
-            data: deletedKelompok
+            data: {
+                id: deletedKelompok.kelompokid,
+                nama: deletedKelompok.nama,
+                usersUpdated: updateResult.modifiedCount
+            }
         });
 
     } catch (error) {

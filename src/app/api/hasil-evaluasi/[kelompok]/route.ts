@@ -23,14 +23,14 @@ export async function GET(
         const kelompokId = resolvedParams.kelompok;
 
         const { searchParams } = new URL(req.url);
-        const bulan = searchParams.get("bulan");
+        const periode = searchParams.get("periode");
         const tahun = searchParams.get("tahun");
-        const questionnaireId = searchParams.get("questionnaireId");
 
-        // Default bulan & tahun
+        // Default tahun
         const currentDate = new Date();
-        const finalBulan = bulan ? Number(bulan) : currentDate.getMonth() + 1;
         const finalTahun = tahun ? Number(tahun) : currentDate.getFullYear();
+
+        console.log('🔍 Fetching detail evaluation data for:', { kelompokId, periode, tahun: finalTahun });
 
         let namaKelompok = "Belum Dikelompokkan";
         let statusKelompok = "aktif";
@@ -66,59 +66,33 @@ export async function GET(
             statusKelompok = "aktif";
         }
 
-        // Kalau questionnaireId kosong → langsung return anggota dengan status "Belum Mengisi"
-        if (!questionnaireId) {
-            const anggotaTanpaEvaluasi = anggotaKelompok.map((user: any, index: number) => ({
-                _id: user._id.toString(),
-                id: index + 1,
-                nama: user.nama || user.username || `User ${user._id}`,
-                bulan: null,
-                tahun: null,
-                bulanSingkat: "-",
-                nilaiEvaluasi: 0,
-                questionnaireId: null,
-                userId: user._id.toString(),
-                hasResponse: false,
-                status: "Belum Mengisi",
-                userData: {
-                    username: user.username,
-                    nama: user.nama,
-                    role: user.role,
-                    kelompok: user.kelompok,
-                },
-            }));
+        console.log(`📊 Found ${anggotaKelompok.length} anggota in kelompok ${kelompokId}`);
 
-            return NextResponse.json({
-                kelompok: kelompokId,
-                namaKelompok,
-                statusKelompok,
-                anggota: anggotaTanpaEvaluasi,
-                totalNilai: 0,
-                jumlahAnggota: anggotaKelompok.length,
-                jumlahResponden: 0,
-                rataRata: 0,
-                persentaseResponden: 0,
-                statusEvaluasi: "Belum Ada Responden",
-            }, { status: 200 });
-        }
+        // Build query untuk responses
+        const query: any = {};
+        if (periode) query.periode = periode;
+        if (tahun) query.tahun = finalTahun;
 
-        // Ambil responses hanya jika questionnaireId ada
-        const query: any = {
-            bulan: finalBulan,
-            tahun: finalTahun,
-            questionnaireId: questionnaireId,
-        };
+        console.log('📋 Query for responses:', query);
 
+        // Ambil responses berdasarkan filter
         const responses = await QuestionnaireResponse.find(query)
             .populate("userId", "nama username kelompok")
-            .sort({ tahun: -1, bulan: -1 })
+            .sort({ tahun: -1, createdAt: -1 })
             .lean();
+
+        console.log(`📝 Found ${responses.length} questionnaire responses`);
 
         const responseMap = new Map();
         responses.forEach((response) => {
-            if (response.userId && response.userId._id) {
-                const userIdStr = response.userId._id.toString();
-                responseMap.set(userIdStr, response);
+            if (response.userId && (response.userId as any)._id) {
+                const userIdStr = (response.userId as any)._id.toString();
+                responseMap.set(userIdStr, {
+                    ...response,
+                    userId: response.userId,
+                    periode: response.periode,
+                    tahun: response.tahun
+                });
             }
         });
 
@@ -144,9 +118,8 @@ export async function GET(
                 _id: userResponse?._id || userIdStr,
                 id: index + 1,
                 nama: user.nama || user.username || `User ${userIdStr}`,
-                bulan: userResponse?.bulan || null,
+                periode: userResponse?.periode || null,
                 tahun: userResponse?.tahun || null,
-                bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : "-",
                 nilaiEvaluasi,
                 questionnaireId: userResponse?.questionnaireId || null,
                 userId: userIdStr,
@@ -172,6 +145,7 @@ export async function GET(
         else if (jumlahResponden === jumlahAnggota) statusEvaluasi = "Semua Sudah Mengisi";
         else statusEvaluasi = "Sebagian Sudah Mengisi";
 
+        // Urutkan anggota: yang sudah mengisi di atas, diurutkan berdasarkan nilai
         anggotaDenganEvaluasi.sort((a: any, b: any) => {
             if (a.hasResponse && !b.hasResponse) return -1;
             if (!a.hasResponse && b.hasResponse) return 1;
@@ -181,7 +155,7 @@ export async function GET(
             return a.nama.localeCompare(b.nama);
         });
 
-        return NextResponse.json({
+        const result = {
             kelompok: kelompokId,
             namaKelompok,
             statusKelompok,
@@ -192,10 +166,13 @@ export async function GET(
             rataRata,
             persentaseResponden,
             statusEvaluasi,
-        }, { status: 200 });
+        };
+
+        console.log(`✅ Successfully processed detail data for kelompok ${kelompokId}`);
+        return NextResponse.json(result, { status: 200 });
 
     } catch (err) {
-        console.error("Error getting evaluation results:", err);
+        console.error("❌ Error getting evaluation results:", err);
         return NextResponse.json(
             { error: "Gagal mengambil hasil evaluasi" },
             { status: 500 }
@@ -237,9 +214,4 @@ function convertAnswerToNumber(answer: any): number {
         if (!isNaN(numeric)) return numeric;
     }
     return 0;
-}
-
-function getBulanSingkat(bulanNumber: number): string {
-    const bulanList = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-    return bulanList[bulanNumber - 1] || `${bulanNumber}`;
 }

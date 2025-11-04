@@ -11,24 +11,23 @@ interface AnggotaEvaluasi {
     nilaiEvaluasi: number;
     hasResponse: boolean;
     status: string;
-    bulan: number | null;
+    periode: string | null;
     tahun: number | null;
-    bulanSingkat: string;
     questionnaireId: string | null;
     userId: string;
 }
 
 interface KelompokEvaluasiDetail {
     kelompok: string;
-    namaKelompok: string; // Ditambahkan
-    statusKelompok: string; // Ditambahkan
+    namaKelompok: string;
+    statusKelompok: string;
     anggota: AnggotaEvaluasi[];
     totalNilai: number;
     jumlahAnggota: number;
     jumlahResponden: number;
     rataRata: number;
     persentaseResponden: number;
-    statusEvaluasi: string; // Diubah dari 'status'
+    statusEvaluasi: string;
 }
 
 export default function DetailHasilEvaluasiPage() {
@@ -47,6 +46,7 @@ export default function DetailHasilEvaluasiPage() {
                 setLoading(true);
                 setError(null);
 
+                console.log('Fetching detail data for kelompok:', kelompokId);
                 const response = await fetch(`/api/hasil-evaluasi/${kelompokId}`);
 
                 if (!response.ok) {
@@ -59,8 +59,10 @@ export default function DetailHasilEvaluasiPage() {
                 }
 
                 const data = await response.json();
+                console.log('Detail data received:', data);
                 setKelompokData(data);
             } catch (err) {
+                console.error('Error fetching detail data:', err);
                 setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
             } finally {
                 setLoading(false);
@@ -123,6 +125,14 @@ export default function DetailHasilEvaluasiPage() {
             return cleanName || 'User';
         }
         return nama;
+    };
+
+    // Fungsi untuk mendapatkan nama periode yang user-friendly
+    const getNamaPeriode = (periode: string | null) => {
+        if (!periode) return '-';
+        if (periode === 'jan-jun') return 'Januari-Juni';
+        if (periode === 'jul-des') return 'Juli-Desember';
+        return periode;
     };
 
     // Fungsi untuk menghitung distribusi nilai
@@ -245,6 +255,11 @@ export default function DetailHasilEvaluasiPage() {
                             </span>
                         </div>
                     </div>
+                    {kelompokData.namaKelompok && kelompokData.namaKelompok !== kelompokData.kelompok && (
+                        <p className="text-gray-600 ml-14">
+                            Nama Kelompok: {kelompokData.namaKelompok}
+                        </p>
+                    )}
                 </div>
 
                 {/* Statistik Kelompok */}
@@ -318,7 +333,10 @@ export default function DetailHasilEvaluasiPage() {
                                             )}
                                         </td>
                                         <td className="py-4 px-6 text-sm text-gray-600">
-                                            {anggota.hasResponse ? `${anggota.bulanSingkat} ${anggota.tahun}` : '-'}
+                                            {anggota.hasResponse && anggota.periode && anggota.tahun
+                                                ? `${getNamaPeriode(anggota.periode)} ${anggota.tahun}`
+                                                : '-'
+                                            }
                                         </td>
                                     </tr>
                                 ))}
@@ -467,7 +485,12 @@ export default function DetailHasilEvaluasiPage() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700">Periode</label>
-                                        <p className="mt-1 text-gray-900">{selectedAnggota.bulanSingkat} {selectedAnggota.tahun}</p>
+                                        <p className="mt-1 text-gray-900">
+                                            {selectedAnggota.periode && selectedAnggota.tahun
+                                                ? `${getNamaPeriode(selectedAnggota.periode)} ${selectedAnggota.tahun}`
+                                                : '-'
+                                            }
+                                        </p>
                                     </div>
                                 </div>
                             </div>

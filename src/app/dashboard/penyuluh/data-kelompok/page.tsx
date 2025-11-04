@@ -20,28 +20,31 @@ export default function DataKelompokPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [kelompokFilter, setKelompokFilter] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [kelompokToDelete, setKelompokToDelete] = useState<Kelompok | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     // Fetch data kelompok dari MongoDB Atlas
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch('/api/kelompok');
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/kelompok');
 
-                if (!response.ok) {
-                    throw new Error('Gagal mengambil data kelompok');
-                }
-
-                const data = await response.json();
-                setKelompokData(data);
-                setFilteredData(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-            } finally {
-                setLoading(false);
+            if (!response.ok) {
+                throw new Error('Gagal mengambil data kelompok');
             }
-        };
 
+            const data = await response.json();
+            setKelompokData(data);
+            setFilteredData(data);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchData();
     }, []);
 
@@ -70,6 +73,42 @@ export default function DataKelompokPage() {
 
     const handleKelompokClick = (kelompokId: string) => {
         router.push(`/dashboard/penyuluh/data-kelompok/${kelompokId}`);
+    };
+
+    const handleDeleteClick = (kelompok: Kelompok, e: React.MouseEvent) => {
+        e.stopPropagation(); // Mencegah trigger click pada card
+        setKelompokToDelete(kelompok);
+        setShowDeleteModal(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!kelompokToDelete) return;
+
+        try {
+            setDeleting(true);
+            const response = await fetch(`/api/kelompok/${kelompokToDelete.id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error('Gagal menghapus kelompok');
+            }
+
+            // Refresh data setelah berhasil hapus
+            await fetchData();
+            setShowDeleteModal(false);
+            setKelompokToDelete(null);
+
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menghapus');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleCancelDelete = () => {
+        setShowDeleteModal(false);
+        setKelompokToDelete(null);
     };
 
     const getStatusColor = (status: string) => {
@@ -254,7 +293,10 @@ export default function DataKelompokPage() {
                         </div>
                     ) : (
                         filteredData.map((kelompok) => (
-                            <div key={kelompok.id} className={`${getStatusColor(kelompok.status)} text-white p-6 rounded-lg shadow-lg flex flex-col`}>
+                            <div
+                                key={kelompok.id}
+                                className={`${getStatusColor(kelompok.status)} text-white p-6 rounded-lg shadow-lg flex flex-col`}
+                            >
                                 <div className="flex justify-between items-start mb-4">
                                     <h3 className="text-xl font-bold">{kelompok.nama}</h3>
                                     <span className={getStatusBubbleClass(kelompok.status)}>
@@ -276,19 +318,77 @@ export default function DataKelompokPage() {
                                     )}
                                 </div>
 
-                                {/* Selengkapnya Button - Tetap di bawah */}
-                                <div className="mt-auto">
+                                {/* Action Buttons - Selengkapnya dan Hapus */}
+                                <div className="mt-auto space-y-2">
                                     <button
                                         onClick={() => handleKelompokClick(kelompok.id)}
                                         className={`${getButtonColor(kelompok.status)} px-6 py-2 rounded-full font-medium transition-colors w-full`}
                                     >
                                         Selengkapnya
                                     </button>
+                                    <button
+                                        onClick={(e) => handleDeleteClick(kelompok, e)}
+                                        className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-medium transition-colors w-full flex items-center justify-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Hapus Kelompok
+                                    </button>
                                 </div>
                             </div>
                         ))
                     )}
                 </div>
+
+                {/* Delete Confirmation Modal */}
+                {showDeleteModal && kelompokToDelete && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-lg max-w-md w-full">
+                            <div className="px-6 py-4 border-b">
+                                <h3 className="text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
+                            </div>
+                            <div className="p-6">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-center text-red-500 mb-4">
+                                        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-center text-gray-700">
+                                        Apakah Anda yakin ingin menghapus kelompok <strong>{kelompokToDelete.nama}</strong>?
+                                    </p>
+                                    <p className="text-center text-sm text-gray-500">
+                                        Tindakan ini tidak dapat dibatalkan. Semua data yang terkait dengan kelompok ini akan dihapus.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="px-6 py-4 border-t flex gap-3">
+                                <button
+                                    onClick={handleCancelDelete}
+                                    disabled={deleting}
+                                    className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleConfirmDelete}
+                                    disabled={deleting}
+                                    className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {deleting ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                            Menghapus...
+                                        </>
+                                    ) : (
+                                        'Hapus'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

@@ -16,13 +16,13 @@ export async function GET(req: NextRequest) {
         }
 
         const { searchParams } = new URL(req.url);
-        const bulan = searchParams.get("bulan");
+        const periode = searchParams.get("periode");
         const tahun = searchParams.get("tahun");
-        const questionnaireId = searchParams.get("questionnaireId");
 
         const currentDate = new Date();
-        const finalBulan = bulan ? Number(bulan) : currentDate.getMonth() + 1;
         const finalTahun = tahun ? Number(tahun) : currentDate.getFullYear();
+
+        console.log('🔍 Fetching evaluation data with params:', { periode, tahun: finalTahun });
 
         // 1. Ambil semua kelompok
         const semuaKelompokDocs = await Kelompok.find({})
@@ -35,68 +35,34 @@ export async function GET(req: NextRequest) {
             .select("nama username _id role kelompok");
         const semuaPeternak = semuaPeternakDocs.map(doc => doc.toObject());
 
-        // Kalau questionnaireId kosong → kembalikan kelompok & anggota tapi semua status "Belum Mengisi"
-        if (!questionnaireId) {
-            const kosongEvaluasiData = semuaKelompok.map((kelompok: any) => {
-                const anggotaKelompok = semuaPeternak.filter(
-                    (peternak: any) => peternak.kelompok === kelompok.kelompokid
-                );
+        console.log(`📊 Found ${semuaKelompok.length} kelompok and ${semuaPeternak.length} peternak`);
 
-                const anggotaDenganEvaluasi = anggotaKelompok.map((user: any, index: number) => ({
-                    _id: user._id.toString(),
-                    id: index + 1,
-                    nama: user.nama || user.username || `User ${user._id}`,
-                    bulan: null,
-                    tahun: null,
-                    bulanSingkat: "-",
-                    nilaiEvaluasi: 0,
-                    questionnaireId: null,
-                    userId: user._id.toString(),
-                    hasResponse: false,
-                    status: "Belum Mengisi",
-                    userData: {
-                        username: user.username,
-                        nama: user.nama,
-                        role: user.role,
-                        kelompok: user.kelompok,
-                    },
-                }));
+        // Build query untuk responses
+        const query: any = {};
+        if (periode) query.periode = periode;
+        if (tahun) query.tahun = finalTahun;
 
-                return {
-                    kelompok: kelompok.kelompokid,
-                    namaKelompok: kelompok.nama,
-                    statusKelompok: kelompok.status,
-                    anggota: anggotaDenganEvaluasi,
-                    totalNilai: 0,
-                    jumlahAnggota: anggotaKelompok.length,
-                    jumlahResponden: 0,
-                    rataRata: 0,
-                    persentaseResponden: 0,
-                    statusEvaluasi: "Belum Ada Responden",
-                };
-            });
+        console.log('📋 Query for responses:', query);
 
-            return NextResponse.json(kosongEvaluasiData, { status: 200 });
-        }
-
-        // === kalau questionnaireId ada, baru hitung responses ===
-        const query: any = {
-            bulan: finalBulan,
-            tahun: finalTahun,
-            questionnaireId: questionnaireId,
-        };
-
+        // Ambil responses berdasarkan filter
         const responsesDocs = await QuestionnaireResponse.find(query)
             .populate("userId", "nama username kelompok")
-            .sort({ tahun: -1, bulan: -1 });
+            .sort({ tahun: -1, createdAt: -1 });
         const responses = responsesDocs.map(doc => doc.toObject());
+
+        console.log(`📝 Found ${responses.length} questionnaire responses`);
 
         // Mapping responses by userId
         const responseMap = new Map();
         responses.forEach((response) => {
             if (response.userId && (response.userId as any)._id) {
                 const userIdStr = (response.userId as any)._id.toString();
-                responseMap.set(userIdStr, { ...response, userId: response.userId });
+                responseMap.set(userIdStr, {
+                    ...response,
+                    userId: response.userId,
+                    periode: response.periode,
+                    tahun: response.tahun
+                });
             }
         });
 
@@ -139,9 +105,8 @@ export async function GET(req: NextRequest) {
                     _id: userResponse?._id || userIdStr,
                     id: index + 1,
                     nama: user.nama || user.username || `User ${userIdStr}`,
-                    bulan: userResponse?.bulan || null,
+                    periode: userResponse?.periode || null,
                     tahun: userResponse?.tahun || null,
-                    bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : "-",
                     nilaiEvaluasi,
                     questionnaireId: userResponse?.questionnaireId || null,
                     userId: userIdStr,
@@ -203,9 +168,8 @@ export async function GET(req: NextRequest) {
                         _id: userResponse?._id || userIdStr,
                         id: index + 1,
                         nama: user.nama || user.username || `User ${userIdStr}`,
-                        bulan: userResponse?.bulan || null,
+                        periode: userResponse?.periode || null,
                         tahun: userResponse?.tahun || null,
-                        bulanSingkat: userResponse?.bulan ? getBulanSingkat(userResponse.bulan) : "-",
                         nilaiEvaluasi,
                         questionnaireId: userResponse?.questionnaireId || null,
                         userId: userIdStr,
@@ -228,9 +192,10 @@ export async function GET(req: NextRequest) {
             });
         }
 
+        console.log(`✅ Successfully processed ${evaluasiData.length} kelompok data`);
         return NextResponse.json(evaluasiData, { status: 200 });
     } catch (err) {
-        console.error("Error getting evaluation results:", err);
+        console.error("❌ Error getting evaluation results:", err);
         return NextResponse.json(
             { error: "Gagal mengambil hasil evaluasi" },
             { status: 500 }
@@ -274,9 +239,4 @@ function convertAnswerToNumber(answer: any): number {
         if (!isNaN(numeric)) return numeric;
     }
     return 0;
-}
-
-function getBulanSingkat(bulanNumber: number): string {
-    const bulanList = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-    return bulanList[bulanNumber - 1] || `${bulanNumber}`;
 }
