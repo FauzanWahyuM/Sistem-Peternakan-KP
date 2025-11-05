@@ -23,13 +23,14 @@ function EditTernakContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [umurNumber, setUmurNumber] = useState('');
 
     const kondisiKesehatanOptions = ['Sehat', 'Sakit'];
 
     const getStatusTernakOptions = () => {
         const { jenisHewan, jenisKelamin } = formData;
         if (!jenisHewan || !jenisKelamin) return [];
-        const statusOptions = {
+        const statusOptions: Record<string, Record<string, string[]>> = {
             'Sapi': {
                 'Jantan': ['Pejantan', 'Sapi Potong', 'Sapi Kerja', 'Bibit', 'Penggemukan'],
                 'Betina': ['Indukan', 'Sapi Perah', 'Sapi Potong', 'Bibit', 'Dara']
@@ -52,6 +53,26 @@ function EditTernakContent() {
             }
         };
         return statusOptions[jenisHewan]?.[jenisKelamin] || [];
+    };
+
+    // Fungsi untuk handle perubahan input umur
+    const handleUmurChange = (value: string) => {
+        // Hanya menerima angka
+        const numbers = value.replace(/\D/g, '');
+        setUmurNumber(numbers);
+
+        // Update formData dengan format "angka bulan"
+        if (numbers) {
+            setFormData(prev => ({
+                ...prev,
+                umurTernak: `${numbers} bulan`
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                umurTernak: ''
+            }));
+        }
     };
 
     // Fungsi untuk menambah penyakit
@@ -86,6 +107,14 @@ function EditTernakContent() {
                 if (!response.ok) throw new Error('Failed to fetch data');
                 const result = await response.json();
 
+                // Extract angka dari umurTernak (jika format "angka bulan")
+                const umurValue = result.umurTernak;
+                let extractedNumber = '';
+                if (umurValue && typeof umurValue === 'string') {
+                    // Extract angka dari string (contoh: "2 bulan" -> "2")
+                    extractedNumber = umurValue.replace(/\D/g, '');
+                }
+
                 setFormData({
                     jenisHewan: result.jenisHewan,
                     jenisKelamin: result.jenisKelamin,
@@ -94,6 +123,7 @@ function EditTernakContent() {
                     kondisiKesehatan: result.kondisiKesehatan,
                     penyakit: result.penyakit || []
                 });
+                setUmurNumber(extractedNumber);
                 setError(null);
             } catch (err) {
                 console.error('Error loading data:', err);
@@ -216,19 +246,33 @@ function EditTernakContent() {
                             </div>
                         </div>
 
-                        {/* Umur Ternak - Editable */}
+                        {/* Umur Ternak - Editable (sama seperti halaman tambah) */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Umur Ternak
                             </label>
-                            <input
-                                type="text"
-                                value={formData.umurTernak}
-                                onChange={(e) => handleInputChange('umurTernak', e.target.value)}
-                                placeholder="Masukkan Umur Ternak"
-                                className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                required
-                            />
+                            <div className="flex gap-3">
+                                <div className="flex-1">
+                                    <input
+                                        type="number"
+                                        value={umurNumber}
+                                        onChange={(e) => handleUmurChange(e.target.value)}
+                                        placeholder="Masukkan umur"
+                                        min="0"
+                                        max="1000"
+                                        className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        required
+                                    />
+                                </div>
+                                <div className="w-32">
+                                    <div className="w-full p-4 border border-gray-300 rounded-lg bg-gray-100 font-[Judson] text-gray-700 text-center">
+                                        bulan
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1 font-[Judson]">
+                                * Masukkan angka umur ternak dalam bulan
+                            </p>
                         </div>
 
                         {/* Status Ternak - Editable */}
@@ -244,7 +288,7 @@ function EditTernakContent() {
                                     required
                                 >
                                     <option value="">Masukkan Status Ternak</option>
-                                    {getStatusTernakOptions().map((option) => (
+                                    {getStatusTernakOptions().map((option: string) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
@@ -269,7 +313,7 @@ function EditTernakContent() {
                                     required
                                 >
                                     <option value="">Masukkan Kondisi Kesehatan</option>
-                                    {kondisiKesehatanOptions.map((option) => (
+                                    {kondisiKesehatanOptions.map((option: string) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
@@ -295,7 +339,7 @@ function EditTernakContent() {
                                         onChange={(e) => setNewPenyakit(e.target.value)}
                                         placeholder="Masukkan nama penyakit"
                                         className="flex-1 p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-black focus:outline-none focus:ring-2 focus:ring-green-500"
-                                        onKeyPress={(e) => {
+                                        onKeyDown={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
                                                 addPenyakit();

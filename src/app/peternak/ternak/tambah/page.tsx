@@ -19,7 +19,7 @@ export default function TambahTernakPage() {
         penyakit: [] as string[]
     });
 
-    const [kelompokOptions, setKelompokOptions] = useState([]);
+    const [kelompokOptions, setKelompokOptions] = useState<{ id: string, nama: string }[]>([]);
     const [isSuccessOpen, setIsSuccessOpen] = useState(false);
     const [isErrorOpen, setIsErrorOpen] = useState(false);
     const [message, setMessage] = useState('');
@@ -38,6 +38,7 @@ export default function TambahTernakPage() {
     const tipeOptions = ['pribadi', 'kelompok'];
     // Tambahan state
     const [jumlahTernak, setJumlahTernak] = useState(1);
+    const [umurNumber, setUmurNumber] = useState('');
 
 
     useEffect(() => {
@@ -102,7 +103,7 @@ export default function TambahTernakPage() {
 
         if (!jenisHewan || !jenisKelamin) return [];
 
-        const statusOptions = {
+        const statusOptions: Record<string, Record<string, string[]>> = {
             'Sapi': {
                 'Jantan': ['Pejantan', 'Sapi Potong', 'Sapi Kerja', 'Bibit', 'Penggemukan'],
                 'Betina': ['Indukan', 'Sapi Perah', 'Sapi Potong', 'Bibit', 'Dara']
@@ -126,6 +127,26 @@ export default function TambahTernakPage() {
         };
 
         return statusOptions[jenisHewan]?.[jenisKelamin] || [];
+    };
+
+    // Fungsi untuk handle perubahan input umur
+    const handleUmurChange = (value: string) => {
+        // Hanya menerima angka
+        const numbers = value.replace(/\D/g, '');
+        setUmurNumber(numbers);
+
+        // Update formData dengan format "angka bulan"
+        if (numbers) {
+            setFormData(prev => ({
+                ...prev,
+                umurTernak: `${numbers} bulan`
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                umurTernak: ''
+            }));
+        }
     };
 
     const handleInputChange = (field: string, value: string) => {
@@ -153,6 +174,9 @@ export default function TambahTernakPage() {
                         kelompokNama: previousKelompokData.kelompokNama
                     };
                 }
+            } else if (field === 'umurTernak') {
+                // Skip karena sudah dihandle oleh handleUmurChange
+                return prev;
             } else {
                 newData = {
                     ...prev,
@@ -302,7 +326,7 @@ export default function TambahTernakPage() {
                                 Tipe Ternak
                             </label>
                             <div className="grid grid-cols-2 gap-4">
-                                {tipeOptions.map((option) => (
+                                {tipeOptions.map((option: string) => (
                                     <div
                                         key={option}
                                         className={`p-4 border rounded-lg cursor-pointer text-center font-[Judson] ${formData.tipe === option
@@ -359,7 +383,7 @@ export default function TambahTernakPage() {
                                     required
                                 >
                                     <option value="">Pilih Jenis Hewan</option>
-                                    {jenisHewanOptions.map((option) => (
+                                    {jenisHewanOptions.map((option: string) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
@@ -383,7 +407,7 @@ export default function TambahTernakPage() {
                                     required
                                 >
                                     <option value="">Pilih Jenis Kelamin</option>
-                                    {jenisKelaminOptions.map((option) => (
+                                    {jenisKelaminOptions.map((option: string) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
@@ -395,18 +419,33 @@ export default function TambahTernakPage() {
                             </div>
                         </div>
 
+                        {/* Input Umur Ternak yang lebih user-friendly */}
                         <div>
                             <label className="block text-lg font-medium font-[Judson] text-gray-700 mb-2">
                                 Umur Ternak
                             </label>
-                            <input
-                                type="text"
-                                value={formData.umurTernak}
-                                onChange={(e) => handleInputChange('umurTernak', e.target.value)}
-                                placeholder="Masukkan Umur Ternak"
-                                className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                required
-                            />
+                            <div className="flex gap-3">
+                                <div className="flex-1">
+                                    <input
+                                        type="number"
+                                        value={umurNumber}
+                                        onChange={(e) => handleUmurChange(e.target.value)}
+                                        placeholder="Masukkan umur"
+                                        min="0"
+                                        max="1000"
+                                        className="w-full p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        required
+                                    />
+                                </div>
+                                <div className="w-32">
+                                    <div className="w-full p-4 border border-gray-300 rounded-lg bg-gray-100 font-[Judson] text-gray-700 text-center">
+                                        bulan
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1 font-[Judson]">
+                                * Masukkan angka umur ternak dalam bulan
+                            </p>
                         </div>
 
                         <div>
@@ -422,7 +461,7 @@ export default function TambahTernakPage() {
                                     disabled={!formData.jenisHewan || !formData.jenisKelamin}
                                 >
                                     <option value="">Pilih Status Ternak</option>
-                                    {getStatusTernakOptions().map((option) => (
+                                    {getStatusTernakOptions().map((option: string) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
@@ -446,7 +485,7 @@ export default function TambahTernakPage() {
                                     required
                                 >
                                     <option value="">Pilih Kondisi Kesehatan</option>
-                                    {kondisiKesehatanOptions.map((option) => (
+                                    {kondisiKesehatanOptions.map((option: string) => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
@@ -472,7 +511,7 @@ export default function TambahTernakPage() {
                                         onChange={(e) => setNewPenyakit(e.target.value)}
                                         placeholder="Masukkan nama penyakit"
                                         className="flex-1 p-4 border border-gray-300 rounded-lg bg-white font-[Judson] text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                        onKeyPress={(e) => {
+                                        onKeyDown={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
                                                 addPenyakit();
