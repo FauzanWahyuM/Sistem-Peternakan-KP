@@ -11,18 +11,18 @@ interface UserData {
     nama: string;
     username: string;
     email: string;
+    phoneNumber?: string;
+    village?: string;
+    district?: string;
     kelompok: string;
     role: string;
     status: string;
-    createdAt: string;
-    updatedAt: string;
+    createdAt: string | Date;
+    updatedAt: string | Date;
     profileImage?: string;
     tempatLahir?: string;
-    tanggalLahir?: string;
+    tanggalLahir?: string | Date;
     umur?: number;
-    phoneNumber?: string; // Tambahan
-    village?: string; // Tambahan
-    district?: string; // Tambahan
 }
 
 interface KelompokData {
@@ -33,7 +33,6 @@ interface KelompokData {
 const ProfilePage: React.FC = () => {
     const router = useRouter();
     const { user, token, loading: authLoading, logout } = useAuth();
-    const userId = user?._id; // ambil id user dari objek user
     const [userData, setUserData] = useState<UserData | null>(null);
     const [dataLoading, setDataLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
@@ -43,9 +42,9 @@ const ProfilePage: React.FC = () => {
         kelompok: '',
         tempatLahir: '',
         tanggalLahir: '',
-        phoneNumber: '', // Tambahan
-        village: '', // Tambahan
-        district: '', // Tambahan
+        phoneNumber: '',
+        village: '',
+        district: '',
     });
     const [profileImage, setProfileImage] = useState('/Vector.svg');
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -54,10 +53,11 @@ const ProfilePage: React.FC = () => {
     const [kelompokList, setKelompokList] = useState<KelompokData[]>([]);
     const [kelompokLoading, setKelompokLoading] = useState(false);
 
-    const loading = authLoading || (dataLoading && !userData);
+    const loading = authLoading || dataLoading;
 
     // Fungsi untuk menghitung umur berdasarkan tanggal lahir
     const calculateAge = (birthDate: string): number => {
+        if (!birthDate) return 0;
         const today = new Date();
         const birth = new Date(birthDate);
         let age = today.getFullYear() - birth.getFullYear();
@@ -66,7 +66,6 @@ const ProfilePage: React.FC = () => {
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
             age--;
         }
-
         return age;
     };
 
@@ -95,9 +94,9 @@ const ProfilePage: React.FC = () => {
             kelompok: '',
             tempatLahir: '',
             tanggalLahir: '',
-            phoneNumber: '', // Tambahan
-            village: '', // Tambahan
-            district: '', // Tambahan
+            phoneNumber: '',
+            village: '',
+            district: '',
         });
         setProfileImage('/Vector.svg');
     }, []);
@@ -107,40 +106,14 @@ const ProfilePage: React.FC = () => {
         localStorage.setItem('userData', JSON.stringify(data));
     }, []);
 
-    // Event listener untuk perubahan auth state
-    useEffect(() => {
-        const handleAuthChange = () => {
-            if (!userId) {
-                // User logout, bersihkan cache
-                clearUserCache();
-            }
-        };
-
-        // Listen untuk event custom yang menandakan perubahan auth state
-        window.addEventListener('authStateChanged', handleAuthChange);
-
-        return () => {
-            window.removeEventListener('authStateChanged', handleAuthChange);
-        };
-    }, [userId, clearUserCache]);
-
-    // Fungsi untuk mengambil daftar kelompok dari API - VERSION PRODUCTION
+    // Fungsi untuk mengambil daftar kelompok dari API
     const fetchKelompokList = useCallback(async () => {
-        if (!token) {
-            console.log('Token tidak tersedia, skip fetching kelompok');
-            return;
-        }
-
         try {
             setKelompokLoading(true);
             console.log('🔄 Fetching kelompok data dari:', '/api/kelompok');
 
             const response = await fetch('/api/kelompok', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include' // Penting untuk production
+                credentials: 'include'
             });
 
             console.log('Response status kelompok:', response.status);
@@ -158,73 +131,24 @@ const ProfilePage: React.FC = () => {
                     console.log('Formatted kelompok data:', formattedKelompok);
                 } else {
                     console.error('Data kelompok bukan array:', data);
-                    setModalMessage('Format data kelompok tidak valid');
-                    setShowModal(true);
                 }
             } else {
                 console.error('Gagal mengambil daftar kelompok, status:', response.status);
-                // Coba fallback tanpa auth header untuk debugging
-                try {
-                    const fallbackResponse = await fetch('/api/kelompok');
-                    if (fallbackResponse.ok) {
-                        const fallbackData = await fallbackResponse.json();
-                        console.log('Fallback data kelompok:', fallbackData);
-                    }
-                } catch (fallbackError) {
-                    console.error('Fallback juga gagal:', fallbackError);
-                }
             }
         } catch (error) {
             console.error('Error mengambil daftar kelompok:', error);
-            // Jangan tampilkan modal di production untuk error kecil
         } finally {
             setKelompokLoading(false);
         }
-    }, [token]);
+    }, []);
 
-    // Fetch user data dengan error handling yang lebih baik
-    const fetchUserData = useCallback(async () => {
+    // ✅ PERBAIKI: Fetch user data dengan retry mechanism
+    const fetchUserData = useCallback(async (retryCount = 0) => {
         try {
             setDataLoading(true);
-            console.log('🔄 Fetching user data...');
+            console.log('🔄 Fetching user data from MongoDB...');
 
-            // Cek jika user tidak login, bersihkan cache
-            if (!userId) {
-                console.warn('⚠️ User ID belum tersedia dari useAuth, tetap lanjut ambil data dari API');
-            }
-
-            // 1. Coba ambil dari localStorage dulu
-            const savedUserData = localStorage.getItem('userData');
-            if (savedUserData) {
-                try {
-                    const cachedUserData = JSON.parse(savedUserData);
-                    if (cachedUserData._id === userId) {
-                        console.log('📦 Using cached user data');
-                        setUserData(cachedUserData);
-                        setEditData({
-                            nama: cachedUserData.nama || '',
-                            email: cachedUserData.email || '',
-                            kelompok: cachedUserData.kelompok || '',
-                            tempatLahir: cachedUserData.tempatLahir || '',
-                            tanggalLahir: cachedUserData.tanggalLahir || '',
-                            phoneNumber: cachedUserData.phoneNumber || '', // Tambahan
-                            village: cachedUserData.village || '', // Tambahan
-                            district: cachedUserData.district || '', // Tambahan
-                        });
-                        if (cachedUserData.profileImage) {
-                            setProfileImage(getProfileImageUrl(cachedUserData.profileImage));
-                        }
-                        setDataLoading(false);
-                        return;
-                    }
-                } catch (cacheError) {
-                    console.error('Error parsing cached data:', cacheError);
-                    localStorage.removeItem('userData');
-                }
-            }
-
-            // 2. Jika tidak ada cached data yang valid, ambil dari API
-            console.log('🌐 Fetching from API...');
+            // Coba ambil data dari API
             const response = await fetch('/api/auth/me', {
                 credentials: 'include',
                 headers: {
@@ -232,154 +156,215 @@ const ProfilePage: React.FC = () => {
                 }
             });
 
-            console.log('API auth/me response status:', response.status);
-
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ API response received');
+                console.log('✅ User data from API:', data.user);
 
                 if (data.user) {
-                    setUserData(data.user);
-                    setEditData({
+                    const safeUserData: UserData = {
+                        _id: data.user._id || '',
                         nama: data.user.nama || '',
+                        username: data.user.username || '',
                         email: data.user.email || '',
                         kelompok: data.user.kelompok || '',
+                        role: data.user.role || '',
+                        status: data.user.status || 'Aktif',
+                        createdAt: data.user.createdAt || new Date(),
+                        updatedAt: data.user.updatedAt || new Date(),
+                        phoneNumber: data.user.phoneNumber || '',
+                        village: data.user.village || '',
+                        district: data.user.district || '',
+                        profileImage: data.user.profileImage,
                         tempatLahir: data.user.tempatLahir || '',
                         tanggalLahir: data.user.tanggalLahir || '',
-                        phoneNumber: data.user.phoneNumber || '', // Tambahan
-                        village: data.user.village || '', // Tambahan
-                        district: data.user.district || '', // Tambahan
+                        umur: data.user.umur || 0
+                    };
+
+                    setUserData(safeUserData);
+                    setEditData({
+                        nama: safeUserData.nama,
+                        email: safeUserData.email,
+                        kelompok: safeUserData.kelompok,
+                        tempatLahir: safeUserData.tempatLahir || '',
+                        tanggalLahir: typeof safeUserData.tanggalLahir === 'string'
+                            ? safeUserData.tanggalLahir
+                            : safeUserData.tanggalLahir?.toISOString().split('T')[0] || '',
+                        phoneNumber: safeUserData.phoneNumber || '',
+                        village: safeUserData.village || '',
+                        district: safeUserData.district || '',
                     });
-                    if (data.user.profileImage) {
-                        setProfileImage(getProfileImageUrl(data.user.profileImage));
+
+                    if (safeUserData.profileImage) {
+                        setProfileImage(getProfileImageUrl(safeUserData.profileImage));
                     }
 
-                    if (userId) {
-                        saveUserDataToCache(data.user);
-                    }
-
-                    window.dispatchEvent(new Event('userDataUpdated'));
-
-                    // ✅ Tambahkan ini
-                    setDataLoading(false);
-                    return; // langsung keluar supaya nggak lanjut ke bawah
-                } else {
-                    console.error('❌ No user data in response');
+                    saveUserDataToCache(safeUserData);
+                    return true;
                 }
-            } else {
-                console.error('❌ API failed, status:', response.status);
-                // Untuk production, mungkin perlu redirect ke login
-                if (response.status === 401) {
-                    clearUserCache();
-                    logout();
+            } else if (response.status === 401) {
+                console.log('❌ 401 from /api/auth/me - User not authenticated');
+                if (retryCount < 2) {
+                    console.log(`🔄 Retrying fetch... attempt ${retryCount + 1}`);
+                    // Tunggu sebentar sebelum retry
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return fetchUserData(retryCount + 1);
                 }
+                return false;
             }
 
+            return false;
+
         } catch (error) {
-            console.error('❌ Error mengambil data user:', error);
+            console.error('❌ Error fetching user data:', error);
+            if (retryCount < 2) {
+                console.log(`🔄 Retrying fetch due to error... attempt ${retryCount + 1}`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return fetchUserData(retryCount + 1);
+            }
+            return false;
         } finally {
             setDataLoading(false);
         }
-    }, [userId, clearUserCache, saveUserDataToCache, logout]);
+    }, [saveUserDataToCache]);
 
+    // ✅ PERBAIKI: Main data fetching effect - JANGAN langsung redirect
     useEffect(() => {
-        console.log("Auth state:", { authLoading, userId, token });
-        if (!authLoading && userId && token) {
-            console.log("🔎 userId:", userId, "token:", token);
-            fetchUserData();
-            fetchKelompokList();
-        }
-    }, [authLoading, userId, token, fetchUserData, fetchKelompokList]);
+        const initializeData = async () => {
+            if (!authLoading) {
+                console.log('🔍 Initializing profile data...');
 
-    useEffect(() => {
-        if (userData && dataLoading) {
-            console.log("✅ User data sudah ada, hentikan loading");
-            setDataLoading(false);
-        }
-    }, [userData, dataLoading]);
+                // Coba fetch data dulu
+                const success = await fetchUserData();
 
-    // Timeout untuk mencegah infinite loading
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            if (loading) {
-                console.log('Loading timeout triggered');
-                setDataLoading(false);
-                setModalMessage('Terjadi masalah saat memuat data. Silakan refresh halaman.');
-                setShowModal(true);
+                if (!success) {
+                    // Jika gagal fetch data, cek apakah ada user dari auth hook
+                    if (user) {
+                        console.log('⚠️ Using user data from auth hook as fallback');
+                        const safeUserData: UserData = {
+                            _id: user._id || '',
+                            nama: user.nama || '',
+                            username: user.username || '',
+                            email: user.email || '',
+                            kelompok: user.kelompok || '',
+                            role: user.role || '',
+                            status: user.status || 'Aktif',
+                            createdAt: user.createdAt || new Date(),
+                            updatedAt: user.updatedAt || new Date(),
+                            phoneNumber: user.phoneNumber || '',
+                            village: user.village || '',
+                            district: user.district || '',
+                            profileImage: user.profileImage,
+                            tempatLahir: user.tempatLahir || '',
+                            tanggalLahir: user.tanggalLahir || '',
+                            umur: user.umur || 0
+                        };
+
+                        setUserData(safeUserData);
+                        setEditData({
+                            nama: safeUserData.nama,
+                            email: safeUserData.email,
+                            kelompok: safeUserData.kelompok,
+                            tempatLahir: safeUserData.tempatLahir || '',
+                            tanggalLahir: typeof safeUserData.tanggalLahir === 'string'
+                                ? safeUserData.tanggalLahir
+                                : safeUserData.tanggalLahir?.toISOString().split('T')[0] || '',
+                            phoneNumber: safeUserData.phoneNumber || '',
+                            village: safeUserData.village || '',
+                            district: safeUserData.district || '',
+                        });
+
+                        if (safeUserData.profileImage) {
+                            setProfileImage(getProfileImageUrl(safeUserData.profileImage));
+                        }
+                    } else {
+                        // Hanya tampilkan warning, jangan langsung redirect
+                        console.warn('⚠️ No user data available, but not redirecting immediately');
+                        setModalMessage('Tidak dapat memuat data profil. Silakan refresh halaman atau login kembali.');
+                        setShowModal(true);
+                    }
+                }
+
+                // Fetch kelompok list terlepas dari status auth
+                fetchKelompokList();
             }
-        }, 10000); // 10 second timeout
+        };
 
-        return () => clearTimeout(timeout);
-    }, [loading]);
+        initializeData();
+    }, [authLoading, user, fetchUserData, fetchKelompokList]);
 
+    // ✅ PERBAIKI: Handle save function - lebih toleran
     const handleSave = async () => {
-        if (!userId || !token) {
-            setModalMessage('Silakan login kembali');
-            setShowModal(true);
-            return;
-        }
-
         try {
-            console.log('Memperbarui data user:', editData);
+            console.log('💾 Saving profile data...', editData);
 
-            const response = await fetch(`/api/auth/profile`, {
+            const response = await fetch('/api/auth/profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
                 },
+                credentials: 'include',
                 body: JSON.stringify(editData),
             });
 
+            const result = await response.json();
+            console.log('📡 Save response status:', response.status);
+            console.log('📡 Save response data:', result);
+
             if (!response.ok) {
                 if (response.status === 401) {
-                    clearUserCache();
-                    logout();
+                    console.log('❌ 401 Unauthorized');
                     setModalMessage('Sesi telah berakhir, silakan login kembali');
                     setShowModal(true);
+                    // Jangan langsung logout, biarkan user memutuskan
                     return;
                 }
-
-                let errorMessage = `Gagal memperbarui data: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch (e) {
-                    errorMessage = response.statusText || errorMessage;
-                }
-                throw new Error(errorMessage);
+                throw new Error(result.error || `Gagal menyimpan: ${response.status}`);
             }
 
-            const data = await response.json();
-            console.log('Response update:', data);
+            if (result.success && result.user) {
+                const updatedUserData: UserData = {
+                    _id: result.user._id || userData?._id || '',
+                    nama: result.user.nama || '',
+                    username: result.user.username || userData?.username || '',
+                    email: result.user.email || '',
+                    kelompok: result.user.kelompok || '',
+                    role: result.user.role || userData?.role || '',
+                    status: result.user.status || userData?.status || 'Aktif',
+                    createdAt: result.user.createdAt || userData?.createdAt || new Date(),
+                    updatedAt: result.user.updatedAt || new Date(),
+                    phoneNumber: result.user.phoneNumber || '',
+                    village: result.user.village || '',
+                    district: result.user.district || '',
+                    profileImage: result.user.profileImage,
+                    tempatLahir: result.user.tempatLahir || '',
+                    tanggalLahir: result.user.tanggalLahir || '',
+                    umur: result.user.umur || 0
+                };
 
-            if (!data.user) {
-                throw new Error('Data user tidak ditemukan dalam response');
+                setUserData(updatedUserData);
+                saveUserDataToCache(updatedUserData);
+
+                setModalMessage('Profil berhasil diperbarui!');
+                setShowModal(true);
+                setIsEditing(false);
+
+                // Refresh data
+                setTimeout(() => {
+                    fetchUserData();
+                }, 500);
+            } else {
+                throw new Error(result.error || 'Gagal memperbarui profil');
             }
 
-            // Update state dan cache
-            setUserData(data.user);
-            saveUserDataToCache(data.user);
-
-            window.dispatchEvent(new Event('userDataUpdated'));
-
-            setModalMessage('Profil berhasil diperbarui');
-            setShowModal(true);
-            setIsEditing(false);
         } catch (error: any) {
-            console.error('Gagal menyimpan perubahan:', error);
-            setModalMessage(error.message || 'Gagal menyimpan perubahan');
+            console.error('❌ Save error:', error);
+            setModalMessage(error.message || 'Terjadi kesalahan saat menyimpan data');
             setShowModal(true);
         }
     };
 
+    // Handle image upload
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!userId || !token) {
-            setModalMessage('Silakan login kembali');
-            setShowModal(true);
-            return;
-        }
-
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -401,58 +386,45 @@ const ProfilePage: React.FC = () => {
             const formData = new FormData();
             formData.append('profileImage', file);
 
-            const response = await fetch(`/api/auth/profile/upload`, {
+            const response = await fetch('/api/auth/profile/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
+                credentials: 'include',
                 body: formData,
             });
 
+            const result = await response.json();
+            console.log('📡 Upload response:', result);
+
             if (!response.ok) {
                 if (response.status === 401) {
-                    clearUserCache();
-                    logout();
                     setModalMessage('Sesi telah berakhir, silakan login kembali');
                     setShowModal(true);
                     return;
                 }
-
-                let errorMessage = `Gagal upload gambar: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch (e) {
-                    errorMessage = response.statusText || errorMessage;
-                }
-                throw new Error(errorMessage);
+                throw new Error(result.error || `Upload failed: ${response.status}`);
             }
 
-            const data = await response.json();
-            console.log('Response upload:', data);
+            if (result.user && result.user.profileImage) {
+                const imageUrl = getProfileImageUrl(result.user.profileImage);
+                setProfileImage(imageUrl);
 
-            if (!data.user || !data.user.profileImage) {
+                if (userData) {
+                    const updatedUserData: UserData = {
+                        ...userData,
+                        profileImage: result.user.profileImage
+                    };
+                    setUserData(updatedUserData);
+                    saveUserDataToCache(updatedUserData);
+                }
+
+                setModalMessage('Foto profil berhasil diubah!');
+                setShowModal(true);
+            } else {
                 throw new Error('Data user tidak ditemukan dalam response');
             }
 
-            const imageUrl = getProfileImageUrl(data.user.profileImage);
-            setProfileImage(imageUrl);
-
-            if (userData) {
-                const updatedUserData = {
-                    ...userData,
-                    profileImage: data.user.profileImage
-                };
-                setUserData(updatedUserData);
-                saveUserDataToCache(updatedUserData);
-
-                window.dispatchEvent(new Event('userDataUpdated'));
-            }
-
-            setModalMessage('Foto profil berhasil diubah');
-            setShowModal(true);
         } catch (error: any) {
-            console.error('Error uploading image:', error);
+            console.error('❌ Upload error:', error);
             setModalMessage(error.message || 'Gagal mengupload gambar');
             setShowModal(true);
         } finally {
@@ -460,53 +432,19 @@ const ProfilePage: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        if (!userId) {
-            (async () => {
-                try {
-                    console.log("🔄 Attempting to sync auth...");
-                    const response = await fetch('/api/auth/sync');
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data?.userId && data?.token) {
-                            sessionStorage.setItem('userId', data.userId);
-                            sessionStorage.setItem('token', data.token);
-                            console.log("✅ Auth sync success:", data);
-                            // 🚀 Langsung fetch data user dan kelompok
-                            fetchUserData();
-                            fetchKelompokList();
-                        } else {
-                            console.warn("❌ Sync gagal: data tidak lengkap");
-                            router.push('/login');
-                        }
-                    } else {
-                        console.warn("❌ Sync response:", response.status);
-                        router.push('/login');
-                    }
-                } catch (error) {
-                    console.error('Failed to sync auth data:', error);
-                    router.push('/login');
-                }
-            })();
-        }
-    }, [userId, router, fetchUserData, fetchKelompokList]);
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Memuat profil...</p>
-                    <p className="text-sm text-gray-500 mt-2">Jika loading terlalu lama, silakan refresh halaman</p>
-                </div>
-            </div>
-        );
-    }
-
+    // Close modal function
     const closeModal = () => {
         setShowModal(false);
+        // Jika ada pesan session expired, redirect ke login
+        if (modalMessage.includes('Sesi telah berakhir') || modalMessage.includes('login kembali')) {
+            setTimeout(() => {
+                logout();
+                router.push('/login');
+            }, 1000);
+        }
     };
 
+    // Get status color
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Aktif': return 'text-green-600 bg-green-100';
@@ -517,10 +455,51 @@ const ProfilePage: React.FC = () => {
 
     const isPeternak = userData?.role?.toLowerCase() === 'peternak';
 
+    // Loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Memuat profil...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Jika tidak ada user data setelah loading selesai
+    if (!userData && !loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-gray-600 mb-4">Tidak dapat memuat data profil</p>
+                    <div className="space-y-2">
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="block w-full bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
+                        >
+                            Refresh Halaman
+                        </button>
+                        <button
+                            onClick={() => {
+                                clearUserCache();
+                                logout();
+                                router.push('/login');
+                            }}
+                            className="block w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
+                        >
+                            Login Kembali
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-4xl mx-auto px-4 py-8">
-                {/* Header minimalis */}
+                {/* Header */}
                 <div className="flex items-center mb-8">
                     <button
                         onClick={() => router.back()}
@@ -535,7 +514,7 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">
-                    {/* Profile Header with Cover Photo */}
+                    {/* Profile Header */}
                     <div className="h-40 bg-gradient-to-r from-green-500 to-green-700 relative">
                         <div className="absolute -bottom-16 left-8">
                             <div className="relative">
@@ -544,7 +523,7 @@ const ProfilePage: React.FC = () => {
                                     alt="Profile"
                                     width={128}
                                     height={128}
-                                    className="w-32 h-32 rounded-full object-cover shadow-lg"
+                                    className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
                                     onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         if (target.src !== '/Vector.svg') {
@@ -553,9 +532,9 @@ const ProfilePage: React.FC = () => {
                                     }}
                                     priority
                                 />
-                                <label htmlFor="profile-upload" className="absolute bottom-2 right-2 bg-green-600 p-2 rounded-full cursor-pointer hover:bg-green-700 transition-colors">
+                                <label htmlFor="profile-upload" className="absolute bottom-2 right-2 bg-green-600 p-2 rounded-full cursor-pointer hover:bg-green-700 transition-colors shadow-lg">
                                     {uploadingImage ? (
-                                        <div className="animate-spin rounded-full h-4 w-4"></div>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                                     ) : (
                                         <Camera size={16} className="text-white" />
                                     )}
@@ -598,6 +577,7 @@ const ProfilePage: React.FC = () => {
                                     <button
                                         onClick={handleSave}
                                         className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                                        disabled={uploadingImage}
                                     >
                                         <Save size={18} />
                                         Simpan
@@ -622,7 +602,8 @@ const ProfilePage: React.FC = () => {
                                                 type="text"
                                                 value={editData.nama}
                                                 onChange={(e) => setEditData({ ...editData, nama: e.target.value })}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                                placeholder="Masukkan nama lengkap"
                                             />
                                         ) : (
                                             <p className="text-gray-800">{userData?.nama || 'Tidak tersedia'}</p>
@@ -641,7 +622,8 @@ const ProfilePage: React.FC = () => {
                                                 type="email"
                                                 value={editData.email}
                                                 onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                                placeholder="Masukkan email"
                                             />
                                         ) : (
                                             <p className="text-gray-800">{userData?.email || 'Tidak tersedia'}</p>
@@ -659,7 +641,7 @@ const ProfilePage: React.FC = () => {
                                                 type="tel"
                                                 value={editData.phoneNumber}
                                                 onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                                 placeholder="Contoh: 081234567890"
                                             />
                                         ) : (
@@ -679,7 +661,8 @@ const ProfilePage: React.FC = () => {
                                                         type="text"
                                                         value={editData.tempatLahir}
                                                         onChange={(e) => setEditData({ ...editData, tempatLahir: e.target.value })}
-                                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                                        placeholder="Masukkan tempat lahir"
                                                     />
                                                 ) : (
                                                     <p className="text-gray-800">{userData?.tempatLahir || 'Tidak tersedia'}</p>
@@ -696,7 +679,7 @@ const ProfilePage: React.FC = () => {
                                                         type="date"
                                                         value={editData.tanggalLahir}
                                                         onChange={(e) => setEditData({ ...editData, tanggalLahir: e.target.value })}
-                                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                                     />
                                                 ) : (
                                                     <p className="text-gray-800">
@@ -718,10 +701,7 @@ const ProfilePage: React.FC = () => {
                                                     Umur
                                                 </label>
                                                 <p className="text-gray-800">
-                                                    {userData?.tanggalLahir
-                                                        ? `${calculateAge(userData.tanggalLahir)} tahun`
-                                                        : 'Tidak tersedia'
-                                                    }
+                                                    {userData?.umur ? `${userData.umur} tahun` : 'Tidak tersedia'}
                                                 </p>
                                             </div>
                                         </>
@@ -743,7 +723,7 @@ const ProfilePage: React.FC = () => {
                                             <select
                                                 value={editData.kelompok}
                                                 onChange={(e) => setEditData({ ...editData, kelompok: e.target.value })}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                                 disabled={kelompokLoading}
                                             >
                                                 <option value="">Pilih Kelompok</option>
@@ -771,7 +751,7 @@ const ProfilePage: React.FC = () => {
                                                 type="text"
                                                 value={editData.village}
                                                 onChange={(e) => setEditData({ ...editData, village: e.target.value })}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                                 placeholder="Masukkan nama desa"
                                             />
                                         ) : (
@@ -790,7 +770,7 @@ const ProfilePage: React.FC = () => {
                                                 type="text"
                                                 value={editData.district}
                                                 onChange={(e) => setEditData({ ...editData, district: e.target.value })}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                                 placeholder="Masukkan nama kecamatan"
                                             />
                                         ) : (
@@ -829,22 +809,22 @@ const ProfilePage: React.FC = () => {
 
             {/* Modal untuk notifikasi */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-auto shadow-xl">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-semibold text-gray-800">Notifikasi</h3>
                             <button
                                 onClick={closeModal}
-                                className="text-gray-800 hover:text-gray-700"
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <X size={20} />
                             </button>
                         </div>
-                        <p className="mb-4 text-gray-800">{modalMessage}</p>
+                        <p className="mb-6 text-gray-700">{modalMessage}</p>
                         <div className="flex justify-end">
                             <button
                                 onClick={closeModal}
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-semibold"
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
                             >
                                 OK
                             </button>

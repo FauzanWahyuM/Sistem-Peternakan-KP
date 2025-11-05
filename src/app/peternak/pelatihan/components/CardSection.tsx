@@ -1,119 +1,78 @@
-import DataTable from 'react-data-table-component';
+// app/peternak/pelatihan/page.tsx
+'use client';
 
-export default function CardSection() {
-    const ActionButtons = ({ onEdit, onDelete, onDownload }) => (
-        <div className="flex gap-2">
-            {onEdit && <button onClick={onEdit} className="text-blue-600 hover:underline">Edit</button>}
-            {onDelete && <button onClick={onDelete} className="text-red-600 hover:underline">Hapus</button>}
-            {onDownload && <button onClick={onDownload} className="text-green-600 hover:underline">Download</button>}
-        </div>
-    );
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Clock, Calendar, Users, BookOpen } from 'lucide-react';
 
-    const userColumns = [
-        { name: 'Nama', selector: row => row.nama, sortable: true },
-        { name: 'Role', selector: row => row.role },
-        { name: 'Status', selector: row => row.status },
-        {
-            name: 'Actions',
-            cell: (row) => (
-                <ActionButtons
-                    onEdit={() => console.log('Edit user', row)}
-                    onDelete={() => console.log('Hapus user', row)} onDownload={undefined}                />
-            ),
-        }
-    ];
-
-    const userData = [
-        { nama: 'Gibson', role: 'Penyuluh', status: 'Aktif' },
-        { nama: 'Zaki', role: 'Admin', status: 'Aktif' }
-    ];
-
-    const artikelColumns = [
-        { name: 'Judul', selector: row => row.judul },
-        { name: 'Deskripsi', selector: row => row.deskripsi },
-        { name: 'Gambar', cell: () => <span>📷</span> },
-        { name: 'Tanggal', selector: row => row.tanggal },
-        {
-            name: 'Actions',
-            cell: (row) => (
-                <ActionButtons
-                    onEdit={() => console.log('Edit artikel', row)}
-                    onDelete={() => console.log('Hapus artikel', row)} onDownload={undefined}                />
-            ),
-        }
-    ];
-
-    const artikelData = [
-        { judul: 'Pertanian', deskripsi: '...', tanggal: '16/07/2025' },
-        { judul: '...', deskripsi: '...', tanggal: '...' }
-    ];
-
-    const laporanColumns = [
-        { name: 'Nama', selector: row => row.nama },
-        { name: 'Nilai Kepuasan', selector: row => row.nilai },
-        {
-            name: 'Actions',
-            cell: (row) => (
-                <ActionButtons
-                    onEdit={() => console.log('Lihat detail', row)}
-                    onDelete={() => console.log('Hapus laporan', row)}
-                    onDownload={() => console.log('Download laporan', row)}
-                />
-            ),
-        }
-    ];
-
-    const laporanData = [
-        { nama: 'Gibson', nilai: '100/100' },
-        { nama: 'Zaki', nilai: '79/100' }
-    ];
+const PelatihanPage = () => {
+    const router = useRouter();
 
     return (
-        <div className="space-y-6">
-            {/* User Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">User</h2>
-                <DataTable
-                    columns={userColumns}
-                    data={userData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    className="rounded"
-                />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">User Lainnya ⮞</button>
-            </section>
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+            <div className="max-w-4xl mx-auto px-4 py-8">
+                {/* Coming Soon Section */}
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="relative bg-gradient-to-r bg-green-600 py-16 px-8 text-center">
+                        <div className="relative z-10">
+                            <div className="w-24 h-24 mx-auto mb-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                <Clock size={48} className="text-black" />
+                            </div>
+                            <h2 className="text-4xl font-bold text-white mb-4">Coming Soon</h2>
+                            <p className="text-white text-xl mb-8 opacity-90">
+                                Fitur pelatihan sedang dalam pengembangan
+                            </p>
+                            <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-6 max-w-md mx-auto">
+                                <p className="text-black text-sm">
+                                    Kami sedang menyiapkan konten pelatihan yang berkualitas untuk membantu Anda
+                                    mengembangkan usaha peternakan dengan lebih baik.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-            {/* Artikel Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">Artikel</h2>
-                <DataTable
-                    columns={artikelColumns}
-                    data={artikelData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    className="rounded"
-                />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">Artikel Lainnya ⮞</button>
-            </section>
+                    {/* Features Preview */}
+                    <div className="p-8">
+                        <h3 className="text-2xl font-bold text-gray-800 text-center mb-8">
+                            Yang Akan Hadir
+                        </h3>
 
-            {/* Laporan Card */}
-            <section className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-xl font-bold mb-4">Laporan</h2>
-                <DataTable
-                    columns={laporanColumns}
-                    data={laporanData}
-                    pagination
-                    dense
-                    responsive
-                    highlightOnHover
-                    className="rounded"
-                />
-                <button className="mt-4 bg-gray-100 px-4 py-2 rounded">Laporan Lainnya ⮞</button>
-            </section>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div className="text-center p-6 bg-green-50 rounded-lg border border-green-100">
+                                <div className="w-12 h-12 mx-auto mb-4 bg-green-500 rounded-full flex items-center justify-center">
+                                    <BookOpen size={24} className="text-white" />
+                                </div>
+                                <h4 className="font-semibold text-gray-800 mb-2">Materi Pelatihan</h4>
+                                <p className="text-gray-600 text-sm">
+                                    Video tutorial dan modul pembelajaran tentang berbagai aspek peternakan
+                                </p>
+                            </div>
+
+                            <div className="text-center p-6 bg-blue-50 rounded-lg border border-blue-100">
+                                <div className="w-12 h-12 mx-auto mb-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <Users size={24} className="text-white" />
+                                </div>
+                                <h4 className="font-semibold text-gray-800 mb-2">Kelas Online</h4>
+                                <p className="text-gray-600 text-sm">
+                                    Sesi interaktif dengan ahli peternakan dan sesi tanya jawab langsung
+                                </p>
+                            </div>
+
+                            <div className="text-center p-6 bg-purple-50 rounded-lg border border-purple-100">
+                                <div className="w-12 h-12 mx-auto mb-4 bg-purple-500 rounded-full flex items-center justify-center">
+                                    <Calendar size={24} className="text-white" />
+                                </div>
+                                <h4 className="font-semibold text-gray-800 mb-2">Jadwal Terstruktur</h4>
+                                <p className="text-gray-600 text-sm">
+                                    Program pembelajaran bertahap dengan jadwal yang fleksibel
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
-}
+};
+
+export default PelatihanPage;

@@ -1,212 +1,93 @@
+// app/peternak/pelatihan/page.tsx
 'use client';
 
-import Sidebar from '../components/UnifiedSidebar';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit2, Trash2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ArrowLeft, Clock, Calendar, Users, BookOpen } from 'lucide-react';
 
-export default function PelatihanPage() {
+const PelatihanPage = () => {
     const router = useRouter();
-    const [pelatihan, setPelatihan] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [deleteLoading, setDeleteLoading] = useState(null);
-
-    // Format tanggal untuk ditampilkan
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    };
-
-    // Load data from MongoDB
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                // In a real implementation, you would get the actual user ID from session/context
-                const userId = 'user-id-placeholder'; // This should be replaced with actual user ID
-                
-                const response = await fetch(`/api/training-programs?userId=${userId}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch data');
-                }
-                
-                const result = await response.json();
-                setPelatihan(result.trainingPrograms);
-                setError(null);
-            } catch (err) {
-                console.error('Error loading data:', err);
-                setError('Gagal memuat data pelatihan');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, []);
-
-    const handleTambahPelatihan = () => {
-        router.push('/dashboard/penyuluh/pelatihan/tambah');
-    };
-
-    const handleEdit = (id) => {
-        router.push(`/dashboard/penyuluh/pelatihan/edit/${id}`);
-    };
-
-    const handleDelete = async (id) => {
-        if (window.confirm('Apakah Anda yakin ingin menghapus pelatihan ini?')) {
-            try {
-                setDeleteLoading(id);
-                
-                const response = await fetch(`/api/training-programs/${id}`, {
-                    method: 'DELETE',
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to delete data');
-                }
-                
-                // Update local state
-                const updatedPelatihan = pelatihan.filter(item => item._id !== id);
-                setPelatihan(updatedPelatihan);
-                
-                alert('Pelatihan berhasil dihapus!');
-            } catch (error) {
-                console.error('Error deleting pelatihan:', error);
-                alert('Terjadi kesalahan saat menghapus pelatihan!');
-            } finally {
-                setDeleteLoading(null);
-            }
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex min-h-screen bg-gray-100">
-                <Sidebar userType="penyuluh" />
-                <main className="flex-1 p-6">
-                    <div className="flex items-center justify-center h-64">
-                        <div className="text-lg text-gray-600">Loading...</div>
-                    </div>
-                </main>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex min-h-screen bg-gray-100">
-                <Sidebar userType="penyuluh" />
-                <main className="flex-1 p-6">
-                    <div className="flex items-center justify-center h-64">
-                        <div className="text-lg text-red-600">{error}</div>
-                    </div>
-                </main>
-            </div>
-        );
-    }
 
     return (
-        <div className="flex min-h-screen bg-gray-100">
-            <Sidebar userType="penyuluh" />
-            <main className="flex-1 p-6">
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+            <div className="max-w-4xl mx-auto px-4 py-8">
                 {/* Header */}
-                <div className="mb-8 flex justify-between items-center">
-                    <h1 className="text-3xl font-bold text-gray-800">Pelatihan</h1>
+                <div className="flex items-center mb-8">
                     <button
-                        onClick={handleTambahPelatihan}
-                        className="bg-white border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
+                        onClick={() => router.back()}
+                        className="group flex items-center gap-2 text-gray-600 hover:text-green-700 transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-green-50"
                     >
-                        Tambah Pelatihan
+                        <ArrowLeft size={20} className="transition-transform group-hover:-translate-x-1" />
+                        <span>Kembali</span>
                     </button>
-                </div>
-
-                {/* Pelatihan Table */}
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                                        Judul
-                                    </th>
-                                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                                        Deskripsi
-                                    </th>
-                                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                                        Gambar
-                                    </th>
-                                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                                        Tanggal
-                                    </th>
-                                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {pelatihan.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="py-8 px-6 text-center text-gray-500">
-                                            Belum ada data pelatihan
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pelatihan.map((item, index) => (
-                                        <tr
-                                            key={item._id}
-                                            className={`border-b border-gray-200 hover:bg-gray-50 ${index === pelatihan.length - 1 ? 'border-b-0' : ''
-                                                }`}
-                                        >
-                                            <td className="py-4 px-6 text-gray-800">
-                                                {item.judul.length > 30
-                                                    ? `${item.judul.substring(0, 30)}...`
-                                                    : item.judul
-                                                }
-                                            </td>
-                                            <td className="py-4 px-6 text-gray-600">
-                                                {item.deskripsi.length > 40
-                                                    ? `${item.deskripsi.substring(0, 40)}...`
-                                                    : item.deskripsi
-                                                }
-                                            </td>
-                                            <td className="py-4 px-6 text-gray-800">
-                                                {item.gambar}
-                                            </td>
-                                            <td className="py-4 px-6 text-gray-800">
-                                                {formatDate(item.tanggal)}
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                <div className="flex items-center space-x-3">
-                                                    <button
-                                                        onClick={() => handleEdit(item._id)}
-                                                        className="text-orange-500 hover:text-orange-700 transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <Edit2 size={18} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(item._id)}
-                                                        disabled={deleteLoading === item._id}
-                                                        className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                    <div className="ml-6 border-l border-gray-200 pl-6">
+                        <h1 className="text-2xl font-bold text-gray-800">Pelatihan & Edukasi</h1>
+                        <p className="text-gray-500 text-sm mt-1">Platform pembelajaran untuk peternak</p>
                     </div>
                 </div>
-            </main>
+                
+                {/* Coming Soon Section */}
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="relative bg-gradient-to-r bg-green-600 py-16 px-8 text-center">
+                        <div className="relative z-10">
+                            <div className="w-24 h-24 mx-auto mb-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                <Clock size={48} className="text-black" />
+                            </div>
+                            <h2 className="text-4xl font-bold text-white mb-4">Coming Soon</h2>
+                            <p className="text-white text-xl mb-8 opacity-90">
+                                Fitur pelatihan sedang dalam pengembangan
+                            </p>
+                            <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-6 max-w-md mx-auto">
+                                <p className="text-black text-sm">
+                                    Kami sedang menyiapkan konten pelatihan yang berkualitas untuk membantu Anda
+                                    mengembangkan usaha peternakan dengan lebih baik.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Features Preview */}
+                    <div className="p-8">
+                        <h3 className="text-2xl font-bold text-gray-800 text-center mb-8">
+                            Yang Akan Hadir
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div className="text-center p-6 bg-green-50 rounded-lg border border-green-100">
+                                <div className="w-12 h-12 mx-auto mb-4 bg-green-500 rounded-full flex items-center justify-center">
+                                    <BookOpen size={24} className="text-white" />
+                                </div>
+                                <h4 className="font-semibold text-gray-800 mb-2">Materi Pelatihan</h4>
+                                <p className="text-gray-600 text-sm">
+                                    Video tutorial dan modul pembelajaran tentang berbagai aspek peternakan
+                                </p>
+                            </div>
+
+                            <div className="text-center p-6 bg-blue-50 rounded-lg border border-blue-100">
+                                <div className="w-12 h-12 mx-auto mb-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <Users size={24} className="text-white" />
+                                </div>
+                                <h4 className="font-semibold text-gray-800 mb-2">Kelas Online</h4>
+                                <p className="text-gray-600 text-sm">
+                                    Sesi interaktif dengan ahli peternakan dan sesi tanya jawab langsung
+                                </p>
+                            </div>
+
+                            <div className="text-center p-6 bg-purple-50 rounded-lg border border-purple-100">
+                                <div className="w-12 h-12 mx-auto mb-4 bg-purple-500 rounded-full flex items-center justify-center">
+                                    <Calendar size={24} className="text-white" />
+                                </div>
+                                <h4 className="font-semibold text-gray-800 mb-2">Jadwal Terstruktur</h4>
+                                <p className="text-gray-600 text-sm">
+                                    Program pembelajaran bertahap dengan jadwal yang fleksibel
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
-}
+};
+
+export default PelatihanPage;

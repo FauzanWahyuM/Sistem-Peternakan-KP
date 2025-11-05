@@ -7,101 +7,149 @@ import { authOptions } from "../../../../lib/authOptions";
 
 export async function PUT(request: NextRequest) {
     try {
+        await connectDB();
+
+        // Cek session
         const session = await getServerSession(authOptions);
-        if (!session || !session.user) {
+        console.log("🔍 Session data:", {
+            hasSession: !!session,
+            userId: session?.user?.id
+        });
+
+        if (!session || !session.user || !session.user.id) {
+            console.log("❌ No valid session found");
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        await connectDB();
-
         const body = await request.json();
+        console.log("📦 Update request body:", body);
+
         const {
             nama,
             email,
             kelompok,
             tempatLahir,
             tanggalLahir,
-            phoneNumber, // Tambahkan
-            village, // Tambahkan
-            district // Tambahkan
+            phoneNumber,
+            village,
+            district
         } = body;
 
-        // Cari user by email dari session
-        const user = await User.findOne({ email: session.user.email });
+        // Cari user by ID dari session
+        const user = await User.findById(session.user.id);
         if (!user) {
+            console.log("❌ User not found for ID:", session.user.id);
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        // Update fields dasar
-        if (nama) user.nama = nama;
-        if (email) user.email = email;
-        if (kelompok) user.kelompok = kelompok;
+        console.log("✅ User found:", user.email, "Role:", user.role);
 
-        // Update fields baru (untuk semua role)
-        if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
-        if (village !== undefined) user.village = village;
-        if (district !== undefined) user.district = district;
+        // ✅ FIX: Safe update - hanya update field yang ada di request body
+        const updateData: any = {};
 
-        // Update fields khusus untuk peternak
+        if (nama !== undefined) updateData.nama = nama;
+        if (email !== undefined) updateData.email = email;
+        if (kelompok !== undefined) updateData.kelompok = kelompok;
+
+        // Field baru - handle dengan safe default
+        if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber || '';
+        if (village !== undefined) updateData.village = village || '';
+        if (district !== undefined) updateData.district = district || '';
+
+        // Field khusus peternak
         if (user.role?.toLowerCase() === 'peternak') {
-            if (tempatLahir !== undefined) user.tempatLahir = tempatLahir;
+            if (tempatLahir !== undefined) updateData.tempatLahir = tempatLahir || '';
 
-            // Pastikan tanggalLahir dalam format yang benar
-            if (tanggalLahir !== undefined && tanggalLahir !== 'Tidak tersedia') {
-                // Jika format sudah YYYY-MM-DD, simpan sebagai Date object
-                user.tanggalLahir = new Date(tanggalLahir);
+            if (tanggalLahir !== undefined) {
+                if (tanggalLahir && tanggalLahir.trim() !== '') {
+                    const birthDate = new Date(tanggalLahir);
+                    if (!isNaN(birthDate.getTime())) {
+                        updateData.tanggalLahir = birthDate;
 
-                // Hitung ulang umur
-                const today = new Date();
-                const birthDate = new Date(tanggalLahir);
-                let age = today.getFullYear() - birthDate.getFullYear();
-                const monthDiff = today.getMonth() - birthDate.getMonth();
-
-                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                    age--;
+                        // Hitung ulang umur
+                        const today = new Date();
+                        let age = today.getFullYear() - birthDate.getFullYear();
+                        const monthDiff = today.getMonth() - birthDate.getMonth();
+                        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                            age--;
+                        }
+                        updateData.umur = age;
+                    }
+                } else {
+                    updateData.tanggalLahir = null;
+                    updateData.umur = null;
                 }
-                user.umur = age;
             }
         }
 
-        await user.save();
+        console.log("🔄 Data to update:", updateData);
 
-        // Siapkan data user yang akan dikembalikan
-        const updatedUser: any = {
-            _id: user._id.toString(),
-            nama: user.nama,
-            username: user.username,
-            email: user.email,
-            phoneNumber: user.phoneNumber || '', // Tambahkan
-            village: user.village || '', // Tambahkan
-            district: user.district || '', // Tambahkan
-            kelompok: user.kelompok,
-            role: user.role,
-            status: user.status,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-            profileImage: user.profileImage
-        };
+        // Lakukan update dengan $set untuk menghindari overwrite field lain
+        const updatedUser = await User.findByIdAndUpdate(
+            session.user.id,
+            { $set: updateData },
+            { new: true, runValidators: true } // new: true untuk return document yang sudah diupdate
+        );
 
-        // Tambahkan field khusus untuk peternak dalam response
-        if (user.role?.toLowerCase() === 'peternak') {
-            updatedUser.tempatLahir = user.tempatLahir || 'Tidak tersedia';
-            updatedUser.tanggalLahir = user.tanggalLahir || 'Tidak tersedia';
-            updatedUser.umur = user.umur || 0;
+        if (!updatedUser) {
+            throw new Error("Failed to update user");
         }
 
-        return NextResponse.json({ user: updatedUser });
+        console.log("✅ User updated successfully");
+
+        // Format response data dengan default values untuk field yang mungkin masih null
+        const userResponse = {
+            _id: updatedUser._id.toString(),
+            nama: updatedUser.nama,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            phoneNumber: updatedUser.phoneNumber || '',
+            village: updatedUser.village || '',
+            district: updatedUser.district || '',
+            kelompok: updatedUser.kelompok,
+            role: updatedUser.role,
+            status: updatedUser.status,
+            profileImage: updatedUser.profileImage,
+            createdAt: updatedUser.createdAt,
+            updatedAt: updatedUser.updatedAt
+        };
+
+        // Tambahkan field khusus peternak
+        if (updatedUser.role?.toLowerCase() === 'peternak') {
+            (userResponse as any).tempatLahir = updatedUser.tempatLahir || '';
+            (userResponse as any).tanggalLahir = updatedUser.tanggalLahir
+                ? updatedUser.tanggalLahir.toISOString().split('T')[0]
+                : '';
+            (userResponse as any).umur = updatedUser.umur || null;
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Profile updated successfully",
+            user: userResponse
+        });
 
     } catch (error: any) {
-        console.error("Error updating profile:", error);
+        console.error("❌ Error updating profile:", error);
+
+        // Berikan error message yang lebih spesifik
+        let errorMessage = "Internal server error";
+        if (error.name === 'ValidationError') {
+            errorMessage = "Data tidak valid: " + Object.values(error.errors).map((e: any) => e.message).join(', ');
+        } else if (error.name === 'CastError') {
+            errorMessage = "Format data tidak valid";
+        }
+
         return NextResponse.json(
-            { error: error.message || "Internal server error" },
+            {
+                success: false,
+                error: errorMessage
+            },
             { status: 500 }
         );
     }
 }
 
-// ✅ Tambahkan handler untuk OPTIONS method (preflight requests)
 export async function OPTIONS() {
     return NextResponse.json({}, {
         headers: {
